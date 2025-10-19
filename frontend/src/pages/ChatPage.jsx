@@ -226,7 +226,7 @@ function ChatPage({ backendStatus }) {
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .chat-page {
           height: 100vh;
           background: #000000;

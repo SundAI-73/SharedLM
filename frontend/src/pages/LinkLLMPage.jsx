@@ -48,7 +48,7 @@ function LinkLLMPage({ connectedLLMs, setSelectedLLM }) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .llm-page {
           min-height: 100vh;
           background: #000000;
