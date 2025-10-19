@@ -1,6 +1,7 @@
 // src/pages/ChatsPage.jsx
 import React, { useState } from 'react';
 import { MessageSquare, Search, ChevronRight } from 'lucide-react';
+import './style.css';
 
 function ChatsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,119 +54,7 @@ function ChatsPage() {
       </div>
 
       <style>{`
-        .chats-page {
-          min-height: 100vh;
-          background: #000000;
-          padding: 3rem 2rem;
-        }
-
-        .page-container {
-          max-width: 900px;
-          margin: 0 auto;
-        }
-
-        .page-title {
-          font-size: 2.5rem;
-          font-weight: 300;
-          color: white;
-          margin-bottom: 0.5rem;
-          text-align: center;
-        }
-
-        .page-subtitle {
-          color: rgba(255, 255, 255, 0.4);
-          text-align: center;
-          margin-bottom: 2rem;
-          font-size: 1rem;
-        }
-
-        .search-container {
-          position: relative;
-          max-width: 500px;
-          margin: 0 auto 2rem;
-        }
-
-        .search-icon {
-          position: absolute;
-          left: 1.25rem;
-          top: 50%;
-          transform: translateY(-50%);
-          color: rgba(255, 255, 255, 0.4);
-        }
-
-        .search-input {
-          width: 100%;
-          padding: 0.875rem 1.25rem 0.875rem 3rem;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1.5px solid rgba(255, 255, 255, 0.15);
-          border-radius: 50px;
-          color: white;
-          font-size: 0.95rem;
-          outline: none;
-          transition: all 0.2s;
-        }
-
-        .search-input::placeholder {
-          color: rgba(255, 255, 255, 0.3);
-        }
-
-        .search-input:focus {
-          background: rgba(255, 255, 255, 0.08);
-          border-color: rgba(255, 255, 255, 0.25);
-        }
-
-        .chats-list {
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-        }
-
-        .chat-pill {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          padding: 1.25rem 1.5rem;
-          background: transparent;
-          border: 1.5px solid rgba(255, 255, 255, 0.15);
-          border-radius: 50px;
-          cursor: pointer;
-          transition: all 0.2s;
-          width: 100%;
-          text-align: left;
-        }
-
-        .chat-pill:hover {
-          background: rgba(255, 255, 255, 0.05);
-          border-color: rgba(255, 255, 255, 0.25);
-        }
-
-        .chat-pill svg {
-          color: rgba(255, 255, 255, 0.7);
-          flex-shrink: 0;
-        }
-
-        .chat-info {
-          display: flex;
-          flex-direction: column;
-          flex: 1;
-        }
-
-        .chat-title {
-          color: white;
-          font-size: 1rem;
-          font-weight: 500;
-        }
-
-        .chat-meta {
-          color: rgba(255, 255, 255, 0.4);
-          font-size: 0.75rem;
-          margin-top: 2px;
-        }
-
-        .arrow-icon {
-          color: rgba(255, 255, 255, 0.3);
-          margin-left: auto;
-        }
+        
       `}</style>
     </div>
   );
