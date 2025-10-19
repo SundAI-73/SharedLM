@@ -36,7 +36,7 @@ function ProjectsPage() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .projects-page {
           min-height: 100vh;
           background: #000000;

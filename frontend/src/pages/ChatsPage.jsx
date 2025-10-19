@@ -52,7 +52,7 @@ function ChatsPage() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .chats-page {
           min-height: 100vh;
           background: #000000;

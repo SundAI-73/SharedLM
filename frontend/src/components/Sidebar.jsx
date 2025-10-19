@@ -60,7 +60,7 @@ function Sidebar() {
         </button>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .sidebar {
           width: 260px;
           height: 100vh;

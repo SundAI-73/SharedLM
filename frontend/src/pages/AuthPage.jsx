@@ -108,7 +108,7 @@ function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
         </button>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .auth-page {
           min-height: 100vh;
           background: #000000;
