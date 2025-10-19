@@ -1,7 +1,7 @@
 import logging
 from typing import List, Dict, Any
 from mem0 import MemoryClient
-from app.config import settings
+from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +10,8 @@ class Mem0Client:
     def __init__(self):
         self.client = MemoryClient(
             api_key=settings.mem0_api_key,
-            org_id=settings.mem0_org_id,
-            project_id=settings.mem0_project_id
+            # org_id=settings.mem0_org_id,
+            # project_id=settings.mem0_project_id
         )
     
     def search_memories(self, user_id: str, query: str, limit: int = 5) -> List[str]:
@@ -24,7 +24,14 @@ class Mem0Client:
                 version="v2"
             )
             
-            memories = [result["memory"] for result in results.get("results", [])]
+            # Fix: Handle both list and dict responses
+            if isinstance(results, list):
+                # Mem0 returns a list directly
+                memories = [result["memory"] for result in results]
+            else:
+                # Mem0 returns a dict with "results" key
+                memories = [result["memory"] for result in results.get("results", [])]
+            
             logger.info(f"Retrieved {len(memories)} memories for user {user_id}")
             return memories
             

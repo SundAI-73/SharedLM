@@ -7,3 +7,4 @@ openai
 anthropic==0.7.8
 python-dotenv==1.0.0
 httpx==0.25.2
+streamlit==1.28.1

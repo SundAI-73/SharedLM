@@ -3,7 +3,7 @@ import asyncio
 from typing import Dict, Any
 import openai
 import anthropic
-from app.config import settings
+from backend.config import settings
 
 logger = logging.getLogger(__name__)
 

@@ -1,14 +1,14 @@
 import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import settings
-from app.models.schemas import (
+from backend.config import settings
+from backend.models.schemas import (
     ChatRequest, ChatResponse, HealthResponse, 
     ModelsResponse, MemorySearchRequest, MemorySearchResponse
 )
-from app.services.mem0_client import mem0_client
-from app.services.llm_router import route_chat
-from app.utils.prompt import compose_prompt
+from backend.services.mem0_client import mem0_client
+from backend.services.llm_router import route_chat
+from backend.utils.prompt import compose_prompt
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
