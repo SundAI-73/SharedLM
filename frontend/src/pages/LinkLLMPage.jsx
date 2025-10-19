@@ -2,6 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bot, Brain, Zap, Sparkles, Search, Cloud } from 'lucide-react';
+import './style.css';
 
 function LinkLLMPage({ connectedLLMs, setSelectedLLM }) {
   const navigate = useNavigate();
@@ -48,109 +49,6 @@ function LinkLLMPage({ connectedLLMs, setSelectedLLM }) {
         </div>
       </div>
 
-      <style>{`
-        .llm-page {
-          min-height: 100vh;
-          background: #000000;
-          padding: 3rem 2rem;
-        }
-
-        .page-container {
-          max-width: 900px;
-          margin: 0 auto;
-        }
-
-        .page-title {
-          font-size: 2.5rem;
-          font-weight: 300;
-          color: white;
-          margin-bottom: 0.5rem;
-          text-align: center;
-        }
-
-        .page-subtitle {
-          color: rgba(255, 255, 255, 0.4);
-          text-align: center;
-          margin-bottom: 4rem;
-          font-size: 1rem;
-        }
-
-        .llm-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 1rem;
-        }
-
-        .llm-pill {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          padding: 1.25rem;
-          background: transparent;
-          border: 1.5px solid rgba(255, 255, 255, 0.15);
-          border-radius: 50px;
-          cursor: pointer;
-          transition: all 0.2s;
-          position: relative;
-        }
-
-        .llm-pill:hover {
-          background: rgba(255, 255, 255, 0.05);
-          border-color: rgba(255, 255, 255, 0.25);
-        }
-
-        .llm-pill.connected {
-          background: white;
-          border-color: white;
-        }
-
-        .llm-icon {
-          color: rgba(255, 255, 255, 0.8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .llm-pill.connected .llm-icon {
-          color: #000000;
-        }
-
-        .llm-info {
-          display: flex;
-          flex-direction: column;
-          text-align: left;
-        }
-
-        .llm-name {
-          color: white;
-          font-size: 1rem;
-          font-weight: 500;
-        }
-
-        .llm-desc {
-          color: rgba(255, 255, 255, 0.4);
-          font-size: 0.75rem;
-          margin-top: 2px;
-        }
-
-        .llm-pill.connected .llm-name {
-          color: #000000;
-        }
-
-        .llm-pill.connected .llm-desc {
-          color: rgba(0, 0, 0, 0.6);
-        }
-
-        .connected-dot {
-          position: absolute;
-          right: 1.5rem;
-          width: 8px;
-          height: 8px;
-          background: #00ff88;
-          border-radius: 50%;
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles, Link, MessageSquare, FolderOpen } from 'lucide-react';
+import './style.css';
 
 function HomePage() {
   return (
