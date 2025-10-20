@@ -1,0 +1,178 @@
+.auth-page {
+    padding: var(--spacing-2xl);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.back-button {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 50px;
+    padding: 10px 20px;
+    color: var(--n-white);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.back-button:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 500px;
+    background: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 24px;
+    padding: var(--spacing-2xl);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: var(--spacing-2xl);
+}
+
+.auth-title {
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: var(--n-white);
+    margin-bottom: var(--spacing-sm);
+    letter-spacing: 3px;
+    font-family: var(--font-led);
+}
+
+.auth-subtitle {
+    color: var(--n-gray);
+    font-size: 0.875rem;
+}
+
+.auth-tabs {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.auth-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    color: var(--n-gray);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.auth-tab:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+    color: var(--n-white);
+}
+
+.auth-tab.active {
+    background: rgba(255, 255, 255, 0.05);
+    border-style: solid;
+    border-color: var(--n-white);
+    color: var(--n-white);
+}
+
+.auth-content {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.auth-description {
+    text-align: center;
+    color: var(--n-gray);
+    margin-bottom: var(--spacing-xl);
+    font-size: 0.875rem;
+}
+
+.auth-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.auth-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 50px;
+    color: var(--n-white);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: 0.875rem;
+}
+
+.auth-btn:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.api-input {
+    width: 100%;
+    padding: var(--spacing-md);
+    background: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    color: var(--n-white);
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    outline: none;
+    transition: all var(--transition-fast);
+    margin-bottom: var(--spacing-md);
+}
+
+.api-input:focus {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.api-input::placeholder {
+    color: var(--n-gray);
+}
+
+.api-hint {
+    text-align: center;
+    color: var(--n-gray);
+    font-size: 0.75rem;
+}
+
+.connect-button {
+    width: 100%;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: transparent;
+    border: 1px solid var(--n-white);
+    border-radius: 50px;
+    color: var(--n-white);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: 0.875rem;
+    letter-spacing: 2px;
+}
+
+.connect-button:hover:not(.disabled) {
+    background: var(--n-white);
+    color: var(--n-black);
+}
+
+.connect-button.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    border-color: rgba(255, 255, 255, 0.3);
+}

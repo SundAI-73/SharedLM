@@ -1,0 +1,11 @@
+/* Global styles */
+@import './globals/variables.css';
+@import './globals/reset.css';
+@import './globals/typography.css';
+@import './globals/fonts.css';
+
+/* Shared components */
+@import './shared/buttons.css';
+@import './shared/cards.css';
+@import './shared/animations.css';
+@import './shared/layout.css';
