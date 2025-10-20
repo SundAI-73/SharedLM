@@ -1,0 +1,152 @@
+/* src/styles/globals.css */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--n-black);
+  color: var(--n-white);
+  font-family: var(--font-sans);
+  font-weight: 300;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+.nothing-app {
+  display: flex;
+  min-height: 100vh;
+  background: var(--n-black);
+  position: relative;
+}
+
+.nothing-main {
+  flex: 1;
+  margin-left: var(--sidebar-expanded);
+  /* Default to expanded width */
+  transition: margin-left var(--transition-smooth);
+  overflow-y: auto;
+  min-height: 100vh;
+}
+
+/* When sidebar is collapsed, adjust main content margin */
+.nothing-sidebar:not(.expanded)~.nothing-main {
+  margin-left: var(--sidebar-width);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--n-pure-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--n-medium-gray);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--n-light-gray);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--n-medium-gray) var(--n-pure-black);
+}
+
+/* Selection */
+::selection {
+  background: var(--n-white);
+  color: var(--n-black);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 1px solid var(--n-white);
+  outline-offset: 2px;
+}
+
+/* Custom Dropdown Styles - Nothing Phone Aesthetic */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--n-pure-black);
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  border: 1px solid var(--n-medium-gray);
+  border-radius: 12px;
+  color: var(--n-white);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  padding: 10px 36px 10px 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+select:hover {
+  border-color: var(--n-light-gray);
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+select:focus {
+  border-color: var(--n-white);
+  background-color: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Option styles */
+select option {
+  background: var(--n-pure-black);
+  color: var(--n-white);
+  padding: 8px;
+}
+
+select option:hover {
+  background: var(--n-dark-gray);
+}
+
+/* For better cross-browser consistency */
+select::-ms-expand {
+  display: none;
+}
+
+/* Custom styling for specific dropdowns */
+.model-dropdown {
+  min-width: 120px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Settings page selects */
+.setting-select {
+  background-color: var(--n-pure-black);
+  border: 1px solid var(--n-medium-gray);
+  border-radius: 8px;
+  padding: 8px 32px 8px 12px;
+  color: var(--n-white);
+  min-width: 150px;
+}

@@ -1,0 +1,36 @@
+/* Cards */
+.card-nothing {
+  background: var(--n-pure-black);
+  border: 1px solid var(--n-medium-gray);
+  border-radius: var(--card-radius);
+  padding: var(--spacing-lg);
+  transition: all var(--transition-smooth);
+}
+
+.card-nothing:hover {
+  border-color: var(--n-light-gray);
+  transform: translateY(-2px);
+}
+
+/* Inputs */
+.input-nothing {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--n-medium-gray);
+  padding: 12px 0;
+  color: var(--n-white);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 300;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.input-nothing:focus {
+  border-bottom-color: var(--n-white);
+}
+
+.input-nothing::placeholder {
+  color: var(--n-gray);
+}

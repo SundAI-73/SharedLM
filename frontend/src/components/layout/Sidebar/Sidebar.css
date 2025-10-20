@@ -1,0 +1,223 @@
+/* src/components/layout/Sidebar/Sidebar.css */
+
+.nothing-sidebar {
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--n-black);
+  border-right: 1px solid var(--n-dark-gray);
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-lg) var(--spacing-md);
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: var(--z-sticky);
+  transition: width var(--transition-smooth);
+}
+
+.nothing-sidebar.expanded {
+  width: var(--sidebar-expanded);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-2xl);
+  justify-content: center;
+}
+
+.nothing-sidebar.expanded .sidebar-header {
+  justify-content: flex-start;
+}
+
+.sidebar-logo-text {
+  font-family: var(--font-led);
+  font-size: 16px;
+  font-weight: 300;
+  letter-spacing: 2px;
+  color: var(--n-white);
+  opacity: 0.9;
+}
+
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid var(--n-medium-gray);
+  border-radius: 16px;
+  color: var(--n-white);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  width: 100%;
+  justify-content: center;
+}
+
+.nothing-sidebar.expanded .sidebar-item {
+  justify-content: flex-start;
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--n-light-gray);
+}
+
+.sidebar-item.active {
+  background: var(--n-white);
+  color: var(--n-black);
+  border-color: var(--n-white);
+}
+
+.sidebar-item-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.9;
+}
+
+.sidebar-item-label {
+  font-family: var(--font-led);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-lg);
+  margin-top: var(--spacing-lg);
+  border-top: 1px solid var(--n-dark-gray);
+}
+
+.sidebar-toggle {
+  position: absolute;
+  right: -16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--n-white);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all var(--transition-fast);
+  color: var(--n-black);
+}
+
+.sidebar-toggle:hover {
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* User Dropdown Styles - Add these at the end of the file */
+.user-dropdown-wrapper {
+  position: relative;
+}
+
+.user-trigger {
+  position: relative;
+}
+
+.sidebar-item-label {
+  font-family: var(--font-led);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex: 1;  /* Add this to make label take available space */
+}
+
+.dropdown-arrow {
+  margin-left: auto;
+  opacity: 0.6;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.user-trigger:hover .dropdown-arrow {
+  opacity: 1;
+}
+
+.user-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);  /* Position above the button */
+  left: 0;
+  right: 0;
+  background: var(--n-pure-black);
+  border: 1px solid var(--n-medium-gray);
+  border-radius: 12px;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
+  z-index: var(--z-dropdown);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  color: var(--n-white);
+  cursor: pointer;
+  width: 100%;
+  transition: all var(--transition-fast);
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-item.logout {
+  color: var(--n-red);
+  border-top: 1px solid var(--n-dark-gray);
+}
+
+.dropdown-item.logout:hover {
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.dropdown-item .led-text {
+  font-family: var(--font-led);
+  letter-spacing: 1.5px;
+  font-size: 0.75rem;
+}
+
+/* Hide dropdown in collapsed state */
+.nothing-sidebar:not(.expanded) .user-dropdown-menu {
+  display: none;
+}
