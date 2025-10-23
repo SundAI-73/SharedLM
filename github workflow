@@ -1,0 +1,109 @@
+# Git Workflow Guide
+
+## Branch Structure
+- `main` - Production (protected, no direct pushes)
+- `NWL` - Development branch (all PRs go here first)
+- `gagan`, `sachin`, `raghav` - Personal feature branches
+
+---
+
+## Initial Setup (One Time Only)
+```bash
+git clone <repo-url>
+cd <repo-name>
+git checkout -b <your-branch-name>  # e.g., gagan, sachin, raghav
+```
+
+---
+
+## Daily Commands
+
+### Start of Day
+```bash
+git checkout <your-branch>
+git fetch origin
+git merge origin/NWL
+```
+
+### End of Day
+```bash
+git add .
+git commit -m "descriptive message about what you did"
+git push origin <your-branch>
+```
+
+---
+
+## Creating a Pull Request
+
+### Before Creating PR
+```bash
+# 1. Sync with latest NWL
+git fetch origin
+git merge origin/NWL
+
+# 2. Resolve any conflicts if they appear
+
+# 3. Push your updated branch
+git push origin <your-branch>
+
+# 4. Go to GitHub and create PR: your-branch → NWL
+```
+
+### After Your PR is Merged
+```bash
+git checkout <your-branch>
+git fetch origin
+git merge origin/NWL
+```
+
+---
+
+## Troubleshooting
+
+### "Ahead/Behind" Issues
+This means NWL has changes you don't have:
+```bash
+git fetch origin
+git merge origin/NWL
+
+# If conflicts appear, resolve them, then:
+git add .
+git commit -m "merged latest from NWL"
+git push origin <your-branch>
+```
+
+### Merge Conflicts
+1. Git will mark conflicted files
+2. Open the files and look for `<<<<<<<`, `=======`, `>>>>>>>`
+3. Edit to keep the correct code
+4. Remove the conflict markers
+5. Save the file
+6. Run:
+```bash
+git add <file-name>
+git commit -m "resolved merge conflicts"
+git push origin <your-branch>
+```
+
+---
+
+## Quick Reference Card
+
+| When | Commands |
+|------|----------|
+| **Start work** | `git checkout <branch>` → `git fetch origin` → `git merge origin/NWL` |
+| **Save work** | `git add .` → `git commit -m "message"` → `git push origin <branch>` |
+| **Before PR** | `git merge origin/NWL` → `git push origin <branch>` → Create PR on GitHub |
+| **After PR merged** | `git fetch origin` → `git merge origin/NWL` |
+
+---
+
+## Important Rules
+
+✅ **Always sync with NWL before starting work**  
+✅ **Always sync with NWL before creating a PR**  
+✅ **Write clear commit messages**  
+✅ **Test your code before pushing**  
+❌ **Never push directly to main**  
+❌ **Never force push** (`git push -f`)

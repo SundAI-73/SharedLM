@@ -5,6 +5,10 @@
 .env.test.local
 .env.production.local
 
+# production
+/build
+/node_modules
+
 # Python
 backend/__pycache__/
 backend/*.pyc
