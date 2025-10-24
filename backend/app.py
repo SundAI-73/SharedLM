@@ -31,11 +31,10 @@ app = FastAPI(
 # Configure CORS for production and development
 allowed_origins = [
     # Production domains
-    "https://sharedlm-frontend.vercel.app",
-    "https://sharedlm.vercel.app",
+    "https://shared-lm.vercel.app",  # Your Vercel deployment
+    "https://shared-lm-*.vercel.app",  # Preview deployments
     "https://*.vercel.app",  # All Vercel preview deployments
-    # Add your custom domain when you have one
-    # "https://app.sharedlm.com",
+
     
     # Development
     "http://localhost:3000",
