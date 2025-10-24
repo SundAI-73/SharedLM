@@ -13,6 +13,5 @@
   },
   "github": {
     "silent": true
-  },
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- Frontend/"
+  }
 }
