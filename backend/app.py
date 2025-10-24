@@ -28,14 +28,40 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Configure CORS for production and development
+allowed_origins = [
+    # Production domains
+    "https://sharedlm-frontend.vercel.app",
+    "https://sharedlm.vercel.app",
+    "https://*.vercel.app",  # All Vercel preview deployments
+    # Add your custom domain when you have one
+    # "https://app.sharedlm.com",
+    
+    # Development
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+]
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "name": "SharedLM API",
+        "version": "1.0.0",
+        "status": "running",
+        "documentation": "/docs"
+    }
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -145,4 +171,5 @@ async def debug_memories(user_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

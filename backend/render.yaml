@@ -12,8 +12,8 @@ services:
       - key: MEM0_API_KEY
         sync: false
       - key: DEFAULT_MODEL_OPENAI
-        sync: false
+        value: gpt-4o-mini
       - key: DEFAULT_MODEL_ANTHROPIC
-        sync: false
+        value: claude-3-haiku-20240307
       - key: DEFAULT_TOP_K
-        sync: false
+        value: 5

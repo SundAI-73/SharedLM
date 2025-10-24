@@ -1,5 +1,4 @@
-// src/services/api.js
-
+// Use environment variable with fallback to localhost for development
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 class APIService {
@@ -88,5 +87,8 @@ class APIService {
     }
   }
 }
+
+// Log the API URL being used (helpful for debugging)
+console.log('API Base URL:', API_BASE_URL);
 
 export default new APIService();
