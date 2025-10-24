@@ -1,0 +1,31 @@
+/* src/styles/globals/fonts.css */
+
+/* Import LED Dot-Matrix Font - CORRECTED PATH */
+@font-face {
+  font-family: 'LED Dot-Matrix';
+  src: url('../../assets/fonts/LED Dot-Matrix 400.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Fallback for development server issues */
+@font-face {
+  font-family: 'LED Dot-Matrix';
+  src: url('/src/assets/fonts/LED Dot-Matrix 400.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: fallback;
+}
+
+.led-text {
+  font-family: 'LED Dot-Matrix', 'Courier New', monospace !important;
+  letter-spacing: 2px;
+  font-weight: 400;
+}
+
+.led-display {
+  font-family: 'LED Dot-Matrix', 'Courier New', monospace !important;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}

@@ -1,0 +1,41 @@
+/* Buttons */
+.btn-nothing {
+  background: transparent;
+  border: 1px solid var(--n-medium-gray);
+  border-radius: var(--button-radius);
+  padding: 12px 24px;
+  color: var(--n-white);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-nothing:hover {
+  border-color: var(--n-light-gray);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.btn-nothing.primary {
+  background: var(--n-white);
+  color: var(--n-black);
+  border: none;
+}
+
+.btn-nothing.primary:hover {
+  background: var(--n-off-white);
+}
+
+.btn-nothing.accent {
+  border-color: var(--n-red);
+  color: var(--n-red);
+}
+
+.btn-nothing.accent:hover {
+  background: var(--n-red-glow);
+  color: var(--n-white);
+}

@@ -1,0 +1,143 @@
+/* src/styles/shared/layout.css */
+
+/* Page Container - Core layout for all pages */
+.page-container {
+  padding: var(--spacing-2xl);
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: fadeInUp var(--transition-smooth);
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: var(--spacing-2xl);
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 200;
+  letter-spacing: 2px;
+  margin-bottom: var(--spacing-sm);
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+.page-subtitle {
+  color: var(--n-gray);
+  font-size: 1rem;
+  font-weight: 300;
+}
+
+/* Dot Matrix Component */
+.dot-matrix {
+  display: grid;
+  gap: var(--dot-spacing);
+  padding: var(--spacing-md);
+}
+
+.dot {
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: 50%;
+  background: var(--n-medium-gray);
+  transition: all var(--transition-fast);
+}
+
+.dot.active {
+  background: var(--n-white);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+/* Glass Effect */
+.glass {
+  background: rgba(255, 255, 255, 0.01);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Input Styles */
+.input-nothing {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--n-medium-gray);
+  padding: 12px 0;
+  color: var(--n-white);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 300;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.input-nothing:focus {
+  border-bottom-color: var(--n-white);
+}
+
+.input-nothing::placeholder {
+  color: var(--n-gray);
+}
+
+/* Typography Utilities */
+.text-mono {
+  font-family: var(--font-led);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.text-display {
+  font-size: 3rem;
+  font-weight: 200;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+}
+
+.text-led {
+  font-family: var(--font-led);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.text-heading-1 {
+  font-size: 2rem;
+  font-weight: 300;
+  line-height: 1.3;
+  letter-spacing: -0.3px;
+}
+
+.text-heading-2 {
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.text-heading-3 {
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.text-body {
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.6;
+}
+
+.text-small {
+  font-size: 0.875rem;
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.text-caption {
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.5px;
+}
+
+.text-uppercase {
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
