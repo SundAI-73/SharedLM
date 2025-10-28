@@ -8,14 +8,16 @@ class Settings(BaseSettings):
     mem0_org_id: Optional[str] = None
     mem0_project_id: Optional[str] = None
     
-    # LLM API Keys
-    openai_api_key: str
-    anthropic_api_key: str
+    # LLM API Keys (all optional now)
+    openai_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+    mistral_api_key: Optional[str] = None  # Optional Mistral key
     
     # Configuration
     default_top_k: int = 5
     default_model_openai: str = "gpt-4o-mini"
     default_model_anthropic: str = "claude-3-5-sonnet-latest"
+    default_model_mistral: str = "mistral-tiny"
     
     class Config:
         env_file = ".env"

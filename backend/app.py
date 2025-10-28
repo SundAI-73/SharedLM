@@ -73,7 +73,7 @@ async def health_check():
 async def get_models():
     """Get available models and defaults"""
     return ModelsResponse(
-        available_models=["openai", "anthropic"],
+        available_models=["mistral", "openai", "anthropic"],
         default_openai=settings.default_model_openai,
         default_anthropic=settings.default_model_anthropic
     )
