@@ -1,127 +1,130 @@
-// src/components/layout/Sidebar/Sidebar.jsx
-import React, { useState } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+// Frontend/src/components/layout/Sidebar/Sidebar.jsx
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Layers,
-  MessageSquare,
   FolderOpen,
   Clock,
-  User,
-  ChevronLeft,
-  ChevronDown,
+  BarChart3,
   Settings,
-  BarChart3,  // Add this import
-  Store,       // Add this import
-  LogOut       // Add this import
+  MessageSquare,
+  Plus,
+  PanelLeftClose,
+  PanelLeft
 } from 'lucide-react';
-import DotMatrix from '../../common/DotMatrix/DotMatrix';
+import logo from '../../../assets/images/logo main.svg';
 import './Sidebar.css';
 
 const NothingSidebar = () => {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);  // Add this state
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Update main content margin when sidebar collapses
+  useEffect(() => {
+    const mainElement = document.querySelector('.nothing-main');
+    if (mainElement) {
+      if (isCollapsed) {
+        mainElement.style.marginLeft = '80px';
+      } else {
+        mainElement.style.marginLeft = '280px';
+      }
+    }
+  }, [isCollapsed]);
 
   const menuItems = [
-    { id: 'integrations', path: '/integrations', icon: <Layers size={20} strokeWidth={1.5} />, label: 'INTEGRATIONS' },
-    { id: 'chat', path: '/chat', icon: <MessageSquare size={20} strokeWidth={1.5} />, label: 'NEW CHAT' },
-    { id: 'projects', path: '/projects', icon: <FolderOpen size={20} strokeWidth={1.5} />, label: 'PROJECTS' },
-    { id: 'history', path: '/history', icon: <Clock size={20} strokeWidth={1.5} />, label: 'HISTORY' },
-    { id: 'analytics', path: '/analytics', icon: <BarChart3 size={20} strokeWidth={1.5} />, label: 'ANALYTICS' },
+    { 
+      id: 'integrations', 
+      path: '/integrations', 
+      label: 'INTEGRATIONS', 
+      icon: <Layers size={18} strokeWidth={1.5} />
+    },
+    { 
+      id: 'projects', 
+      path: '/projects', 
+      label: 'PROJECTS',
+      icon: <FolderOpen size={18} strokeWidth={1.5} />
+    },
+    { 
+      id: 'history', 
+      path: '/history', 
+      label: 'HISTORY',
+      icon: <Clock size={18} strokeWidth={1.5} />
+    },
+    { 
+      id: 'analytics', 
+      path: '/analytics', 
+      label: 'ANALYTICS',
+      icon: <BarChart3 size={18} strokeWidth={1.5} />
+    },
+    { 
+      id: 'settings', 
+      path: '/settings', 
+      label: 'SETTINGS',
+      icon: <Settings size={18} strokeWidth={1.5} />
+    },
   ];
 
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = '/';
+  const handleNewChat = () => {
+    navigate('/chat');
   };
 
-  const handleStore = () => {
-    window.location.href = '/store';  // Or open modal/external link
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed);
   };
 
   return (
-    <aside className={`nothing-sidebar ${isExpanded ? 'expanded' : ''}`}>
-      <div className="sidebar-header">
-        <DotMatrix size={5} text="S" />
-        {isExpanded && (
-          <span className="sidebar-logo-text led-text">SHARED</span>
-        )}
+    <aside className={`nothing-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+      {/* BOX 1: Logo Box - Separate container for logo */}
+      <div className="logo-box">
+        <div className="sidebar-logo">
+          <img src={logo} alt="Shared LM Logo" className="logo-image" />
+        </div>
+        {!isCollapsed && <span className="sidebar-logo-text">SHARED LM</span>}
+        <button className="sidebar-toggle" onClick={toggleSidebar} aria-label="Toggle sidebar">
+          {isCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
+        </button>
       </div>
 
-      <nav className="sidebar-nav">
-        {menuItems.map(item => (
-          <Link
-            key={item.id}
-            to={item.path}
-            className={`sidebar-item ${location.pathname === item.path ? 'active' : ''}`}
-          >
-            <span className="sidebar-item-icon">{item.icon}</span>
-            {isExpanded && (
-              <span className="sidebar-item-label led-text">{item.label}</span>
-            )}
-          </Link>
-        ))}
-      </nav>
+      {/* BOX 2: Navigation Box - Contains all menu items AND New Chat button */}
+      <div className="navigation-box">
+        {/* Navigation Items */}
+        <div className="nav-items-container">
+          {menuItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => navigate(item.path)}
+              className={`sidebar-item ${location.pathname === item.path ? 'active' : ''}`}
+              title={isCollapsed ? item.label : ''}
+            >
+              <span className="sidebar-item-icon">{item.icon}</span>
+              {!isCollapsed && <span className="sidebar-item-label">{item.label}</span>}
+              {/* Show indicator dot only on active page */}
+              {location.pathname === item.path && <span className="indicator-dot"></span>}
+            </button>
+          ))}
+        </div>
 
-      <div className="sidebar-footer">
-        {/* Settings Link */}
-        <Link
-          to="/settings"
-          className={`sidebar-item ${location.pathname === '/settings' ? 'active' : ''}`}
+        {/* Spacer inside the box */}
+        <div className="box-spacer"></div>
+
+        {/* NEW CHAT Button */}
+        <button
+          onClick={handleNewChat}
+          className={`sidebar-item new-chat-button ${location.pathname === '/chat' ? 'active-chat' : ''}`}
+          title={isCollapsed ? 'NEW CHAT' : ''}
         >
           <span className="sidebar-item-icon">
-            <Settings size={20} strokeWidth={1.5} />
+            <MessageSquare size={18} strokeWidth={1.5} />
           </span>
-          {isExpanded && <span className="sidebar-item-label led-text">SETTINGS</span>}
-        </Link>
-
-        {/* User Dropdown */}
-        <div className="user-dropdown-wrapper">
-          <button
-            className="sidebar-item user-trigger"
-            onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-          >
-            <span className="sidebar-item-icon">
-              <User size={20} strokeWidth={1.5} />
-            </span>
-            {isExpanded && (
-              <>
-                <span className="sidebar-item-label led-text">USER</span>
-                <ChevronDown
-                  size={16}
-                  className={`dropdown-arrow ${userDropdownOpen ? 'open' : ''}`}
-                />
-              </>
-            )}
-          </button>
-
-          {userDropdownOpen && isExpanded && (
-            <div className="user-dropdown-menu">
-              <button className="dropdown-item" onClick={handleStore}>
-                <Store size={16} />
-                <span className="led-text">STORE</span>
-              </button>
-              <button className="dropdown-item logout" onClick={handleLogout}>
-                <LogOut size={16} />
-                <span className="led-text">LOGOUT</span>
-              </button>
+          {!isCollapsed && <span className="sidebar-item-label">NEW CHAT</span>}
+          {!isCollapsed && (
+            <div className="plus-icon-container">
+              <Plus size={16} strokeWidth={2} />
             </div>
           )}
-        </div>
+        </button>
       </div>
-
-      <button
-        className="sidebar-toggle"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <ChevronLeft
-          size={16}
-          style={{
-            transform: isExpanded ? 'rotate(0deg)' : 'rotate(180deg)',
-            transition: 'transform 0.3s ease'
-          }}
-        />
-      </button>
     </aside>
   );
 };

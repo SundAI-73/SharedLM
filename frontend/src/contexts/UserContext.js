@@ -23,7 +23,7 @@ export const UserProvider = ({ children }) => {
   };
 
   const [userId, setUserId] = useState(getOrCreateUserId());
-  const [currentModel, setCurrentModel] = useState('openai');
+  const [currentModel, setCurrentModel] = useState('mistral');
   const [connectedModels, setConnectedModels] = useState({
     openai: false,
     anthropic: false
