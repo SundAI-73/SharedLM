@@ -1,6 +1,3 @@
-/* src/styles/globals/fonts.css */
-
-/* Import LED Dot-Matrix Font - CORRECTED PATH */
 @font-face {
   font-family: 'LED Dot-Matrix';
   src: url('../../assets/fonts/LED Dot-Matrix 400.ttf') format('truetype');

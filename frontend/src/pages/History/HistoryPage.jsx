@@ -49,7 +49,7 @@ function HistoryPage() {
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
+              className="input-base input-with-icon search-input"
             />
           </div>
 
@@ -58,7 +58,7 @@ function HistoryPage() {
             <select
               value={selectedProject}
               onChange={(e) => setSelectedProject(e.target.value)}
-              className="filter-select"
+              className="select-base select-with-icon filter-select"
             >
               {projects.map(project => (
                 <option key={project} value={project}>
@@ -70,11 +70,11 @@ function HistoryPage() {
         </div>
 
         {/* Chat List */}
-        <div className="chat-list">
+        <div className="list-layout chat-list">
           {filteredChats.map(chat => (
             <button
               key={chat.id}
-              className="chat-item"
+              className="list-item list-item-clickable chat-item"
               onClick={() => handleChatClick(chat.id)}
             >
               <MessageSquare size={20} className="chat-icon" />

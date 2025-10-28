@@ -1,4 +1,3 @@
-// Frontend/src/pages/Projects/ProjectsPage.jsx
 import React, { useState } from 'react';
 import { FolderOpen, Clock, MoreVertical, Search, Plus } from 'lucide-react';
 import './Projects.css';
@@ -6,7 +5,7 @@ import './Projects.css';
 function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const projects = [
     { id: 1, name: 'Website Redesign', type: 'UI/UX', chats: 12, lastActive: '2 hours ago', active: true },
     { id: 2, name: 'Marketing Campaign', type: 'Content', chats: 8, lastActive: '1 day ago', active: false },
@@ -55,41 +54,41 @@ function ProjectsPage() {
               placeholder="Search projects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
+              className="input-base input-with-icon search-input"
             />
           </div>
 
-          <button onClick={handleNewProject} className="action-button primary">
+          <button onClick={handleNewProject} className="button-base button-primary action-button">
             <Plus size={16} />
             NEW PROJECT
           </button>
         </div>
 
         {/* Projects Grid */}
-        <div className="items-grid">
+        <div className="grid-3 items-grid">
           {filteredProjects.map(project => (
-            <div 
-              key={project.id} 
-              className="item-card"
+            <div
+              key={project.id}
+              className="card-base card-clickable item-card"
               onClick={() => handleProjectClick(project.id)}
             >
               {project.active && <div className="active-indicator"></div>}
-              
+
               <div className="card-header">
                 <FolderOpen size={24} className="card-icon" />
-                <button 
+                <button
                   className="more-button"
                   onClick={(e) => handleMoreClick(e, project.id)}
                 >
                   <MoreVertical size={16} />
                 </button>
               </div>
-              
+
               <div className="card-content">
                 <h3 className="card-title">{project.name}</h3>
                 <p className="card-type">{project.type}</p>
               </div>
-              
+
               <div className="card-stats">
                 <span className="stat-item">{project.chats} chats</span>
                 <span className="stat-divider">•</span>

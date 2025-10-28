@@ -1,4 +1,3 @@
-/* src/styles/globals/reset.css */
 * {
   margin: 0;
   padding: 0;
@@ -60,8 +59,7 @@ body {
   transition: margin-left var(--transition-smooth);
   overflow-y: auto;
   min-height: 100vh;
-  /* Remove any background here - inherit from .nothing-app */
-  background: transparent;
+    background: transparent;
 }
 
 /* When sidebar is collapsed, adjust main content margin */

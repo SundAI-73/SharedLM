@@ -31,9 +31,7 @@ function SettingsPage() {
   ];
 
   const handleLogout = () => {
-    // Clear localStorage
     localStorage.removeItem('sharedlm_user_id');
-    // Redirect to login or home
     window.location.href = '/';
   };
 
@@ -61,7 +59,7 @@ function SettingsPage() {
             ))}
           </div>
 
-          {/* Settings Content - Fixed Height Container */}
+          {/* Settings Content */}
           <div className="settings-content-wrapper">
             <div className="settings-content">
               {activeTab === 'general' && (
@@ -176,7 +174,7 @@ function SettingsPage() {
                       <label className="setting-label">Change Password</label>
                       <p className="setting-description">Update your account password</p>
                     </div>
-                    <button className="secondary-button">CHANGE PASSWORD</button>
+                    <button className="button-base button-secondary">CHANGE PASSWORD</button>
                   </div>
 
                   <div className="setting-item no-divider">
@@ -193,11 +191,11 @@ function SettingsPage() {
                   <div className="danger-zone">
                     <h4 className="danger-title">DANGER ZONE</h4>
                     <div className="action-buttons">
-                      <button className="danger-button" onClick={handleLogout}>
+                      <button className="button-base button-danger" onClick={handleLogout}>
                         <LogOut size={14} style={{ marginRight: '8px' }} />
                         LOGOUT
                       </button>
-                      <button className="danger-button">DELETE ACCOUNT</button>
+                      <button className="button-base button-danger">DELETE ACCOUNT</button>
                     </div>
                   </div>
                 </div>
@@ -241,9 +239,9 @@ function SettingsPage() {
                   </div>
 
                   <div className="action-buttons">
-                    <button className="secondary-button">EXPORT DATA</button>
-                    <button className="secondary-button">DOWNLOAD CHATS</button>
-                    <button className="danger-button">CLEAR ALL DATA</button>
+                    <button className="button-base button-secondary">EXPORT DATA</button>
+                    <button className="button-base button-secondary">DOWNLOAD CHATS</button>
+                    <button className="button-base button-danger">CLEAR ALL DATA</button>
                   </div>
                 </div>
               )}
@@ -275,7 +273,7 @@ function SettingsPage() {
                         <li>Priority support</li>
                         <li>Advanced features</li>
                       </ul>
-                      <button className="primary-button">UPGRADE</button>
+                      <button className="button-base button-primary">UPGRADE</button>
                     </div>
 
                     <div className="pricing-card">
@@ -287,7 +285,7 @@ function SettingsPage() {
                         <li>SLA guarantee</li>
                         <li>Dedicated support</li>
                       </ul>
-                      <button className="secondary-button">CONTACT SALES</button>
+                      <button className="button-base button-secondary">CONTACT SALES</button>
                     </div>
                   </div>
 
@@ -296,7 +294,7 @@ function SettingsPage() {
                       <label className="setting-label">Payment Method</label>
                       <p className="setting-description">Manage your payment information</p>
                     </div>
-                    <button className="secondary-button">MANAGE PAYMENT</button>
+                    <button className="button-base button-secondary">MANAGE PAYMENT</button>
                   </div>
                 </div>
               )}
@@ -338,8 +336,8 @@ function SettingsPage() {
                   </div>
 
                   <div className="action-buttons">
-                    <button className="primary-button">SAVE API KEYS</button>
-                    <button className="secondary-button">TEST CONNECTION</button>
+                    <button className="button-base button-primary">SAVE API KEYS</button>
+                    <button className="button-base button-secondary">TEST CONNECTION</button>
                   </div>
                 </div>
               )}
@@ -366,7 +364,7 @@ function SettingsPage() {
                       <label className="setting-label">Chat History</label>
                       <p className="setting-description">1.2 GB • 247 conversations</p>
                     </div>
-                    <button className="secondary-button">MANAGE</button>
+                    <button className="button-base button-secondary">MANAGE</button>
                   </div>
 
                   <div className="setting-item">
@@ -374,7 +372,7 @@ function SettingsPage() {
                       <label className="setting-label">Memory Cache</label>
                       <p className="setting-description">800 MB • Cross-session memories</p>
                     </div>
-                    <button className="secondary-button">CLEAR CACHE</button>
+                    <button className="button-base button-secondary">CLEAR CACHE</button>
                   </div>
 
                   <div className="setting-item no-divider">
@@ -382,13 +380,13 @@ function SettingsPage() {
                       <label className="setting-label">Project Files</label>
                       <p className="setting-description">400 MB • 12 projects</p>
                     </div>
-                    <button className="secondary-button">VIEW FILES</button>
+                    <button className="button-base button-secondary">VIEW FILES</button>
                   </div>
 
                   <div className="action-buttons">
-                    <button className="primary-button">EXPORT ALL DATA</button>
-                    <button className="secondary-button">IMPORT DATA</button>
-                    <button className="danger-button">DELETE ALL DATA</button>
+                    <button className="button-base button-primary">EXPORT ALL DATA</button>
+                    <button className="button-base button-secondary">IMPORT DATA</button>
+                    <button className="button-base button-danger">DELETE ALL DATA</button>
                   </div>
                 </div>
               )}

@@ -1,111 +1,13 @@
-/* Frontend/src/pages/Integrations/Integrations.css */
-
-.integrations-page-container {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px;
-  animation: fadeInUp var(--transition-smooth);
-  position: relative;
-}
-
-/* Background decoration elements - subtle */
-.integrations-page-container::before {
-  content: '';
-  position: absolute;
-  top: 15%;
-  left: 10%;
-  width: 250px;
-  height: 250px;
-  background: radial-gradient(circle, rgba(185, 69, 57, 0.06) 0%, transparent 70%);
-  border-radius: 50%;
-  filter: blur(60px);
-  animation: float 25s ease-in-out infinite;
-}
-
-.integrations-page-container::after {
-  content: '';
-  position: absolute;
-  bottom: 15%;
-  right: 10%;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(185, 69, 57, 0.05) 0%, transparent 70%);
-  border-radius: 50%;
-  filter: blur(80px);
-  animation: float 30s ease-in-out infinite reverse;
-}
-
-/* Main content container */
-.integrations-content {
-  background: #0A0A0A;
-  border-radius: 24px;
-  padding: 60px;
-  width: 100%;
-  max-width: 1100px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  position: relative;
-  z-index: 1;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-/* Header */
-.page-header {
-  text-align: center;
-  margin-bottom: 50px;
-  position: relative;
-}
-
-.page-title {
-  font-size: 2.8rem;
-  font-weight: 400;
-  color: #FFFFFF;
-  letter-spacing: 8px;
-  margin: 0 0 12px 0;
-  text-transform: uppercase;
-  font-family: 'Courier New', monospace;
-  opacity: 0.95;
-}
-
-.page-subtitle {
-  font-size: 0.95rem;
-  color: #888888;
-  letter-spacing: 2px;
-  margin: 0;
-  opacity: 0.8;
-  font-weight: 300;
-}
-
-/* Grid Layout */
 .integrations-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
   margin-bottom: 50px;
 }
 
-/* Integration Card */
 .integration-card {
-  background: #141414;
-  border: 1px solid #1F1F1F;
-  border-radius: 16px;
-  padding: 28px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
   min-height: 100px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-}
-
-.integration-card:hover:not(:disabled) {
-  background: #1A1A1A;
-  border-color: #2A2A2A;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 .integration-card:disabled {
@@ -117,7 +19,6 @@
   border: 1px solid rgba(185, 69, 57, 0.5);
 }
 
-/* Content Layout */
 .integration-content {
   display: flex;
   align-items: center;
@@ -125,7 +26,6 @@
   width: 100%;
 }
 
-/* Icon Placeholder */
 .integration-icon-placeholder {
   width: 36px;
   height: 36px;
@@ -144,14 +44,12 @@
   border-color: #2A2A2A;
 }
 
-/* Text Container */
 .integration-text {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-/* Integration Name */
 .integration-name {
   font-size: 0.95rem;
   font-weight: 400;
@@ -168,7 +66,6 @@
   color: #FFFFFF;
 }
 
-/* Provider Info */
 .integration-provider {
   font-size: 0.7rem;
   color: #555555;
@@ -178,20 +75,6 @@
   font-weight: 300;
 }
 
-/* Connected Indicator */
-.connected-indicator {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 6px;
-  height: 6px;
-  background: #B94539;
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
-  box-shadow: 0 0 10px rgba(185, 69, 57, 0.6);
-}
-
-/* Coming Soon Badge */
 .coming-soon-badge {
   position: absolute;
   top: 8px;
@@ -206,7 +89,6 @@
   font-weight: 500;
 }
 
-/* Custom Section */
 .custom-section {
   text-align: center;
   margin-top: 45px;
@@ -225,128 +107,26 @@
   font-weight: 300;
 }
 
-/* Custom Integration Button */
 .custom-integration-btn {
-  background: #B94539;
-  color: #FFFFFF;
-  border: none;
-  border-radius: 12px;
-  padding: 14px 32px;
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
-  font-weight: 400;
-  letter-spacing: 1.8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-  position: relative;
-  overflow: hidden;
-}
-
-.custom-integration-btn:hover {
-  background: #C54A3E;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(185, 69, 57, 0.3);
-}
-
-/* Animations */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
   }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.2);
-  }
-}
-
-@keyframes float {
-  0%, 100% { 
-    transform: translateY(0) translateX(0); 
-  }
-  25% { 
-    transform: translateY(-15px) translateX(10px); 
-  }
-  50% { 
-    transform: translateY(10px) translateX(-10px); 
-  }
-  75% { 
-    transform: translateY(-8px) translateX(5px); 
-  }
-}
-
-/* Responsive Design */
-@media (max-width: 1024px) {
-  .integrations-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
-  }
-  
-  .integrations-content {
-    padding: 45px;
-    max-width: 900px;
-  }
-  
-  .page-title {
-    font-size: 2.4rem;
-  }
-}
 
 @media (max-width: 768px) {
-  .integrations-page-container {
-    padding: 25px;
-  }
-  
-  .integrations-content {
-    padding: 35px 25px;
-  }
-  
-  .integrations-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-  }
-  
-  .page-title {
-    font-size: 2rem;
-    letter-spacing: 4px;
-  }
-  
   .integration-card {
     padding: 22px;
   }
 }
 
 @media (max-width: 480px) {
-  .integrations-page-container {
-    padding: 20px;
-  }
-  
-  .integrations-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  
-  .integrations-content {
-    padding: 25px 20px;
-    border-radius: 16px;
-  }
-  
-  .page-title {
-    font-size: 1.6rem;
-    letter-spacing: 2px;
-  }
-  
   .integration-card {
     padding: 20px;
     min-height: 80px;
   }
-  
+
   .integration-icon-placeholder {
     width: 32px;
     height: 32px;
   }
-  
+
   .integration-name {
     font-size: 0.9rem;
   }
