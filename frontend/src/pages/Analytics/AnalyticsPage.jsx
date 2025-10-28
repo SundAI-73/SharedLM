@@ -1,11 +1,10 @@
-// Frontend/src/pages/Analytics/AnalyticsPage.jsx
 import React, { useState } from 'react';
 import { TrendingUp, Activity, PieChart, Calendar } from 'lucide-react';
 import './Analytics.css';
 
 function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('7d');
-  
+
   const stats = [
     { label: 'TOTAL CHATS', value: '247', change: '+12%' },
     { label: 'TOKENS USED', value: '45.2K', change: '+23%' },
@@ -38,7 +37,7 @@ function AnalyticsPage() {
         {/* Time Range Selector */}
         <div className="time-range-selector">
           {['24h', '7d', '30d', 'all'].map(range => (
-            <button 
+            <button
               key={range}
               onClick={() => setTimeRange(range)}
               className={`time-range-btn ${timeRange === range ? 'active' : ''}`}
@@ -49,9 +48,9 @@ function AnalyticsPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="stats-grid">
+        <div className="grid-4 stats-grid">
           {stats.map((stat, idx) => (
-            <div key={idx} className="stat-card">
+            <div key={idx} className="card-base stat-card">
               <div className="stat-label">{stat.label}</div>
               <div className="stat-value">{stat.value}</div>
               <div className={`stat-change ${stat.change.startsWith('+') ? 'positive' : stat.change.startsWith('-') ? 'negative' : 'neutral'}`}>
@@ -62,7 +61,7 @@ function AnalyticsPage() {
         </div>
 
         {/* Charts Section */}
-        <div className="charts-section">
+        <div className="grid-2 charts-section">
           {/* Usage Chart */}
           <div className="chart-card">
             <div className="chart-header">
@@ -71,7 +70,7 @@ function AnalyticsPage() {
             </div>
             <div className="bar-chart">
               {[65, 45, 80, 55, 72, 88, 60].map((height, idx) => (
-                <div 
+                <div
                   key={idx}
                   className="bar"
                   style={{ height: `${height}%` }}
@@ -81,7 +80,7 @@ function AnalyticsPage() {
           </div>
 
           {/* Model Distribution */}
-          <div className="chart-card">
+          <div className="card-base chart-card">
             <div className="chart-header">
               <h3 className="chart-title">MODEL DISTRIBUTION</h3>
               <PieChart size={18} className="chart-icon" />
@@ -90,8 +89,8 @@ function AnalyticsPage() {
               {modelDistribution.map((model, idx) => (
                 <div key={idx} className="distribution-item">
                   <div className="distribution-bar">
-                    <div 
-                      className="distribution-fill" 
+                    <div
+                      className="distribution-fill"
                       style={{ width: `${model.value}%`, background: model.color }}
                     />
                   </div>
@@ -110,7 +109,7 @@ function AnalyticsPage() {
           <h3 className="section-title">RECENT ACTIVITY</h3>
           <div className="activity-list">
             {recentActivity.map((activity, idx) => (
-              <div key={idx} className="activity-item">
+              <div key={idx} className="list-item activity-item">
                 <div className="activity-icon">{activity.icon}</div>
                 <span className="activity-text">{activity.text}</span>
                 <span className="activity-time">{activity.time}</span>

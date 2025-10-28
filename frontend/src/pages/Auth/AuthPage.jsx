@@ -1,4 +1,3 @@
-// src/pages/AuthPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Key, Github } from 'lucide-react';
@@ -23,7 +22,7 @@ function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
 
   return (
     <div className="auth-page">
-      <button 
+      <button
         className="back-button"
         onClick={() => navigate('/integrations')}
       >
@@ -60,7 +59,7 @@ function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
               <p className="auth-description">
                 Sign in with your account to continue
               </p>
-              
+
               <div className="auth-buttons">
                 <button className="auth-btn">
                   <span className="led-text">CONTINUE WITH GOOGLE</span>
@@ -76,7 +75,7 @@ function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
               <p className="auth-description">
                 Enter your API key to authenticate
               </p>
-              
+
               <input
                 type="password"
                 placeholder="sk-..."
@@ -84,7 +83,7 @@ function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
                 onChange={(e) => setApiKey(e.target.value)}
                 className="api-input"
               />
-              
+
               <p className="api-hint">
                 Your API key is encrypted and stored locally
               </p>
@@ -92,7 +91,7 @@ function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
           )}
         </div>
 
-        <button 
+        <button
           className={`connect-button ${authMethod === 'api' && !apiKey ? 'disabled' : ''}`}
           onClick={handleConnect}
           disabled={authMethod === 'api' && !apiKey}

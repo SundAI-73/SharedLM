@@ -1,4 +1,4 @@
-// Frontend/src/components/layout/Sidebar/Sidebar.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -33,33 +33,33 @@ const NothingSidebar = () => {
   }, [isCollapsed]);
 
   const menuItems = [
-    { 
-      id: 'integrations', 
-      path: '/integrations', 
-      label: 'INTEGRATIONS', 
+    {
+      id: 'integrations',
+      path: '/integrations',
+      label: 'INTEGRATIONS',
       icon: <Layers size={18} strokeWidth={1.5} />
     },
-    { 
-      id: 'projects', 
-      path: '/projects', 
+    {
+      id: 'projects',
+      path: '/projects',
       label: 'PROJECTS',
       icon: <FolderOpen size={18} strokeWidth={1.5} />
     },
-    { 
-      id: 'history', 
-      path: '/history', 
+    {
+      id: 'history',
+      path: '/history',
       label: 'HISTORY',
       icon: <Clock size={18} strokeWidth={1.5} />
     },
-    { 
-      id: 'analytics', 
-      path: '/analytics', 
+    {
+      id: 'analytics',
+      path: '/analytics',
       label: 'ANALYTICS',
       icon: <BarChart3 size={18} strokeWidth={1.5} />
     },
-    { 
-      id: 'settings', 
-      path: '/settings', 
+    {
+      id: 'settings',
+      path: '/settings',
       label: 'SETTINGS',
       icon: <Settings size={18} strokeWidth={1.5} />
     },

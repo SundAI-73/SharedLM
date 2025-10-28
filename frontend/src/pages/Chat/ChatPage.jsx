@@ -1,4 +1,3 @@
-// src/pages/Chat/ChatPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Send, Bot, User, Star, Edit3, FolderPlus, Trash2, MoreVertical, Paperclip } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
@@ -183,7 +182,7 @@ function ChatPage({ backendStatus }) {
                 <ArrowLeft size={20} />
               </button>
             )}
-            
+
             {/* Chat Title with Options */}
             <div className="chat-title-section" ref={optionsRef}>
               {isEditingTitle ? (
@@ -206,7 +205,7 @@ function ChatPage({ backendStatus }) {
                   <h1 className="chat-title-display" onClick={() => setShowOptions(!showOptions)}>
                     {chatTitle}
                   </h1>
-                  <button 
+                  <button
                     className="chat-options-btn"
                     onClick={() => setShowOptions(!showOptions)}
                   >
@@ -214,7 +213,7 @@ function ChatPage({ backendStatus }) {
                   </button>
                 </>
               )}
-              
+
               {/* Options Menu */}
               {showOptions && !isEditingTitle && (
                 <div className="chat-options-menu">
@@ -237,15 +236,15 @@ function ChatPage({ backendStatus }) {
                 </div>
               )}
             </div>
-            
+
             {/* Center Logo */}
             <img src={logo} alt="SharedLM" className="chat-top-bar-logo" />
-            
+
             {/* Model Dropdown */}
             <CustomDropdown
               value={currentModel}
               onChange={setCurrentModel}
-              options={modelOptions.filter(opt => 
+              options={modelOptions.filter(opt =>
                 availableModels.includes(opt.value) || opt.value === 'mistral'
               )}
               className="chat-model-dropdown-custom"
@@ -259,7 +258,7 @@ function ChatPage({ backendStatus }) {
             <CustomDropdown
               value={currentModel}
               onChange={setCurrentModel}
-              options={modelOptions.filter(opt => 
+              options={modelOptions.filter(opt =>
                 availableModels.includes(opt.value) || opt.value === 'mistral'
               )}
               className="chat-model-dropdown-custom"
@@ -300,7 +299,7 @@ function ChatPage({ backendStatus }) {
                   </div>
                 </div>
               ))}
-              
+
               {loading && (
                 <div className="chat-message assistant">
                   <div className="message-avatar">
@@ -326,7 +325,7 @@ function ChatPage({ backendStatus }) {
             <button className="chat-attach-btn">
               <Paperclip size={18} />
             </button>
-            
+
             <input
               type="text"
               value={input}
@@ -341,7 +340,7 @@ function ChatPage({ backendStatus }) {
               disabled={loading}
               autoFocus
             />
-            
+
             <button
               onClick={handleSend}
               disabled={!input.trim() || loading}
