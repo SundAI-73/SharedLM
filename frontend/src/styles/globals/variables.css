@@ -1,18 +1,18 @@
 :root {
   /* Core Colors */
   --n-black: #000000;
-  --n-pure-black: #0a0a0a;
+  --n-pure-black: #101010;
   --n-dark-gray: #1a1a1a;
-  --n-medium-gray: #2a2a2a;
+  --n-medium-gray: #2A2A2A;
   --n-light-gray: #3a3a3a;
   --n-gray: #666666;
   --n-light: #999999;
-  --n-white: #ffffff;
+  --n-white: #FFFFFF;
   --n-off-white: #f5f5f5;
 
   /* Accent Colors */
-  --n-red: #ff3b30;
-  --n-red-glow: rgba(255, 59, 48, 0.3);
+  --n-red: #972721;
+  --n-red-glow: rgba(151, 39, 33, 0.3);
   --n-green: #00ff88;
   --n-blue: #007aff;
 
@@ -23,6 +23,7 @@
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
 
   /* Typography */
   --font-led: 'Courier New', monospace;

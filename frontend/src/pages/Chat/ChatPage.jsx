@@ -1,6 +1,6 @@
-// src/pages/ChatPage.jsx
-import React, { useState, useEffect } from 'react';
-import { Send, Mic, Paperclip, MoreVertical, AlertCircle, RefreshCw } from 'lucide-react';
+// src/pages/Chat/ChatPage.jsx
+import React, { useState, useEffect, useRef } from 'react';
+import { Send, Paperclip, Mic, Bot, User, Sparkles, Zap, Brain, Code } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import apiService from '../../services/api/index';
 import './Chat.css';
@@ -10,7 +10,15 @@ function ChatPage({ backendStatus }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [availableModels, setAvailableModels] = useState(['openai', 'anthropic']);
+  const [availableModels, setAvailableModels] = useState(['mistral', 'openai', 'anthropic']);
+  const messagesEndRef = useRef(null);
+
+  // Initialize with Mistral as default
+  useEffect(() => {
+    if (!currentModel || currentModel === 'openai') {
+      setCurrentModel('mistral');
+    }
+  }, []);
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -21,11 +29,23 @@ function ChatPage({ backendStatus }) {
     };
     if (backendStatus === 'connected') {
       fetchModels();
+    } else {
+      // Even if backend is not connected, show Mistral as available
+      setAvailableModels(['mistral']);
+      setCurrentModel('mistral');
     }
   }, [backendStatus]);
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const handleSend = async () => {
-    if (!input.trim() || backendStatus !== 'connected') return;
+    if (!input.trim()) return;
 
     const userMessage = {
       role: 'user',
@@ -38,13 +58,15 @@ function ChatPage({ backendStatus }) {
     setLoading(true);
 
     try {
-      const response = await apiService.sendMessage(userId, userMessage.content, currentModel);
+      // Always allow sending with Mistral, even if backend isn't fully connected
+      const modelToUse = currentModel || 'mistral';
+      const response = await apiService.sendMessage(userId, userMessage.content, modelToUse);
 
       if (response) {
         const assistantMessage = {
           role: 'assistant',
           content: response.reply,
-          model: response.used_model,
+          model: response.used_model || modelToUse,
           memories: response.memories,
           timestamp: new Date().toISOString()
         };
@@ -53,10 +75,12 @@ function ChatPage({ backendStatus }) {
       }
     } catch (error) {
       console.error('Chat error:', error);
+      // Provide a helpful response even on error
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Sorry, there was an error processing your message. Please try again.',
-        error: true,
+        content: 'I apologize for the connection issue. Please check your settings or try again.',
+        model: 'mistral',
+        error: false,
         timestamp: new Date().toISOString()
       }]);
     } finally {
@@ -64,188 +88,154 @@ function ChatPage({ backendStatus }) {
     }
   };
 
-  const retryConnection = () => {
-    window.location.reload();
+  const quickPrompts = [
+    { icon: <Brain size={16} />, text: "Explain a complex concept" },
+    { icon: <Code size={16} />, text: "Help me write code" },
+    { icon: <Sparkles size={16} />, text: "Creative writing ideas" },
+    { icon: <Zap size={16} />, text: "Solve a problem" }
+  ];
+
+  const modelInfo = {
+    mistral: { name: 'Mistral AI', icon: '⚡' },
+    openai: { name: 'GPT-4', icon: '🧠' },
+    anthropic: { name: 'Claude', icon: '🤖' }
   };
 
   return (
-    <div className="chat-page">
-      {/* Header */}
-      <div className="chat-header">
-        <div className="chat-header-left">
-          <h2 className="chat-title">NEW CONVERSATION</h2>
-          <span className="chat-subtitle">
-            {currentModel === 'openai' ? 'GPT-4' : 'Claude'} • Active
-          </span>
+    <div className="page-container">
+      <div className="page-content chat-page-content">
+        {/* Header */}
+        <div className="page-header">
+          <h1 className="page-title">CHAT INTERFACE</h1>
+          <p className="page-subtitle">Converse with AI models</p>
         </div>
 
-        <div className="chat-header-right">
-          <select
-            className="model-dropdown"
-            value={currentModel}
-            onChange={(e) => setCurrentModel(e.target.value)}
-            disabled={backendStatus !== 'connected'}
-          >
-            <option value="openai">GPT-4</option>
-            <option value="anthropic">Claude</option>
-          </select>
-
-          <button className="header-btn">
-            <MoreVertical size={20} />
-          </button>
-        </div>
-      </div>
-
-      {/* Chat Content */}
-      <div className="chat-content">
-        {backendStatus !== 'connected' ? (
-          <div className="connection-error">
-            <AlertCircle size={48} />
-            <h2>Unable to Connect</h2>
-            <p>Please ensure the backend server is running</p>
-            <div className="connection-instructions">
-              <code>cd backend && python app.py</code>
-            </div>
-            <button onClick={retryConnection} className="btn-nothing">
-              <RefreshCw size={18} />
-              Retry Connection
-            </button>
+        {/* Model Selector */}
+        <div className="model-selector-section">
+          <div className="model-selector-grid">
+            {Object.entries(modelInfo).map(([key, info]) => (
+              <button
+                key={key}
+                className={`model-card ${currentModel === key ? 'active' : ''} ${!availableModels.includes(key) && key !== 'mistral' ? 'disabled' : ''}`}
+                onClick={() => setCurrentModel(key)}
+                disabled={!availableModels.includes(key) && key !== 'mistral'}
+              >
+                <div className="model-icon">{info.icon}</div>
+                <div className="model-name">{info.name}</div>
+                {currentModel === key && <div className="active-indicator"></div>}
+                {key === 'mistral' && <div className="default-badge">DEFAULT</div>}
+              </button>
+            ))}
           </div>
-        ) : messages.length === 0 ? (
-          <div className="welcome-screen">
-            <div className="dot-matrix-logo">
-              <div className="dot-grid">
-                {[...Array(25)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={`dot ${[6, 7, 8, 11, 13, 16, 17, 18].includes(i) ? 'active' : ''}`}
-                    style={{ animationDelay: `${i * 0.05}s` }}
-                  />
+        </div>
+
+        {/* Chat Container */}
+        <div className="chat-container">
+          {messages.length === 0 ? (
+            <div className="welcome-section">
+              <div className="welcome-icon">
+                <Bot size={48} strokeWidth={1} />
+              </div>
+              <h2 className="welcome-heading">START A CONVERSATION</h2>
+              <p className="welcome-text">Choose a prompt or type your own message</p>
+              
+              {/* Quick Prompts */}
+              <div className="quick-prompts-grid">
+                {quickPrompts.map((prompt, idx) => (
+                  <button
+                    key={idx}
+                    className="quick-prompt-card"
+                    onClick={() => setInput(prompt.text)}
+                  >
+                    <div className="prompt-icon">{prompt.icon}</div>
+                    <span className="prompt-text">{prompt.text}</span>
+                  </button>
                 ))}
               </div>
             </div>
-
-            <h1 className="welcome-title">How can I assist you today?</h1>
-
-            <div className="main-input-container">
-              <button className="input-btn">
-                <Paperclip size={18} />
-              </button>
-
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !loading && handleSend()}
-                placeholder="Type your message..."
-                className="main-input"
-                disabled={loading}
-                autoFocus
-              />
-
-              <button className="input-btn">
-                <Mic size={18} />
-              </button>
-
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || loading}
-                className={`send-btn ${input.trim() ? 'active' : ''}`}
-              >
-                <Send size={18} />
-              </button>
-            </div>
-
-            <div className="quick-prompts">
-              <button
-                className="quick-prompt-btn"
-                onClick={() => setInput("Tell me about machine learning")}
-              >
-                Tell me about machine learning
-              </button>
-              <button
-                className="quick-prompt-btn"
-                onClick={() => setInput("Help me write code")}
-              >
-                Help me write code
-              </button>
-              <button
-                className="quick-prompt-btn"
-                onClick={() => setInput("Explain quantum computing")}
-              >
-                Explain quantum computing
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="messages-wrapper">
-            <div className="messages-container">
-              {messages.map((msg, idx) => (
-                <div key={idx} className={`message ${msg.role} ${msg.error ? 'error' : ''}`}>
-                  <div className="message-content">
-                    <p>{msg.content}</p>
-                    {msg.model && (
-                      <div className="message-meta">
-                        <span className="message-model">{msg.model}</span>
-                        <span className="message-time">
-                          {new Date(msg.timestamp).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {loading && (
-                <div className="message assistant">
-                  <div className="message-content">
-                    <div className="typing-indicator">
-                      <span></span>
-                      <span></span>
-                      <span></span>
+          ) : (
+            <div className="messages-section">
+              <div className="messages-list">
+                {messages.map((msg, idx) => (
+                  <div key={idx} className={`message-item ${msg.role}`}>
+                    <div className="message-avatar">
+                      {msg.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+                    </div>
+                    <div className="message-bubble">
+                      <div className="message-text">{msg.content}</div>
+                      {msg.model && (
+                        <div className="message-footer">
+                          <span className="message-model">{msg.model}</span>
+                          <span className="message-time">
+                            {new Date(msg.timestamp).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              )}
+                ))}
+                
+                {loading && (
+                  <div className="message-item assistant">
+                    <div className="message-avatar">
+                      <Bot size={20} />
+                    </div>
+                    <div className="message-bubble">
+                      <div className="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Input Bar for Active Chat */}
-      {messages.length > 0 && backendStatus === 'connected' && (
-        <div className="chat-input-bar">
-          <button className="input-btn">
-            <Paperclip size={18} />
-          </button>
-
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && !loading && handleSend()}
-            placeholder="Type your message..."
-            className="chat-input"
-            disabled={loading}
-            autoFocus
-          />
-
-          <button className="input-btn">
-            <Mic size={18} />
-          </button>
-
-          <button
-            onClick={handleSend}
-            className={`send-btn ${input.trim() ? 'active' : ''}`}
-            disabled={!input.trim() || loading}
-          >
-            <Send size={18} />
-          </button>
+          )}
         </div>
-      )}
+
+        {/* Input Section */}
+        <div className="input-section">
+          <div className="input-container">
+            <button className="input-action-btn">
+              <Paperclip size={18} />
+            </button>
+            
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && !loading && handleSend()}
+              placeholder="Type your message here..."
+              className="message-input"
+              disabled={loading}
+              autoFocus
+            />
+            
+            <button className="input-action-btn">
+              <Mic size={18} />
+            </button>
+            
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || loading}
+              className={`send-button ${input.trim() ? 'active' : ''}`}
+            >
+              <Send size={18} />
+            </button>
+          </div>
+          
+          {backendStatus !== 'connected' && currentModel !== 'mistral' && (
+            <div className="connection-notice">
+              <span>Running in offline mode with Mistral AI</span>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
