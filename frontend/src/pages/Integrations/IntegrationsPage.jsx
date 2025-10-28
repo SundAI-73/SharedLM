@@ -6,11 +6,11 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM }) {
   const navigate = useNavigate();
 
   const llms = [
-    { id: 'claude', name: 'CLAUDE', provider: 'Anthropic', status: 'available' },
-    { id: 'chatgpt', name: 'CHATGPT', provider: 'OpenAI', status: 'available' },
+    { id: 'mistral', name: 'MISTRAL', provider: 'Open Source', status: 'available' },
+    { id: 'claude', name: 'CLAUDE', provider: 'Anthropic', status: 'available', status: 'coming' },
+    { id: 'chatgpt', name: 'CHATGPT', provider: 'OpenAI', status: 'available', status: 'coming' },
     { id: 'gemini', name: 'GEMINI', provider: 'Google', status: 'available' },
     { id: 'copilot', name: 'CO PIOLET', provider: 'Microsoft', status: 'available' },
-    { id: 'mistral', name: 'MISTRAL', provider: 'Open Source', status: 'available' },
     { id: 'cursor', name: 'CURSOR', provider: 'Code AI', status: 'available' },
     { id: 'llama', name: 'LLAMA 3', provider: 'Meta', status: 'coming' },
     { id: 'perplexity', name: 'PERPLEXITY', provider: 'Search AI', status: 'coming' },
