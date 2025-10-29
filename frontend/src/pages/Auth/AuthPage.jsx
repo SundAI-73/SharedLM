@@ -5,11 +5,11 @@ import './Auth.css';
 
 function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
   const navigate = useNavigate();
-  const [authMethod, setAuthMethod] = useState('account');
+  const [authMethod, setAuthMethod] = useState('api'); // Changed default to 'api'
   const [apiKey, setApiKey] = useState('');
 
   const handleConnect = () => {
-    if (selectedLLM) {
+    if (selectedLLM && apiKey.trim()) {
       setConnectedLLMs([...connectedLLMs, selectedLLM.id]);
       navigate('/integrations');
     }
@@ -27,29 +27,31 @@ function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
         onClick={() => navigate('/integrations')}
       >
         <ArrowLeft size={20} />
-        <span className="led-text">BACK</span>
+        <span>BACK</span>
       </button>
 
       <div className="auth-container">
         <div className="auth-header">
-          <h2 className="auth-title led-text">CONNECT {selectedLLM.name}</h2>
+          <h2 className="auth-title">CONNECT {selectedLLM.name}</h2>
           <p className="auth-subtitle">Choose your authentication method</p>
         </div>
 
         <div className="auth-tabs">
           <button
-            className={`auth-tab ${authMethod === 'account' ? 'active' : ''}`}
+            className={`auth-tab ${authMethod === 'account' ? 'active' : ''} oauth-disabled`}
             onClick={() => setAuthMethod('account')}
+            disabled
           >
             <User size={18} />
-            <span className="led-text">OAUTH</span>
+            <span>OAUTH</span>
+            <span className="tab-badge">SOON</span>
           </button>
           <button
             className={`auth-tab ${authMethod === 'api' ? 'active' : ''}`}
             onClick={() => setAuthMethod('api')}
           >
             <Key size={18} />
-            <span className="led-text">API KEY</span>
+            <span>API KEY</span>
           </button>
         </div>
 
@@ -57,16 +59,16 @@ function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
           {authMethod === 'account' ? (
             <div className="oauth-section">
               <p className="auth-description">
-                Sign in with your account to continue
+                OAuth authentication coming soon
               </p>
 
               <div className="auth-buttons">
-                <button className="auth-btn">
-                  <span className="led-text">CONTINUE WITH GOOGLE</span>
+                <button className="auth-btn" disabled>
+                  <span>CONTINUE WITH GOOGLE</span>
                 </button>
-                <button className="auth-btn">
+                <button className="auth-btn" disabled>
                   <Github size={18} />
-                  <span className="led-text">CONTINUE WITH GITHUB</span>
+                  <span>CONTINUE WITH GITHUB</span>
                 </button>
               </div>
             </div>
@@ -92,14 +94,13 @@ function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
         </div>
 
         <button
-          className={`connect-button ${authMethod === 'api' && !apiKey ? 'disabled' : ''}`}
+          className={`connect-button ${!apiKey.trim() ? 'disabled' : ''}`}
           onClick={handleConnect}
-          disabled={authMethod === 'api' && !apiKey}
+          disabled={!apiKey.trim()}
         >
-          <span className="led-text">CONNECT {selectedLLM.name}</span>
+          <span>CONNECT {selectedLLM.name}</span>
         </button>
       </div>
-
     </div>
   );
 }

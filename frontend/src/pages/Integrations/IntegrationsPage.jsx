@@ -6,15 +6,19 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM }) {
   const navigate = useNavigate();
 
   const llms = [
-    { id: 'mistral', name: 'MISTRAL', provider: 'Open Source', status: 'available' },
-    { id: 'claude', name: 'CLAUDE', provider: 'Anthropic', status: 'coming' },
-    { id: 'chatgpt', name: 'CHATGPT', provider: 'OpenAI', status: 'coming' },
-    { id: 'gemini', name: 'GEMINI', provider: 'Google', status: 'available' },
-    { id: 'copilot', name: 'CO PIOLET', provider: 'Microsoft', status: 'available' },
-    { id: 'cursor', name: 'CURSOR', provider: 'Code AI', status: 'available' },
-    { id: 'llama', name: 'LLAMA 3', provider: 'Meta', status: 'coming' },
-    { id: 'perplexity', name: 'PERPLEXITY', provider: 'Search AI', status: 'coming' },
-    { id: 'grok', name: 'GROK', provider: 'xAI', status: 'coming' },
+    // Available models
+    { id: 'openai', name: 'GPT-4O', provider: 'OpenAI', status: 'available' },
+    { id: 'anthropic', name: 'CLAUDE 3.5', provider: 'Anthropic', status: 'available' },
+    { id: 'google', name: 'GEMINI 2.0', provider: 'Google AI', status: 'available' },
+    { id: 'mistral', name: 'MIXTRAL', provider: 'Mistral AI', status: 'available' },
+    { id: 'meta', name: 'LLAMA 3', provider: 'Meta', status: 'available' },
+    { id: 'cohere', name: 'COMMAND', provider: 'Cohere', status: 'available' },
+    { id: 'deepseek', name: 'DEEPSEEK-V3', provider: 'DeepSeek', status: 'available' },
+    { id: 'ai21', name: 'JURASSIC-2', provider: 'AI21 Labs', status: 'available' },
+    { id: '01ai', name: 'YI-LARGE', provider: '01.AI', status: 'available' },
+    { id: 'microsoft', name: 'PHI-3', provider: 'Microsoft', status: 'available' },
+    { id: 'nvidia', name: 'NEMOTRON-4', provider: 'NVIDIA', status: 'available' },
+    { id: 'ibm', name: 'GRANITE', provider: 'IBM', status: 'available' },
   ];
 
   const handleLLMClick = (llm) => {
@@ -37,7 +41,7 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM }) {
           <p className="page-subtitle">Connect and manage your AI models</p>
         </div>
 
-        {}
+        {/* LLM Grid */}
         <div className="grid-4 integrations-grid">
           {llms.map(llm => (
             <button
@@ -71,10 +75,12 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM }) {
         <div className="custom-section">
           <p className="custom-label">CUSTOM INTEGRATIONS</p>
           <button
-            className="button-base button-primary custom-integration-btn"
+            className="button-base button-primary custom-integration-btn coming-soon"
             onClick={handleCustomIntegration}
+            disabled
           >
             ADD CUSTOM INTEGRATIONS
+            <span className="coming-soon-badge">SOON</span>
           </button>
         </div>
       </div>

@@ -25,10 +25,10 @@
   --spacing-2xl: 48px;
   --spacing-3xl: 64px;
 
-  /* Typography */
-  --font-led: 'Courier New', monospace;
-  --font-mono: 'Courier New', 'Monaco', 'Consolas', monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  /* Typography - Only Courier New */
+  --font-primary: 'Courier New', monospace;
+  --font-mono: 'Courier New', monospace;
+  --font-sans: 'Courier New', monospace;
 
   /* Sizing */
   --dot-size: 6px;
