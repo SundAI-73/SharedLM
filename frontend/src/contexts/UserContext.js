@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const UserContext = createContext();
@@ -29,11 +28,22 @@ export const UserProvider = ({ children }) => {
     anthropic: false
   });
   const [backendConnected, setBackendConnected] = useState(false);
+  
+  // Analytics page visibility state - default enabled
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(() => {
+    const saved = localStorage.getItem('sharedlm_analytics_enabled');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
 
   // Update localStorage when userId changes
   useEffect(() => {
     localStorage.setItem('sharedlm_user_id', userId);
   }, [userId]);
+
+  // Update localStorage when analytics preference changes
+  useEffect(() => {
+    localStorage.setItem('sharedlm_analytics_enabled', JSON.stringify(analyticsEnabled));
+  }, [analyticsEnabled]);
 
   const value = {
     userId,
@@ -43,7 +53,9 @@ export const UserProvider = ({ children }) => {
     connectedModels,
     setConnectedModels,
     backendConnected,
-    setBackendConnected
+    setBackendConnected,
+    analyticsEnabled,
+    setAnalyticsEnabled
   };
 
   return (

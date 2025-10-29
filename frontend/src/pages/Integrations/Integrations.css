@@ -24,6 +24,7 @@
   align-items: center;
   gap: 14px;
   width: 100%;
+  justify-content: flex-start;
 }
 
 .integration-icon-placeholder {
@@ -48,6 +49,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .integration-name {
@@ -60,6 +63,8 @@
   font-family: 'Courier New', monospace;
   margin: 0;
   line-height: 1.2;
+  text-align: left;
+  width: 100%;
 }
 
 .integration-card:hover .integration-name {
@@ -73,6 +78,8 @@
   margin: 0;
   text-transform: capitalize;
   font-weight: 300;
+  text-align: left;
+  width: 100%;
 }
 
 .coming-soon-badge {
@@ -108,7 +115,27 @@
 }
 
 .custom-integration-btn {
-  }
+  position: relative;
+}
+
+.custom-integration-btn.coming-soon {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.custom-integration-btn .coming-soon-badge {
+  position: absolute;
+  top: -70px;
+  right: 95px;
+  background: #B94539;
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
 
 @media (max-width: 768px) {
   .integration-card {

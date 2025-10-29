@@ -12,12 +12,22 @@ html {
 body {
   background: #000000;
   color: var(--n-white);
-  font-family: var(--font-sans);
+  font-family: 'Courier New', monospace; /* Changed to Courier New consistently */
   font-weight: 300;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+}
+
+/* Apply Courier New to all elements by default */
+* {
+  font-family: 'Courier New', monospace;
+}
+
+/* Specific overrides for buttons, inputs, etc. */
+button, input, textarea, select {
+  font-family: 'Courier New', monospace;
 }
 
 .nothing-app {
@@ -59,7 +69,7 @@ body {
   transition: margin-left var(--transition-smooth);
   overflow-y: auto;
   min-height: 100vh;
-    background: transparent;
+  background: transparent;
 }
 
 /* When sidebar is collapsed, adjust main content margin */
@@ -67,29 +77,29 @@ body {
   margin-left: 76px;
 }
 
-/* Custom Scrollbar */
+/* Hide Scrollbar but keep scrolling functionality */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 0px;
+  height: 0px;
+  display: none;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.8);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--n-medium-gray);
-  border-radius: 2px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--n-light-gray);
+  background: transparent;
 }
 
 /* Firefox */
 * {
-  scrollbar-width: thin;
-  scrollbar-color: var(--n-medium-gray) rgba(0, 0, 0, 0.8);
+  scrollbar-width: none;
+}
+
+/* IE and Edge */
+* {
+  -ms-overflow-style: none;
 }
 
 /* Selection */
@@ -117,7 +127,7 @@ select {
   border: 1px solid var(--n-medium-gray);
   border-radius: 12px;
   color: var(--n-white);
-  font-family: var(--font-sans);
+  font-family: 'Courier New', monospace;
   font-size: 0.875rem;
   padding: 10px 36px 10px 12px;
   cursor: pointer;
@@ -147,6 +157,7 @@ select option {
   background: var(--n-pure-black);
   color: var(--n-white);
   padding: 8px;
+  font-family: 'Courier New', monospace;
 }
 
 select option:hover {
@@ -161,7 +172,7 @@ select::-ms-expand {
 /* Custom styling for specific dropdowns */
 .model-dropdown {
   min-width: 120px;
-  font-family: var(--font-mono);
+  font-family: 'Courier New', monospace;
   font-size: 0.8rem;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -178,4 +189,5 @@ select::-ms-expand {
   color: var(--n-white);
   min-width: 150px;
   backdrop-filter: blur(10px);
+  font-family: 'Courier New', monospace;
 }

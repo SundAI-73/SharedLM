@@ -1,0 +1,686 @@
+.project-landing {
+  max-width: 1400px;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+  padding: 10px 20px;
+  color: #888888;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 30px;
+  text-transform: uppercase;
+}
+
+.back-button:hover {
+  border-color: #3A3A3A;
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.project-header {
+  margin-bottom: 40px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid #1F1F1F;
+}
+
+.project-info {
+  flex: 1;
+}
+
+.project-title {
+  font-family: 'Courier New', monospace;
+  font-size: 2rem;
+  font-weight: 400;
+  color: #FFFFFF;
+  letter-spacing: 4px;
+  margin: 0 0 10px 0;
+  padding-top: 35px;
+  text-transform: uppercase;
+}
+
+.project-type {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: #B94539;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0 0 15px 0;
+}
+
+.project-description {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #888888;
+  line-height: 1.6;
+  margin: 0 0 20px 0;
+  max-width: 700px;
+}
+
+.project-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: #666666;
+  font-family: 'Courier New', monospace;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta-divider {
+  color: #3A3A3A;
+}
+
+/* Chat Input Bar */
+.project-chat-bar {
+  margin-bottom: 50px;
+}
+
+.chat-bar-container {
+  max-width: 100%;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #1F1F1F;
+  border: 1px solid #2A2A2A;
+  border-radius: 50px;
+  padding: 8px 12px 8px 8px;
+  transition: all 0.2s ease;
+}
+
+.chat-bar-container:focus-within {
+  border-color: rgba(185, 69, 57, 0.5);
+  background: #2A2A2A;
+  box-shadow: 0 0 0 1px rgba(185, 69, 57, 0.2);
+}
+
+.chat-bar-attach-btn {
+  background: transparent;
+  border: none;
+  color: #666666;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.chat-bar-attach-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #999999;
+}
+
+.chat-bar-input {
+  flex: 1;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: #E0E0E0;
+  font-size: 0.95rem;
+  font-family: 'Courier New', monospace;
+  padding: 12px 8px;
+}
+
+.chat-bar-input:focus {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.chat-bar-input::placeholder {
+  color: #555555;
+}
+
+.chat-bar-send-btn {
+  background: #3A3A3A;
+  border: none;
+  color: #666666;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chat-bar-send-btn:hover:not(:disabled) {
+  background: #4A4A4A;
+  color: #999999;
+}
+
+.chat-bar-send-btn.active {
+  background: #B94539;
+  color: #FFFFFF;
+}
+
+.chat-bar-send-btn.active:hover {
+  background: #C54A3E;
+}
+
+.chat-bar-send-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Two Column Layout */
+.project-content-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 30px;
+  margin-top: 40px;
+}
+
+/* Left Column */
+.project-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.project-tabs {
+  display: flex;
+  gap: 10px;
+  background: #141414;
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid #1F1F1F;
+}
+
+.project-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  color: #666666;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+}
+
+.project-tab:hover {
+  color: #999999;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.project-tab.active {
+  background: #1F1F1F;
+  color: #B94539;
+  border: 1px solid rgba(185, 69, 57, 0.3);
+}
+
+.project-tab svg {
+  flex-shrink: 0;
+}
+
+/* Tab Content */
+.tab-content {
+  background: #141414;
+  border: 1px solid #1F1F1F;
+  border-radius: 16px;
+  padding: 30px;
+  min-height: 400px;
+}
+
+/* Memory Section */
+.memory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.memory-item {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+}
+
+.memory-bullet {
+  width: 6px;
+  height: 6px;
+  background: #B94539;
+  border-radius: 50%;
+  margin-top: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(185, 69, 57, 0.4);
+}
+
+.memory-text {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #E0E0E0;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Instructions Section */
+.instructions-content {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.instructions-text {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #E0E0E0;
+  line-height: 1.8;
+  margin: 0;
+  padding: 20px;
+  background: #1F1F1F;
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+}
+
+.edit-instructions-btn {
+  align-self: flex-start;
+}
+
+/* Files Section */
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 16px 20px;
+  background: #1F1F1F;
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-item:hover {
+  background: #2A2A2A;
+  border-color: #3A3A3A;
+  transform: translateX(4px);
+}
+
+.file-icon {
+  width: 40px;
+  height: 40px;
+  background: #2A2A2A;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999999;
+  flex-shrink: 0;
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #E0E0E0;
+  margin: 0 0 5px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-meta {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #666666;
+  margin: 0;
+}
+
+.file-action-btn {
+  background: transparent;
+  border: none;
+  color: #666666;
+  cursor: pointer;
+  padding: 4px;
+  transition: all 0.2s ease;
+}
+
+.file-item:hover .file-action-btn {
+  color: #999999;
+}
+
+/* Empty Tab Content */
+.empty-tab-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 20px;
+}
+
+.empty-tab-icon {
+  color: #2A2A2A;
+}
+
+.empty-tab-text {
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  color: #666666;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.empty-tab-hint {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #444444;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+/* Right Column - Recent Activity */
+.project-right-column {
+  background: #141414;
+  border: 1px solid #1F1F1F;
+  border-radius: 16px;
+  padding: 25px;
+  height: fit-content;
+  max-height: 700px;
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #1F1F1F;
+}
+
+.activity-header svg {
+  color: #B94539;
+}
+
+.activity-title {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #888888;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+/* Custom scrollbar for activity list */
+.activity-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.activity-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+  background: #2A2A2A;
+  border-radius: 2px;
+}
+
+.activity-list::-webkit-scrollbar-thumb:hover {
+  background: #3A3A3A;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: #1F1F1F;
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.activity-item.clickable {
+  cursor: pointer;
+}
+
+.activity-item.clickable:hover {
+  background: #2A2A2A;
+  border-color: #3A3A3A;
+  transform: translateX(4px);
+}
+
+.activity-icon-wrapper {
+  width: 32px;
+  height: 32px;
+  background: #2A2A2A;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999999;
+  flex-shrink: 0;
+}
+
+.activity-item:hover .activity-icon-wrapper {
+  color: #E0E0E0;
+}
+
+.activity-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-title {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #E0E0E0;
+  margin: 0 0 6px 0;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-item:hover .activity-title {
+  color: #FFFFFF;
+}
+
+.activity-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: #555555;
+  font-family: 'Courier New', monospace;
+  flex-wrap: wrap;
+}
+
+.activity-model {
+  color: #999999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.activity-time {
+  color: #666666;
+}
+
+.activity-chevron {
+  color: #666666;
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+
+.activity-item:hover .activity-chevron {
+  color: #999999;
+}
+
+/* Empty Activity */
+.empty-activity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 15px;
+}
+
+.empty-activity-icon {
+  color: #2A2A2A;
+}
+
+.empty-activity-text {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #666666;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 100px 20px;
+  font-family: 'Courier New', monospace;
+  color: #666666;
+  letter-spacing: 2px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .project-content-layout {
+    grid-template-columns: 1fr 320px;
+    gap: 25px;
+  }
+
+  .project-right-column {
+    max-height: 600px;
+  }
+}
+
+@media (max-width: 768px) {
+  .project-content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .project-right-column {
+    max-height: 500px;
+  }
+
+  .project-title {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+  }
+
+  .project-tabs {
+    flex-wrap: wrap;
+  }
+
+  .project-tab {
+    flex: 1;
+    min-width: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .project-header {
+    margin-bottom: 30px;
+  }
+
+  .project-title {
+    font-size: 1.3rem;
+    letter-spacing: 1.5px;
+  }
+
+  .project-description {
+    font-size: 0.85rem;
+  }
+
+  .project-chat-bar {
+    margin-bottom: 30px;
+  }
+
+  .chat-bar-container {
+    padding: 6px 10px 6px 6px;
+  }
+
+  .chat-bar-send-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .tab-content {
+    padding: 20px;
+    min-height: 300px;
+  }
+
+  .project-tab {
+    padding: 10px 12px;
+    font-size: 0.75rem;
+  }
+
+  .project-tab span {
+    display: none;
+  }
+
+  .project-tab svg {
+    margin: 0;
+  }
+
+  .memory-text,
+  .instructions-text,
+  .file-name {
+    font-size: 0.85rem;
+  }
+
+  .activity-item {
+    padding: 12px;
+  }
+
+  .activity-icon-wrapper {
+    width: 28px;
+    height: 28px;
+  }
+}

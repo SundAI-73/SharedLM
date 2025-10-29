@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Settings, User, Shield, CreditCard, Zap, Database, LogOut } from 'lucide-react';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
+import { useUser } from '../../contexts/UserContext';
 import './Settings.css';
 
 function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [defaultModel, setDefaultModel] = useState('gpt-4');
   const [language, setLanguage] = useState('english');
+  const { analyticsEnabled, setAnalyticsEnabled } = useUser();
 
   const settingsTabs = [
     { id: 'general', label: 'GENERAL', icon: <Settings size={18} /> },
@@ -128,7 +130,11 @@ function SettingsPage() {
                       <p className="setting-description">Enable or disable analytics dashboard</p>
                     </div>
                     <label className="toggle-switch">
-                      <input type="checkbox" defaultChecked />
+                      <input 
+                        type="checkbox" 
+                        checked={analyticsEnabled}
+                        onChange={(e) => setAnalyticsEnabled(e.target.checked)}
+                      />
                       <span className="toggle-slider"></span>
                     </label>
                   </div>

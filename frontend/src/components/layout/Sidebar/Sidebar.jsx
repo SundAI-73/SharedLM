@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -12,6 +11,7 @@ import {
   PanelLeftClose,
   PanelLeft
 } from 'lucide-react';
+import { useUser } from '../../../contexts/UserContext';
 import logo from '../../../assets/images/logo main.svg';
 import './Sidebar.css';
 
@@ -19,6 +19,7 @@ const NothingSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { analyticsEnabled } = useUser();
 
   // Update main content margin when sidebar collapses
   useEffect(() => {
@@ -32,7 +33,8 @@ const NothingSidebar = () => {
     }
   }, [isCollapsed]);
 
-  const menuItems = [
+  // Base menu items
+  const baseMenuItems = [
     {
       id: 'integrations',
       path: '/integrations',
@@ -50,19 +52,30 @@ const NothingSidebar = () => {
       path: '/history',
       label: 'HISTORY',
       icon: <Clock size={18} strokeWidth={1.5} />
-    },
-    {
-      id: 'analytics',
-      path: '/analytics',
-      label: 'ANALYTICS',
-      icon: <BarChart3 size={18} strokeWidth={1.5} />
-    },
-    {
-      id: 'settings',
-      path: '/settings',
-      label: 'SETTINGS',
-      icon: <Settings size={18} strokeWidth={1.5} />
-    },
+    }
+  ];
+
+  // Analytics menu item
+  const analyticsMenuItem = {
+    id: 'analytics',
+    path: '/analytics',
+    label: 'ANALYTICS',
+    icon: <BarChart3 size={18} strokeWidth={1.5} />
+  };
+
+  // Settings menu item
+  const settingsMenuItem = {
+    id: 'settings',
+    path: '/settings',
+    label: 'SETTINGS',
+    icon: <Settings size={18} strokeWidth={1.5} />
+  };
+
+  // Build menu items array conditionally
+  const menuItems = [
+    ...baseMenuItems,
+    ...(analyticsEnabled ? [analyticsMenuItem] : []),
+    settingsMenuItem
   ];
 
   const handleNewChat = () => {
@@ -105,7 +118,6 @@ const NothingSidebar = () => {
           ))}
         </div>
 
-        {/* Spacer inside the box */}
         <div className="box-spacer"></div>
 
         {/* NEW CHAT Button */}
