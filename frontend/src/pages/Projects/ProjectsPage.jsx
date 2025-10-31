@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FolderOpen, Clock, MoreVertical, Search, Plus, Trash2, Edit3, Archive } from 'lucide-react';
+import { FolderOpen, Clock, MoreVertical, Search, Plus, Trash2, Edit3, Archive, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../contexts/UserContext';
 import './Projects.css';
 
 function ProjectsPage() {
   const navigate = useNavigate();
+  const { starredProjects, toggleStarProject } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [openMenuId, setOpenMenuId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -29,6 +31,11 @@ function ProjectsPage() {
     project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     project.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Check if project is starred
+  const isProjectStarred = (projectId) => {
+    return starredProjects.some(p => p.id === projectId);
+  };
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -78,6 +85,16 @@ function ProjectsPage() {
   const handleMoreClick = (e, projectId) => {
     e.stopPropagation();
     setOpenMenuId(openMenuId === projectId ? null : projectId);
+  };
+
+  const handleStarProject = (e, project) => {
+    e.stopPropagation();
+    const projectData = {
+      id: project.id,
+      name: project.name
+    };
+    toggleStarProject(projectData);
+    setOpenMenuId(null);
   };
 
   const handleRenameProject = (e, projectId) => {
@@ -158,7 +175,7 @@ function ProjectsPage() {
             {filteredProjects.map(project => (
               <div
                 key={project.id}
-                className="card-base card-clickable item-card"
+                className={`card-base card-clickable item-card ${openMenuId === project.id ? 'menu-open' : ''}`}
                 onClick={() => handleProjectClick(project.id)}
               >
                 <div className="card-header">
@@ -174,6 +191,17 @@ function ProjectsPage() {
                     {/* Options Menu */}
                     {openMenuId === project.id && (
                       <div className="project-options-menu">
+                        <button 
+                          className="menu-item" 
+                          onClick={(e) => handleStarProject(e, project)}
+                        >
+                          <Star 
+                            size={16} 
+                            fill={isProjectStarred(project.id) ? '#B94539' : 'none'}
+                            color={isProjectStarred(project.id) ? '#B94539' : '#888888'}
+                          />
+                          <span>{isProjectStarred(project.id) ? 'Unstar' : 'Star'}</span>
+                        </button>
                         <button className="menu-item" onClick={(e) => handleRenameProject(e, project.id)}>
                           <Edit3 size={16} />
                           <span>Rename</span>

@@ -1,94 +1,75 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Layers,
-  FolderOpen,
-  Clock,
-  BarChart3,
-  Settings,
-  MessageSquare,
-  Plus,
-  PanelLeftClose,
-  PanelLeft
+  Layers, FolderOpen, Clock, BarChart3, Settings,
+  MessageSquare, Plus, PanelLeftClose, PanelLeft, Star
 } from 'lucide-react';
 import { useUser } from '../../../contexts/UserContext';
 import logo from '../../../assets/images/logo main.svg';
 import './Sidebar.css';
 
-const NothingSidebar = () => {
+const NothingSidebar = React.memo(() => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { analyticsEnabled } = useUser();
+  
+  const [starredProjects, setStarredProjects] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sharedlm_starred_projects');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  // Update main content margin when sidebar collapses
+  // Memoize menu items
+  const menuItems = useMemo(() => {
+    const base = [
+      { id: 'integrations', path: '/integrations', label: 'INTEGRATIONS', 
+        icon: <Layers size={18} strokeWidth={1.5} /> },
+      { id: 'projects', path: '/projects', label: 'PROJECTS', 
+        icon: <FolderOpen size={18} strokeWidth={1.5} /> },
+      { id: 'history', path: '/history', label: 'HISTORY', 
+        icon: <Clock size={18} strokeWidth={1.5} /> }
+    ];
+
+    if (analyticsEnabled) {
+      base.push({ id: 'analytics', path: '/analytics', label: 'ANALYTICS', 
+        icon: <BarChart3 size={18} strokeWidth={1.5} /> });
+    }
+
+    base.push({ id: 'settings', path: '/settings', label: 'SETTINGS', 
+      icon: <Settings size={18} strokeWidth={1.5} /> });
+
+    return base;
+  }, [analyticsEnabled]);
+
+  // Persist starred projects
+  useEffect(() => {
+    localStorage.setItem('sharedlm_starred_projects', JSON.stringify(starredProjects));
+  }, [starredProjects]);
+
+  // Update main margin
   useEffect(() => {
     const mainElement = document.querySelector('.nothing-main');
     if (mainElement) {
-      if (isCollapsed) {
-        mainElement.style.marginLeft = '80px';
-      } else {
-        mainElement.style.marginLeft = '280px';
-      }
+      mainElement.style.marginLeft = isCollapsed ? '80px' : '280px';
     }
   }, [isCollapsed]);
 
-  // Base menu items
-  const baseMenuItems = [
-    {
-      id: 'integrations',
-      path: '/integrations',
-      label: 'INTEGRATIONS',
-      icon: <Layers size={18} strokeWidth={1.5} />
-    },
-    {
-      id: 'projects',
-      path: '/projects',
-      label: 'PROJECTS',
-      icon: <FolderOpen size={18} strokeWidth={1.5} />
-    },
-    {
-      id: 'history',
-      path: '/history',
-      label: 'HISTORY',
-      icon: <Clock size={18} strokeWidth={1.5} />
-    }
-  ];
-
-  // Analytics menu item
-  const analyticsMenuItem = {
-    id: 'analytics',
-    path: '/analytics',
-    label: 'ANALYTICS',
-    icon: <BarChart3 size={18} strokeWidth={1.5} />
-  };
-
-  // Settings menu item
-  const settingsMenuItem = {
-    id: 'settings',
-    path: '/settings',
-    label: 'SETTINGS',
-    icon: <Settings size={18} strokeWidth={1.5} />
-  };
-
-  // Build menu items array conditionally
-  const menuItems = [
-    ...baseMenuItems,
-    ...(analyticsEnabled ? [analyticsMenuItem] : []),
-    settingsMenuItem
-  ];
-
-  const handleNewChat = () => {
-    navigate('/chat');
-  };
-
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  const handleNewChat = useCallback(() => navigate('/chat'), [navigate]);
+  const toggleSidebar = useCallback(() => setIsCollapsed(prev => !prev), []);
+  const handleProjectClick = useCallback((id) => navigate(`/projects/${id}`), [navigate]);
+  
+  const handleUnstarProject = useCallback((e, projectId) => {
+    e.stopPropagation();
+    setStarredProjects(prev => prev.filter(p => p.id !== projectId));
+  }, []);
 
   return (
     <aside className={`nothing-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-      {/* BOX 1: Logo Box - Separate container for logo */}
+      {/* Logo Box */}
       <div className="logo-box">
         <div className="sidebar-logo">
           <img src={logo} alt="Shared LM Logo" className="logo-image" />
@@ -99,9 +80,8 @@ const NothingSidebar = () => {
         </button>
       </div>
 
-      {/* BOX 2: Navigation Box - Contains all menu items AND New Chat button */}
+      {/* Navigation Box */}
       <div className="navigation-box">
-        {/* Navigation Items */}
         <div className="nav-items-container">
           {menuItems.map(item => (
             <button
@@ -112,18 +92,64 @@ const NothingSidebar = () => {
             >
               <span className="sidebar-item-icon">{item.icon}</span>
               {!isCollapsed && <span className="sidebar-item-label">{item.label}</span>}
-              {/* Show indicator dot only on active page */}
-              {location.pathname === item.path && <span className="indicator-dot"></span>}
+              {location.pathname === item.path && <span className="indicator-dot" />}
             </button>
           ))}
         </div>
 
-        <div className="box-spacer"></div>
+        {/* Starred Projects */}
+        {starredProjects.length > 0 && (
+          <div className="starred-projects-section">
+            {!isCollapsed && (
+              <div className="starred-header">
+                <Star size={12} className="starred-header-icon" />
+                <span className="starred-title">STARRED</span>
+              </div>
+            )}
+            
+            <div className="starred-projects-list">
+              {starredProjects.map(project => (
+                <button
+                  key={project.id}
+                  onClick={() => handleProjectClick(project.id)}
+                  className={`sidebar-item starred-project-item ${
+                    location.pathname === `/projects/${project.id}` ? 'active' : ''
+                  }`}
+                  title={isCollapsed ? project.name : ''}
+                >
+                  <span className="sidebar-item-icon">
+                    <FolderOpen size={18} strokeWidth={1.5} />
+                  </span>
+                  {!isCollapsed && (
+                    <>
+                      <span className="sidebar-item-label starred-project-name">
+                        {project.name}
+                      </span>
+                      <button
+                        className="unstar-btn"
+                        onClick={(e) => handleUnstarProject(e, project.id)}
+                        title="Unstar project"
+                      >
+                        <Star size={12} fill="#B94539" color="#B94539" />
+                      </button>
+                    </>
+                  )}
+                  {location.pathname === `/projects/${project.id}` && 
+                    <span className="indicator-dot" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* NEW CHAT Button */}
+        <div className="box-spacer" />
+
+        {/* New Chat Button */}
         <button
           onClick={handleNewChat}
-          className={`sidebar-item new-chat-button ${location.pathname === '/chat' ? 'active-chat' : ''}`}
+          className={`sidebar-item new-chat-button ${
+            location.pathname === '/chat' ? 'active-chat' : ''
+          }`}
           title={isCollapsed ? 'NEW CHAT' : ''}
         >
           <span className="sidebar-item-icon">
@@ -139,6 +165,8 @@ const NothingSidebar = () => {
       </div>
     </aside>
   );
-};
+});
+
+NothingSidebar.displayName = 'NothingSidebar';
 
 export default NothingSidebar;

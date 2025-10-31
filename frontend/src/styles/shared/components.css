@@ -77,7 +77,7 @@
 
 .input-base:focus {
   background: #2A2A2A;
-  border-color: rgba(185, 69, 57, 0.3);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .input-base::placeholder {
@@ -184,10 +184,6 @@
   background-size: 12px;
 }
 
-.select-base:focus {
-  background-color: #2A2A2A;
-  border-color: rgba(185, 69, 57, 0.3);
-}
 
 .select-container {
   position: relative;

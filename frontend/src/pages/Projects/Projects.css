@@ -72,13 +72,13 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  background: #1F1F1F;
+  background: #0A0A0A;
   border: 1px solid #2A2A2A;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
   z-index: 1000;
   overflow: hidden;
-  min-width: 180px;
+  min-width: 200px;
   animation: menuFadeIn 0.2s ease;
 }
 
@@ -98,20 +98,20 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 14px 20px;
   background: transparent;
   border: none;
-  color: #E0E0E0;
+  color: #888888;
   font-family: 'Courier New', monospace;
   font-size: 0.875rem;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
 }
 
 .menu-item:hover {
-  background: #2A2A2A;
+  background: #1A1A1A;
   color: #FFFFFF;
 }
 
@@ -226,6 +226,24 @@
   z-index: 2000;
   animation: fadeIn 0.2s ease;
 }
+.item-card.menu-open {
+  z-index: 1001;
+}
+
+/* Update the project-options-menu z-index */
+.project-options-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #0A0A0A;
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 1002; /* Increase from 1000 to 1002 */
+  overflow: hidden;
+  min-width: 200px;
+  animation: menuFadeIn 0.2s ease;
+}
 
 @keyframes fadeIn {
   from {
@@ -300,7 +318,7 @@
 }
 
 .form-input:focus {
-  border-color: rgba(185, 69, 57, 0.5);
+  border-color: rgba(255, 255, 255, 0.15);
   background: #2A2A2A;
 }
 
