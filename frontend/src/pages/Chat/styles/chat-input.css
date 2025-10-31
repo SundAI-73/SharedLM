@@ -21,9 +21,9 @@
 }
 
 .chat-input-container:focus-within {
-  border-color: rgba(185, 69, 57, 0.5);
-  background: #2A2A2A;
-  box-shadow: 0 0 0 1px rgba(185, 69, 57, 0.2);
+  border-color: rgba(255, 255, 255, 0.15);
+  background: #1F1F1F;
+  box-shadow: none;
 }
 
 /* Attachment Button */
@@ -102,5 +102,7 @@
 
 .chat-send-btn:disabled {
   opacity: 0.3;
+  background: #B94539;
+  color: #FFFFFF;
   cursor: not-allowed;
 }

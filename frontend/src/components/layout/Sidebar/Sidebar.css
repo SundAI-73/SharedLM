@@ -1,6 +1,3 @@
-/* Frontend/src/components/layout/Sidebar/Sidebar.css */
-
-
 .nothing-sidebar {
   width: 280px;
   height: 100vh;
@@ -136,6 +133,96 @@
   flex-direction: column;
   gap: 10px;
   width: 100%;
+}
+
+.starred-projects-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #1F1F1F;
+}
+
+.nothing-sidebar.collapsed .starred-projects-section {
+  padding-top: 8px;
+  gap: 6px;
+}
+
+.starred-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 18px;
+  margin-bottom: 4px;
+}
+
+.starred-header-icon {
+  color: #B94539;
+  flex-shrink: 0;
+}
+
+.starred-title {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: #666666;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.starred-projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.nothing-sidebar.collapsed .starred-projects-list {
+  gap: 4px;
+}
+
+.starred-project-item {
+  position: relative;
+}
+
+.starred-project-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unstar-btn {
+  background: transparent;
+  border: none;
+  color: #B94539;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.starred-project-item:hover .unstar-btn {
+  opacity: 1;
+}
+
+.unstar-btn:hover {
+  opacity: 1 !important;
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Hide unstar button when collapsed */
+.nothing-sidebar.collapsed .unstar-btn {
+  display: none;
 }
 
 .nothing-sidebar.collapsed .nav-items-container {
@@ -279,16 +366,13 @@
 .new-chat-button {
   background: #B94539 !important;
   color: #ffffff !important;
-  flex-shrink: 0;  /* Prevent button from shrinking */
+  flex-shrink: 0;
 }
 
 .new-chat-button:hover {
   background: #C54A3E !important;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(185, 69, 57, 0.4);
 }
 
-/* Square NEW CHAT button when collapsed */
 .nothing-sidebar.collapsed .new-chat-button {
   width: 44px;
   height: 44px;
@@ -306,8 +390,7 @@
 
 /* Active state for new chat button when on /chat */
 .new-chat-button.active-chat {
-  background: #D4524A !important;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+  background: #C54A3E !important;
 }
 
 /* Plus icon for NEW CHAT button */

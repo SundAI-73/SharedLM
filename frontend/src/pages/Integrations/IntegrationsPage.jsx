@@ -7,18 +7,18 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM }) {
 
   const llms = [
     // Available models
+    { id: 'mistral', name: 'MIXTRAL', provider: 'Mistral AI', status: 'available' },
+    { id: 'deepseek', name: 'DEEPSEEK-V3', provider: 'DeepSeek', status: 'available' },
+    { id: 'whisper ', name: 'Whisper', provider: 'OpenAI', status: 'available' },
+    { id: 'meta', name: 'LLAMA 3', provider: 'Meta', status: 'available' },
     { id: 'openai', name: 'GPT-4O', provider: 'OpenAI', status: 'available' },
     { id: 'anthropic', name: 'CLAUDE 3.5', provider: 'Anthropic', status: 'available' },
     { id: 'google', name: 'GEMINI 2.0', provider: 'Google AI', status: 'available' },
-    { id: 'mistral', name: 'MIXTRAL', provider: 'Mistral AI', status: 'available' },
-    { id: 'meta', name: 'LLAMA 3', provider: 'Meta', status: 'available' },
+
     { id: 'cohere', name: 'COMMAND', provider: 'Cohere', status: 'available' },
-    { id: 'deepseek', name: 'DEEPSEEK-V3', provider: 'DeepSeek', status: 'available' },
-    { id: 'ai21', name: 'JURASSIC-2', provider: 'AI21 Labs', status: 'available' },
-    { id: '01ai', name: 'YI-LARGE', provider: '01.AI', status: 'available' },
     { id: 'microsoft', name: 'PHI-3', provider: 'Microsoft', status: 'available' },
     { id: 'nvidia', name: 'NEMOTRON-4', provider: 'NVIDIA', status: 'available' },
-    { id: 'ibm', name: 'GRANITE', provider: 'IBM', status: 'available' },
+ 
   ];
 
   const handleLLMClick = (llm) => {

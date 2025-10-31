@@ -140,7 +140,7 @@
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  background: #1F1F1F;
+  background: #0A0A0A;
   border: 1px solid #2A2A2A;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
@@ -166,20 +166,20 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 14px 20px;
   background: transparent;
   border: none;
-  color: #E0E0E0;
+  color: #888888;
   font-family: 'Courier New', monospace;
   font-size: 0.875rem;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
 }
 
 .option-item:hover {
-  background: #2A2A2A;
+  background: #1A1A1A;
   color: #FFFFFF;
 }
 
@@ -196,7 +196,6 @@
   flex-shrink: 0;
 }
 
-/* Title Edit Input */
 .chat-title-input {
   background: transparent;
   border: none;
@@ -213,10 +212,9 @@
 }
 
 .chat-title-input:focus {
-  border-bottom-color: #B94539;
+  border-bottom-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Center Logo in Top Bar */
 .chat-top-bar-logo {
   width: 40px;
   height: 40px;
@@ -229,14 +227,13 @@
   z-index: 1;
 }
 
-/* Model Dropdown - RED THEME */
 .chat-model-dropdown-custom {
   min-width: 150px;
 }
 
 .chat-model-dropdown-custom .trigger {
-  background: #B94539;
-  border: 1px solid #B94539;
+  background: #0a0a0a; /* Dark background, not red */
+  border: 1px solid #2a2a2a;
   padding: 10px 20px;
   color: #FFFFFF;
   font-family: 'Courier New', monospace;
@@ -244,24 +241,15 @@
   letter-spacing: 1.5px;
   text-transform: uppercase;
   font-weight: 400;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 .chat-model-dropdown-custom .trigger:hover:not(.disabled) {
-  background: #C54A3E;
-  border-color: #C54A3E;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: #3a3a3a;
 }
 
 .chat-model-dropdown-custom .arrow {
   color: #FFFFFF;
 }
 
-.chat-model-dropdown-custom .menu {
-  margin-top: 8px;
-}
-
-.chat-model-dropdown-custom .option.selected {
-  background: rgba(185, 69, 57, 0.15);
-  color: #B94539;
-  font-weight: 500;
-}

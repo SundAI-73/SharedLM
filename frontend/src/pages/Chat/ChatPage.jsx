@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Send, Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, FolderPlus } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -10,6 +10,31 @@ import './styles/chat-header.css';
 import './styles/chat-messages.css';
 import './styles/chat-input.css';
 import './styles/chat-responsive.css';
+
+// Memoized message component
+const Message = React.memo(({ msg, idx }) => (
+  <div className={`chat-message ${msg.role}`}>
+    <div className="message-avatar">
+      {msg.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+    </div>
+    <div className="message-content">
+      <div className="message-text">{msg.content}</div>
+      {msg.model && (
+        <div className="message-meta">
+          <span className="message-model">{msg.model}</span>
+          <span className="message-time">
+            {new Date(msg.timestamp).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </span>
+        </div>
+      )}
+    </div>
+  </div>
+));
+
+Message.displayName = 'Message';
 
 function ChatPage({ backendStatus }) {
   const { userId, currentModel, setCurrentModel } = useUser();
@@ -24,48 +49,38 @@ function ChatPage({ backendStatus }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [selectedProject, setSelectedProject] = useState(null);
+  
   const messagesEndRef = useRef(null);
   const optionsRef = useRef(null);
   const titleInputRef = useRef(null);
   const initialMessageSent = useRef(false);
 
-  // Model options for dropdown
-  const modelOptions = [
+  // Memoize model options
+  const modelOptions = useMemo(() => [
     { value: 'mistral', label: 'MISTRAL AI' },
     { value: 'openai', label: 'GPT-4' },
     { value: 'anthropic', label: 'CLAUDE' }
-  ];
+  ], []);
 
-  // Check if chat is from a project and handle initial message
+  // Handle project state from navigation
   useEffect(() => {
-    // Set project if coming from project
-    const projectId = location.state?.projectId;
-    const projectName = location.state?.projectName;
+    const { projectId, projectName, initialMessage } = location.state || {};
+    
     if (projectId && projectName) {
       setSelectedProject({ id: projectId, name: projectName });
     } else {
-      // Clear project if starting a new chat from sidebar
       setSelectedProject(null);
     }
 
-    // Handle initial message from project chat bar - ONLY ONCE
-    const initialMessage = location.state?.initialMessage;
     if (initialMessage && initialMessage.trim() && !initialMessageSent.current) {
       initialMessageSent.current = true;
-      setInput('');
-      // Auto-send the initial message after component mounts
       setTimeout(() => {
         handleSendWithMessage(initialMessage);
       }, 200);
       
-      // Clear the state to prevent re-sending on re-render
-      window.history.replaceState({
-        projectId,
-        projectName
-      }, '');
+      window.history.replaceState({ projectId, projectName }, '');
     }
 
-    // Reset for new chats
     if (!projectId && !projectName && !initialMessage) {
       setMessages([]);
       setChatTitle('');
@@ -73,52 +88,47 @@ function ChatPage({ backendStatus }) {
     }
   }, [location]);
 
-  // Initialize with Mistral as default
+  // Initialize model
   useEffect(() => {
-    if (!currentModel) {
-      setCurrentModel('mistral');
-    }
+    if (!currentModel) setCurrentModel('mistral');
   }, [currentModel, setCurrentModel]);
 
+  // Fetch available models
   useEffect(() => {
-    const fetchModels = async () => {
-      const modelsData = await apiService.getModels();
-      if (modelsData) {
-        setAvailableModels(modelsData.available_models);
-      }
-    };
     if (backendStatus === 'connected') {
-      fetchModels();
+      apiService.getModels().then(data => {
+        if (data) setAvailableModels(data.available_models);
+      });
     } else {
       setAvailableModels(['mistral']);
       setCurrentModel('mistral');
     }
   }, [backendStatus, setCurrentModel]);
 
-  // Auto-generate title from first message
+  // Auto-generate title
   useEffect(() => {
     if (messages.length === 2 && !chatTitle) {
       const firstMessage = messages.find(m => m.role === 'user');
       if (firstMessage) {
-        const title = firstMessage.content.slice(0, 40) + (firstMessage.content.length > 40 ? '...' : '');
+        const title = firstMessage.content.slice(0, 40) + 
+          (firstMessage.content.length > 40 ? '...' : '');
         setChatTitle(title);
       }
     }
   }, [messages, chatTitle]);
 
-  // Close options when clicking outside
+  // Close options on outside click
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (optionsRef.current && !optionsRef.current.contains(event.target)) {
+    const handleClickOutside = (e) => {
+      if (optionsRef.current && !optionsRef.current.contains(e.target)) {
         setShowOptions(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Focus input when editing title
+  // Focus title input
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
@@ -126,15 +136,12 @@ function ChatPage({ backendStatus }) {
     }
   }, [isEditingTitle]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Auto-scroll to bottom
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendWithMessage = async (messageText) => {
+  const handleSendWithMessage = useCallback(async (messageText) => {
     if (!messageText.trim()) return;
 
     const userMessage = {
@@ -148,98 +155,75 @@ function ChatPage({ backendStatus }) {
 
     try {
       const modelToUse = currentModel || 'mistral';
-      const response = await apiService.sendMessage(userId, userMessage.content, modelToUse);
+      const response = await apiService.sendMessage(userId, messageText, modelToUse);
 
       if (response) {
-        const assistantMessage = {
+        setMessages(prev => [...prev, {
           role: 'assistant',
           content: response.reply,
           model: response.used_model || modelToUse,
           memories: response.memories,
           timestamp: new Date().toISOString()
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
+        }]);
       }
     } catch (error) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'I apologize for the connection issue. Please check your settings or try again.',
+        content: 'Connection issue. Please check settings or try again.',
         model: 'mistral',
-        error: false,
         timestamp: new Date().toISOString()
       }]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentModel, userId]);
 
-  const handleSend = async () => {
+  const handleSend = useCallback(() => {
     handleSendWithMessage(input);
     setInput('');
-  };
+  }, [input, handleSendWithMessage]);
 
-  const handleRename = () => {
+  const handleRename = useCallback(() => {
     setEditedTitle(chatTitle);
     setIsEditingTitle(true);
     setShowOptions(false);
-  };
+  }, [chatTitle]);
 
-  const handleSaveTitle = () => {
-    if (editedTitle.trim()) {
-      setChatTitle(editedTitle.trim());
-    }
+  const handleSaveTitle = useCallback(() => {
+    if (editedTitle.trim()) setChatTitle(editedTitle.trim());
     setIsEditingTitle(false);
-  };
+  }, [editedTitle]);
 
-  const handleCancelEdit = () => {
-    setIsEditingTitle(false);
-    setEditedTitle('');
-  };
-
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (window.confirm('Delete this conversation?')) {
       setMessages([]);
       setChatTitle('');
       setShowOptions(false);
       navigate('/chat');
     }
-  };
-
-  const handleProjectClick = () => {
-    if (selectedProject) {
-      navigate(`/projects/${selectedProject.id}`);
-    }
-  };
-
-  const handleAddToProject = () => {
-    // TODO: Implement add to project functionality
-    console.log('Add to project clicked');
-  };
+  }, [navigate]);
 
   return (
     <div className="chat-page-container">
       <div className="chat-page-content">
-        {/* Top Bar - Shows when messages exist */}
-        {messages.length > 0 && (
+        {/* Top Bar */}
+        {messages.length > 0 ? (
           <div className="chat-top-bar-with-content">
-            {/* Left Section: Project Name / Chat Title (Claude order) */}
             <div className="chat-left-section">
-              {/* Project comes FIRST - Just clickable, no dropdown */}
               {selectedProject && (
                 <>
-                  <button className="chat-project-badge" onClick={handleProjectClick}>
+                  <button 
+                    className="chat-project-badge" 
+                    onClick={() => navigate(`/projects/${selectedProject.id}`)}
+                  >
                     <FolderOpen size={14} />
                     <span>{selectedProject.name}</span>
                   </button>
-
-                  {/* Divider */}
                   <div className="title-divider">/</div>
                 </>
               )}
 
-              {/* Chat Title comes SECOND - Has dropdown */}
               <div className="chat-title-wrapper" ref={optionsRef}>
                 {isEditingTitle ? (
                   <input
@@ -249,7 +233,7 @@ function ChatPage({ backendStatus }) {
                     onChange={(e) => setEditedTitle(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleSaveTitle();
-                      if (e.key === 'Escape') handleCancelEdit();
+                      if (e.key === 'Escape') setIsEditingTitle(false);
                     }}
                     onBlur={handleSaveTitle}
                     className="chat-title-input"
@@ -258,7 +242,6 @@ function ChatPage({ backendStatus }) {
                   <h1 className="chat-title-display">{chatTitle}</h1>
                 )}
 
-                {/* Title dropdown button */}
                 <button
                   className="chat-title-dropdown-btn"
                   onClick={() => setShowOptions(!showOptions)}
@@ -266,19 +249,18 @@ function ChatPage({ backendStatus }) {
                   <MoreVertical size={16} />
                 </button>
 
-                {/* Title Options Menu */}
                 {showOptions && !isEditingTitle && (
                   <div className="chat-title-options-menu">
                     <button className="option-item" onClick={handleRename}>
                       <Edit3 size={16} />
                       <span>Rename</span>
                     </button>
-                    <button className="option-item" onClick={handleAddToProject}>
+                    <button className="option-item">
                       <Star size={16} />
                       <span>Star</span>
                     </button>
                     {!selectedProject && (
-                      <button className="option-item" onClick={handleAddToProject}>
+                      <button className="option-item">
                         <FolderPlus size={16} />
                         <span>Add to project</span>
                       </button>
@@ -292,10 +274,8 @@ function ChatPage({ backendStatus }) {
               </div>
             </div>
 
-            {/* Center Logo */}
             <img src={logo} alt="SharedLM" className="chat-top-bar-logo" />
 
-            {/* Model Dropdown - Right */}
             <CustomDropdown
               value={currentModel}
               onChange={setCurrentModel}
@@ -305,10 +285,7 @@ function ChatPage({ backendStatus }) {
               className="chat-model-dropdown-custom"
             />
           </div>
-        )}
-
-        {/* Top Bar - Only dropdown when no messages (RIGHT SIDE) */}
-        {messages.length === 0 && (
+        ) : (
           <div className="chat-top-bar">
             <CustomDropdown
               value={currentModel}
@@ -321,7 +298,7 @@ function ChatPage({ backendStatus }) {
           </div>
         )}
 
-        {/* Chat Messages Container */}
+        {/* Messages */}
         <div className={`chat-messages-wrapper ${messages.length === 0 ? 'full-height' : ''}`}>
           {messages.length === 0 ? (
             <div className="chat-empty-state">
@@ -337,25 +314,7 @@ function ChatPage({ backendStatus }) {
           ) : (
             <div className="chat-messages-list">
               {messages.map((msg, idx) => (
-                <div key={idx} className={`chat-message ${msg.role}`}>
-                  <div className="message-avatar">
-                    {msg.role === 'user' ? <User size={20} /> : <Bot size={20} />}
-                  </div>
-                  <div className="message-content">
-                    <div className="message-text">{msg.content}</div>
-                    {msg.model && (
-                      <div className="message-meta">
-                        <span className="message-model">{msg.model}</span>
-                        <span className="message-time">
-                          {new Date(msg.timestamp).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <Message key={idx} msg={msg} idx={idx} />
               ))}
 
               {loading && (
@@ -365,9 +324,7 @@ function ChatPage({ backendStatus }) {
                   </div>
                   <div className="message-content">
                     <div className="typing-indicator">
-                      <span></span>
-                      <span></span>
-                      <span></span>
+                      <span /><span /><span />
                     </div>
                   </div>
                 </div>
@@ -377,7 +334,7 @@ function ChatPage({ backendStatus }) {
           )}
         </div>
 
-        {/* Bottom Input Container */}
+        {/* Input */}
         <div className="chat-input-wrapper">
           <div className="chat-input-container">
             <button className="chat-attach-btn">
@@ -389,9 +346,7 @@ function ChatPage({ backendStatus }) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !loading) {
-                  handleSend();
-                }
+                if (e.key === 'Enter' && !loading) handleSend();
               }}
               placeholder="Message SharedLM..."
               className="chat-input-field"
@@ -413,4 +368,4 @@ function ChatPage({ backendStatus }) {
   );
 }
 
-export default ChatPage;
+export default React.memo(ChatPage);

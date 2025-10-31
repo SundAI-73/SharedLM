@@ -39,8 +39,8 @@
 
 .nav-tab.active {
   background: #1A1A1A;
-  color: #B94539;
-  border: 1px solid rgba(185, 69, 57, 0.5);
+  color: #FFFFFF;
+  border: 1px solid #2A2A2A;
 }
 
 .settings-content-wrapper {
@@ -191,7 +191,8 @@
 }
 
 .pricing-card.active {
-  border-color: rgba(185, 69, 57, 0.5);
+  border-color: #3A3A3A;
+  background: #1A1A1A;
 }
 
 .plan-badge {
@@ -291,46 +292,6 @@
   text-align: center;
 }
 
-.setting-dropdown .trigger {
-  background: #1F1F1F;
-  border: 1px solid #2A2A2A;
-  border-radius: 10px;
-  padding: 10px 15px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-}
-
-.setting-dropdown .trigger:hover:not(.disabled) {
-  border-color: rgba(185, 69, 57, 0.5);
-  background: #2A2A2A;
-}
-
-.setting-dropdown .menu {
-  background: #1F1F1F;
-  border: 1px solid #2A2A2A;
-  border-radius: 10px;
-  margin-top: 4px;
-}
-
-.setting-dropdown .option {
-  padding: 12px 15px;
-  color: #E0E0E0;
-  font-family: 'Courier New', monospace;
-  font-size: 0.875rem;
-}
-
-.setting-dropdown .option:hover {
-  background: #2A2A2A;
-  color: #FFFFFF;
-}
-
-.setting-dropdown .option.selected {
-  background: rgba(185, 69, 57, 0.2);
-  color: #B94539;
-  font-weight: 400;
-}
-
 .setting-input {
   background: #1F1F1F;
   border: 1px solid #2A2A2A;
@@ -345,7 +306,7 @@
 }
 
 .setting-input:focus {
-  border-color: rgba(185, 69, 57, 0.5);
+  border-color: rgba(255, 255, 255, 0.15);
   background: #2A2A2A;
 }
 

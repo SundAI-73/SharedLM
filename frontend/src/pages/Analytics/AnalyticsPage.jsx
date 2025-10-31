@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { TrendingUp, Activity, PieChart, Calendar } from 'lucide-react';
+import { TrendingUp, Activity, PieChart, Calendar, Clock } from 'lucide-react';
+import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
 import './Analytics.css';
 
 function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('7d');
+
+  const timeRangeOptions = [
+    { value: '24h', label: 'LAST 24 HOURS' },
+    { value: '7d', label: 'LAST 7 DAYS' },
+    { value: '30d', label: 'LAST 30 DAYS' },
+    { value: 'all', label: 'ALL TIME' }
+  ];
 
   const stats = [
     { label: 'TOTAL CHATS', value: '247', change: '+12%' },
@@ -34,17 +42,14 @@ function AnalyticsPage() {
           <p className="page-subtitle">Track your AI usage and performance</p>
         </div>
 
-        {/* Time Range Selector */}
-        <div className="time-range-selector">
-          {['24h', '7d', '30d', 'all'].map(range => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={`time-range-btn ${timeRange === range ? 'active' : ''}`}
-            >
-              {range.toUpperCase()}
-            </button>
-          ))}
+        {/* Time Range Filter - Right aligned like other pages */}
+        <div className="analytics-controls">
+          <CustomDropdown
+            value={timeRange}
+            onChange={setTimeRange}
+            options={timeRangeOptions}
+            className="analytics-time-dropdown"
+          />
         </div>
 
         {/* Stats Grid */}
@@ -80,7 +85,7 @@ function AnalyticsPage() {
           </div>
 
           {/* Model Distribution */}
-          <div className="card-base chart-card">
+          <div className="chart-card">
             <div className="chart-header">
               <h3 className="chart-title">MODEL DISTRIBUTION</h3>
               <PieChart size={18} className="chart-icon" />
@@ -107,7 +112,7 @@ function AnalyticsPage() {
         {/* Activity Feed */}
         <div className="activity-section">
           <h3 className="section-title">RECENT ACTIVITY</h3>
-          <div className="activity-list">
+          <div className="list-layout">
             {recentActivity.map((activity, idx) => (
               <div key={idx} className="list-item activity-item">
                 <div className="activity-icon">{activity.icon}</div>
