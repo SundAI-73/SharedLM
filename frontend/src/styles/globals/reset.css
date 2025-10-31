@@ -191,3 +191,11 @@ select::-ms-expand {
   backdrop-filter: blur(10px);
   font-family: 'Courier New', monospace;
 }
+
+.nothing-main-fullwidth {
+  flex: 1;
+  margin-left: 0 !important;
+  overflow-y: auto;
+  min-height: 100vh;
+  background: transparent;
+}
