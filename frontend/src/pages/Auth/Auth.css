@@ -7,8 +7,6 @@
     padding: 40px;
     position: relative;
 }
-
-/* Background decoration - Top left glow */
 .auth-page::before {
     content: '';
     position: absolute;
@@ -22,8 +20,6 @@
     animation: float 25s ease-in-out infinite;
     pointer-events: none;
 }
-
-/* Background decoration - Bottom right glow */
 .auth-page::after {
     content: '';
     position: absolute;
@@ -203,8 +199,6 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
-
-/* Responsive Design */
 @media (max-width: 768px) {
     .back-button {
         top: 20px;
