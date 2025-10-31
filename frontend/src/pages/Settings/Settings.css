@@ -43,6 +43,10 @@
   border: 1px solid #2A2A2A;
 }
 
+.nav-tab svg {
+  flex-shrink: 0;
+}
+
 .settings-content-wrapper {
   height: 100%;
   overflow: hidden;
@@ -58,7 +62,6 @@
   overflow-x: hidden;
 }
 
-/* Custom scrollbar for settings content */
 .settings-content::-webkit-scrollbar {
   width: 6px !important;
   display: block !important;
@@ -78,15 +81,9 @@
   background: #4A4A4A !important;
 }
 
-/* Firefox scrollbar for settings */
 .settings-content {
   scrollbar-width: thin !important;
   scrollbar-color: #3A3A3A #1F1F1F !important;
-}
-
-/* IE/Edge scrollbar for settings */
-.settings-content {
-  -ms-overflow-style: auto !important;
 }
 
 .settings-section {
@@ -101,6 +98,7 @@
   align-items: center;
   padding: 25px 0;
   position: relative;
+  gap: 20px;
 }
 
 .setting-item::after {
@@ -127,6 +125,7 @@
 
 .setting-info {
   flex: 1;
+  min-width: 0;
 }
 
 .setting-label {
@@ -141,6 +140,7 @@
   color: #555555;
   font-size: 0.7rem;
   margin: 0;
+  word-wrap: break-word;
 }
 
 .danger-zone {
@@ -336,12 +336,27 @@
 
 @media (max-width: 1024px) {
   .settings-layout {
-    grid-template-columns: 200px 1fr;
+    grid-template-columns: 220px 1fr;
     height: 550px;
+    gap: 25px;
+  }
+
+  .nav-tab {
+    padding: 13px 18px;
+    font-size: 0.8rem;
+  }
+
+  .settings-content {
+    padding: 30px;
   }
 
   .pricing-card-container {
     grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .setting-input {
+    min-width: 180px;
   }
 }
 
@@ -349,6 +364,7 @@
   .settings-layout {
     grid-template-columns: 1fr;
     height: auto;
+    gap: 20px;
   }
 
   .settings-nav {
@@ -356,38 +372,234 @@
     overflow-x: auto;
     padding-bottom: 10px;
     gap: 8px;
+    scrollbar-width: thin;
+  }
+
+  .settings-nav::-webkit-scrollbar {
+    height: 4px;
+    display: block !important;
+  }
+
+  .settings-nav::-webkit-scrollbar-track {
+    background: #1F1F1F;
+  }
+
+  .settings-nav::-webkit-scrollbar-thumb {
+    background: #3A3A3A;
+    border-radius: 2px;
   }
 
   .nav-tab {
     white-space: nowrap;
     padding: 12px 16px;
+    font-size: 0.75rem;
+    letter-spacing: 0.8px;
+  }
+
+  .nav-tab svg {
+    width: 16px;
+    height: 16px;
   }
 
   .settings-content-wrapper {
     height: 500px;
   }
+
+  .settings-content {
+    padding: 25px;
+  }
+
+  .setting-item {
+    padding: 20px 0;
+  }
+
+  .setting-label {
+    font-size: 0.9rem;
+  }
+
+  .setting-description {
+    font-size: 0.65rem;
+  }
+
+  .setting-input {
+    min-width: 150px;
+    font-size: 0.8rem;
+  }
+
+  .pricing-card {
+    padding: 20px;
+  }
+
+  .plan-name {
+    font-size: 0.95rem;
+  }
+
+  .plan-price {
+    font-size: 1.8rem;
+  }
+
+  .storage-value {
+    font-size: 1.3rem;
+  }
 }
 
 @media (max-width: 480px) {
+  .settings-nav {
+    gap: 6px;
+  }
+
+  .nav-tab {
+    padding: 10px 14px;
+    font-size: 0.7rem;
+  }
+
+  .nav-tab svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .settings-content-wrapper {
+    height: 450px;
+  }
+
   .settings-content {
     padding: 20px;
+  }
+
+  .settings-section {
+    gap: 25px;
   }
 
   .setting-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 15px;
+    padding: 18px 0;
+  }
+
+  .setting-label {
+    font-size: 0.85rem;
+  }
+
+  .setting-description {
+    font-size: 0.6rem;
+  }
+
+  .setting-input {
+    width: 100%;
+    min-width: 100%;
+    font-size: 0.75rem;
+    padding: 10px 14px;
+  }
+
+  .toggle-switch {
+    width: 46px;
+    height: 22px;
+  }
+
+  .toggle-slider:before {
+    height: 14px;
+    width: 14px;
+  }
+
+  .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+  }
+
+  .pricing-card-container {
+    gap: 15px;
+  }
+
+  .pricing-card {
+    padding: 20px 18px;
+  }
+
+  .plan-badge {
+    font-size: 0.55rem;
+    padding: 2px 6px;
+  }
+
+  .plan-name {
+    font-size: 0.9rem;
+  }
+
+  .plan-price {
+    font-size: 1.6rem;
+  }
+
+  .plan-price span {
+    font-size: 0.8rem;
+  }
+
+  .plan-features li {
+    font-size: 0.75rem;
+    padding: 7px 0;
+  }
+
+  .storage-overview {
+    padding: 20px;
+  }
+
+  .storage-label {
+    font-size: 0.8rem;
+  }
+
+  .storage-value {
+    font-size: 1.2rem;
+  }
+
+  .storage-info {
+    font-size: 0.7rem;
   }
 
   .action-buttons {
     flex-direction: column;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 30px;
   }
 
   .action-buttons button {
     width: 100%;
+    font-size: 0.7rem;
+    padding: 12px 20px;
   }
 
-  .pricing-card-container {
-    grid-template-columns: 1fr;
+  .danger-zone {
+    margin-top: 30px;
+    padding-top: 30px;
+  }
+
+  .danger-title {
+    font-size: 0.8rem;
+    margin-bottom: 15px;
+  }
+}
+
+@media (max-width: 375px) {
+  .nav-tab {
+    padding: 9px 12px;
+    font-size: 0.65rem;
+    letter-spacing: 0.5px;
+  }
+
+  .settings-content {
+    padding: 18px;
+  }
+
+  .setting-label {
+    font-size: 0.8rem;
+  }
+
+  .setting-description {
+    font-size: 0.58rem;
+  }
+
+  .plan-price {
+    font-size: 1.5rem;
+  }
+
+  .plan-features li {
+    font-size: 0.7rem;
   }
 }

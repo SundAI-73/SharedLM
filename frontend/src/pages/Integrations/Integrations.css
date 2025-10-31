@@ -51,6 +51,8 @@
   gap: 4px;
   align-items: flex-start;
   text-align: left;
+  flex: 1;
+  min-width: 0;
 }
 
 .integration-name {
@@ -65,6 +67,7 @@
   line-height: 1.2;
   text-align: left;
   width: 100%;
+  word-break: break-word;
 }
 
 .integration-card:hover .integration-name {
@@ -116,6 +119,8 @@
 
 .custom-integration-btn {
   position: relative;
+  width: auto;
+  max-width: 100%;
 }
 
 .custom-integration-btn.coming-soon {
@@ -125,8 +130,8 @@
 
 .custom-integration-btn .coming-soon-badge {
   position: absolute;
-  top: -70px;
-  right: 95px;
+  top: -8px;
+  right: -8px;
   background: #B94539;
   color: #ffffff;
   padding: 3px 8px;
@@ -137,16 +142,41 @@
   font-weight: 500;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .integration-card {
     padding: 22px;
+    min-height: 95px;
+  }
+
+  .integration-name {
+    font-size: 0.9rem;
+    letter-spacing: 1.5px;
+  }
+
+  .integration-provider {
+    font-size: 0.65rem;
+  }
+
+  .integration-icon-placeholder {
+    width: 34px;
+    height: 34px;
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+  .integrations-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-bottom: 40px;
+  }
+
   .integration-card {
     padding: 20px;
-    min-height: 80px;
+    min-height: 90px;
+  }
+
+  .integration-content {
+    gap: 12px;
   }
 
   .integration-icon-placeholder {
@@ -155,6 +185,111 @@
   }
 
   .integration-name {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    letter-spacing: 1.2px;
+  }
+
+  .integration-provider {
+    font-size: 0.65rem;
+  }
+
+  .custom-section {
+    margin-top: 35px;
+    padding-top: 35px;
+  }
+
+  .custom-label {
+    font-size: 0.8rem;
+    margin-bottom: 15px;
+  }
+
+  .custom-integration-btn {
+    padding: 12px 24px;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .integrations-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 30px;
+  }
+
+  .integration-card {
+    padding: 18px;
+    min-height: 85px;
+  }
+
+  .integration-content {
+    gap: 10px;
+  }
+
+  .integration-icon-placeholder {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+
+  .integration-name {
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+  }
+
+  .integration-provider {
+    font-size: 0.6rem;
+  }
+
+  .coming-soon-badge {
+    top: 6px;
+    right: 6px;
+    padding: 2px 5px;
+    font-size: 0.55rem;
+  }
+
+  .custom-section {
+    margin-top: 30px;
+    padding-top: 30px;
+  }
+
+  .custom-label {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .custom-integration-btn {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 11px;
+    letter-spacing: 1.2px;
+  }
+
+  .custom-integration-btn .coming-soon-badge {
+    top: -6px;
+    right: -6px;
+  }
+}
+
+@media (max-width: 375px) {
+  .integration-card {
+    padding: 16px;
+    min-height: 80px;
+  }
+
+  .integration-name {
+    font-size: 0.75rem;
+    letter-spacing: 0.8px;
+  }
+
+  .integration-provider {
+    font-size: 0.58rem;
+  }
+
+  .custom-integration-btn {
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 10px 16px;
   }
 }

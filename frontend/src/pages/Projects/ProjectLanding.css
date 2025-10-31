@@ -199,8 +199,6 @@
 .meta-divider {
   color: #3A3A3A;
 }
-
-/* Chat Section with Model Selector - Dropdown on RIGHT */
 .project-chat-section {
   display: flex;
   align-items: center;
@@ -213,8 +211,6 @@
   width: 180px;
   order: 2;
 }
-
-/* Dark theme like chat page - NOT RED */
 .project-model-dropdown .trigger {
   background: #0a0a0a;
   border: 1px solid #2a2a2a;
@@ -238,8 +234,6 @@
 .project-model-dropdown .arrow {
   color: #FFFFFF;
 }
-
-/* Chat Input Bar */
 .chat-bar-container {
   flex: 1;
   order: 1;
@@ -340,16 +334,12 @@
   color: #FFFFFF;
   cursor: not-allowed;
 }
-
-/* Two Column Layout */
 .project-content-layout {
   display: grid;
   grid-template-columns: 1fr 550px;
   gap: 30px;
   margin-top: 40px;
 }
-
-/* Left Column */
 .project-left-column {
   display: flex;
   flex-direction: column;
@@ -399,8 +389,6 @@
 .project-tab svg {
   display: none;
 }
-
-/* Tab Content */
 .tab-content {
   background: #141414;
   border: 1px solid #1F1F1F;
@@ -433,8 +421,6 @@
   border-color: #3A3A3A;
   color: #FFFFFF;
 }
-
-/* Storage Info Bar - Top aligned with add button */
 .storage-info-container {
   position: absolute;
   top: 25px;
@@ -469,8 +455,6 @@
   border-radius: 2px;
   transition: width 0.3s ease;
 }
-
-/* Memory Section */
 .memory-list {
   display: flex;
   flex-direction: column;
@@ -500,8 +484,6 @@
   line-height: 1.6;
   margin: 0;
 }
-
-/* Instructions Section */
 .instructions-content {
   display: flex;
   flex-direction: column;
@@ -524,8 +506,6 @@
 .edit-instructions-btn {
   display: none;
 }
-
-/* Files Section - Claude Style */
 .files-section {
   display: flex;
   flex-direction: column;
@@ -654,8 +634,6 @@
   width: 14px;
   height: 14px;
 }
-
-/* Storage Info Bar - Remove from bottom */
 .storage-info-bar {
   display: none;
 }
@@ -663,8 +641,6 @@
 .add-more-btn {
   display: none;
 }
-
-/* Empty Tab Content */
 .empty-tab-content {
   display: flex;
   flex-direction: column;
@@ -690,8 +666,6 @@
   letter-spacing: 0.5px;
   margin: 0;
 }
-
-/* Right Column - Recent Activity */
 .project-right-column {
   background: #141414;
   border: 1px solid #1F1F1F;
@@ -832,8 +806,6 @@
 .activity-item:hover .activity-chevron {
   color: #999999;
 }
-
-/* Empty Activity */
 .empty-activity {
   display: flex;
   flex-direction: column;
@@ -851,8 +823,6 @@
   letter-spacing: 1px;
   margin: 0;
 }
-
-/* Loading State */
 .loading-state {
   text-align: center;
   padding: 100px 20px;
@@ -860,8 +830,6 @@
   color: #666666;
   letter-spacing: 2px;
 }
-
-/* Responsive Design */
 @media (max-width: 1024px) {
   .project-content-layout {
     grid-template-columns: 1fr 320px;
