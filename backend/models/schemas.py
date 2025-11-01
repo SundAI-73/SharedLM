@@ -5,7 +5,8 @@ from typing import List, Optional, Literal
 class ChatRequest(BaseModel):
     user_id: str
     message: str
-    model_choice: Literal["openai", "anthropic"]
+    model_provider: Literal["openai", "anthropic", "mistral"]
+    model_choice: str
     session_id: Optional[str] = None
 
 

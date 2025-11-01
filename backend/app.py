@@ -8,7 +8,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from backend.config import settings
 from backend.models.schemas import (
     ChatRequest, ChatResponse, HealthResponse, 
     ModelsResponse, MemorySearchRequest, MemorySearchResponse
@@ -74,8 +73,6 @@ async def get_models():
     """Get available models and defaults"""
     return ModelsResponse(
         available_models=["mistral", "openai", "anthropic"],
-        default_openai=settings.default_model_openai,
-        default_anthropic=settings.default_model_anthropic
     )
 
 
@@ -87,14 +84,13 @@ async def chat(request: ChatRequest):
         memories = mem0_client.search_memories(
             user_id=request.user_id,
             query=request.message,
-            limit=settings.default_top_k
         )
         
         # 2. Compose prompt with memories
         prompt = compose_prompt(memories, request.message)
         
         # 3. Route to appropriate model
-        reply, used_model = await route_chat(request.model_choice, prompt)
+        reply, used_model = await route_chat(request.model_provider, request.model_choice, prompt)
         
         # 4. Store the conversation in memory with enhanced context
         # Create a more descriptive memory entry
