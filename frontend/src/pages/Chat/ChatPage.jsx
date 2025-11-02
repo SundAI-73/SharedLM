@@ -11,28 +11,88 @@ import './styles/chat-messages.css';
 import './styles/chat-input.css';
 import './styles/chat-responsive.css';
 
-// Memoized message component
-const Message = React.memo(({ msg, idx }) => (
-  <div className={`chat-message ${msg.role}`}>
-    <div className="message-avatar">
-      {msg.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+// Message formatter utilities - NO EMOJIS
+const formatMessage = (text) => {
+  if (!text) return '';
+  
+  let formatted = text;
+  
+  // Remove all emojis first
+  formatted = formatted.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
+  
+  // Convert bold markdown: **text** -> <strong>text</strong>
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  
+  // Convert italic: *text* -> <em>text</em>
+  formatted = formatted.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+  
+  // Code blocks: `code` -> <code>code</code>
+  formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+  
+  // Convert double line breaks to paragraphs
+  formatted = formatted.split('\n\n').map(para => {
+    return para.trim() ? `<p>${para.replace(/\n/g, ' ')}</p>` : '';
+  }).join('');
+  
+  // If no paragraphs were created, wrap in paragraph
+  if (!formatted.includes('<p>')) {
+    formatted = `<p>${formatted}</p>`;
+  }
+  
+  return formatted;
+};
+
+// Generate smart title from conversation
+const generateChatTitle = (userMessage, assistantMessage) => {
+  // Try to extract a topic from the user's message
+  const message = userMessage.toLowerCase();
+  
+  // Remove common question words and get key topic
+  const cleaned = message
+    .replace(/^(what|how|why|when|where|who|can|could|would|should|is|are|do|does|tell me|explain|show me|help me with)\s+/i, '')
+    .replace(/\?+$/, '')
+    .trim();
+  
+  // Capitalize first letter of each word
+  const title = cleaned
+    .split(' ')
+    .slice(0, 6) // Take first 6 words max
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+  
+  // Limit to 40 characters
+  return title.length > 40 ? title.substring(0, 40) + '...' : title;
+};
+
+// Enhanced message component with formatting
+const Message = React.memo(({ msg, idx }) => {
+  const formattedContent = formatMessage(msg.content);
+  
+  return (
+    <div className={`chat-message ${msg.role}`}>
+      <div className="message-avatar">
+        {msg.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+      </div>
+      <div className="message-content">
+        <div 
+          className="message-text"
+          dangerouslySetInnerHTML={{ __html: formattedContent }}
+        />
+        {msg.model && (
+          <div className="message-meta">
+            <span className="message-model">{msg.model.toUpperCase()}</span>
+            <span className="message-time">
+              {new Date(msg.timestamp).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
-    <div className="message-content">
-      <div className="message-text">{msg.content}</div>
-      {msg.model && (
-        <div className="message-meta">
-          <span className="message-model">{msg.model}</span>
-          <span className="message-time">
-            {new Date(msg.timestamp).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </span>
-        </div>
-      )}
-    </div>
-  </div>
-));
+  );
+});
 
 Message.displayName = 'Message';
 
@@ -105,13 +165,14 @@ function ChatPage({ backendStatus }) {
     }
   }, [backendStatus, setCurrentModel]);
 
-  // Auto-generate title
+  // Auto-generate smart title
   useEffect(() => {
     if (messages.length === 2 && !chatTitle) {
-      const firstMessage = messages.find(m => m.role === 'user');
-      if (firstMessage) {
-        const title = firstMessage.content.slice(0, 40) + 
-          (firstMessage.content.length > 40 ? '...' : '');
+      const userMessage = messages.find(m => m.role === 'user');
+      const assistantMessage = messages.find(m => m.role === 'assistant');
+      
+      if (userMessage && assistantMessage) {
+        const title = generateChatTitle(userMessage.content, assistantMessage.content);
         setChatTitle(title);
       }
     }

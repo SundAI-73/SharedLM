@@ -37,7 +37,8 @@ class APIService {
         body: JSON.stringify({
           user_id: userId,
           message: message,
-          model_choice: modelChoice
+          model_provider: this.getModelProvider(modelChoice), // NEW
+          model_choice: this.getModelName(modelChoice) // NEW
         })
       });
 
@@ -50,6 +51,24 @@ class APIService {
       console.error('Send message failed:', error);
       throw error;
     }
+  }
+
+  getModelProvider(modelChoice) {
+    const providerMap = {
+      'mistral': 'mistral',
+      'openai': 'openai',
+      'anthropic': 'anthropic'
+    };
+    return providerMap[modelChoice] || 'mistral';
+  }
+
+  getModelName(modelChoice) {
+    const modelMap = {
+      'mistral': 'mistral-large-latest',
+      'openai': 'gpt-4o-mini',
+      'anthropic': 'claude-3-5-sonnet-20241022'
+    };
+    return modelMap[modelChoice] || 'mistral-large-latest';
   }
 
   // Search memories
