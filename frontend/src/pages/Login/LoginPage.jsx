@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import logo from '../../assets/images/logo main.svg';
+import apiService from '../../services/api';
 import './Login.css';
 
 function LoginPage() {
@@ -17,17 +18,27 @@ function LoginPage() {
     setError('');
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      if (email && password) {
-        // Store user session
+    try {
+      // REAL API CALL - Not setTimeout!
+      const response = await apiService.login(email, password);
+      
+      if (response.success) {
+        // Store user info in localStorage
         localStorage.setItem('sharedlm_session', 'authenticated');
+        localStorage.setItem('sharedlm_user_id', response.user.id);
+        localStorage.setItem('sharedlm_user_email', response.user.email);
+        localStorage.setItem('sharedlm_user_name', response.user.display_name);
+        
+        // Navigate to chat
         navigate('/chat');
       } else {
-        setError('Please fill in all fields');
+        setError('Login failed. Please try again.');
       }
+    } catch (err) {
+      setError(err.message || 'Invalid email or password');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -63,6 +74,7 @@ function LoginPage() {
                     placeholder="your@email.com"
                     className="auth-input"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -79,11 +91,13 @@ function LoginPage() {
                     placeholder="Enter your password"
                     className="auth-input"
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="auth-input-action"
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -145,10 +159,10 @@ function LoginPage() {
 
             {/* Social Login */}
             <div className="auth-social-section">
-              <button className="auth-social-btn">
+              <button className="auth-social-btn" disabled>
                 <span>Continue with Google</span>
               </button>
-              <button className="auth-social-btn">
+              <button className="auth-social-btn" disabled>
                 <span>Continue with GitHub</span>
               </button>
             </div>

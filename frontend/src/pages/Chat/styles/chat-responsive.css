@@ -242,3 +242,34 @@
     height: 40px;
   }
 }
+
+@media (max-width: 768px) {
+  .message-content {
+    max-width: 85%;
+    padding: 16px 18px;
+  }
+  
+  .message-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  
+  .message-text p {
+    margin-bottom: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .message-content {
+    max-width: 90%;
+    padding: 14px 16px;
+  }
+  
+  .message-text {
+    font-size: 0.875rem;
+  }
+  
+  .message-text p {
+    margin-bottom: 12px;
+  }
+}

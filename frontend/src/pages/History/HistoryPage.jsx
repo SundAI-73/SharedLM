@@ -1,59 +1,131 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { MessageSquare, Search, ChevronRight, Clock, Filter, Trash2, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../contexts/UserContext';
+import apiService from '../../services/api';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
+import { useNotification } from '../../contexts/NotificationContext';
 import './History.css';
 
 function HistoryPage() {
   const navigate = useNavigate();
+  const { userId } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProject, setSelectedProject] = useState('all');
   const [selectedChats, setSelectedChats] = useState([]);
+  const [chats, setChats] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const notify = useNotification();
 
-  const chats = [
-    { id: 1, title: 'React component optimization', model: 'Claude', time: '10 min ago', messages: 23, project: 'Web Development' },
-    { id: 2, title: 'Python data analysis script', model: 'GPT-4', time: '2 hours ago', messages: 15, project: 'Data Science' },
-    { id: 3, title: 'Marketing copy ideas', model: 'Claude', time: '1 day ago', messages: 8, project: 'Marketing' },
-    { id: 4, title: 'SQL query optimization', model: 'Cursor', time: '2 days ago', messages: 12, project: 'Web Development' },
-    { id: 5, title: 'Business strategy discussion', model: 'Gemini', time: '3 days ago', messages: 45, project: 'Business' },
-    { id: 6, title: 'UI/UX design review', model: 'Claude', time: '4 days ago', messages: 18, project: 'Web Development' },
-    { id: 7, title: 'Machine learning model training', model: 'GPT-4', time: '5 days ago', messages: 32, project: 'Data Science' },
-    { id: 8, title: 'API documentation', model: 'Claude', time: '1 week ago', messages: 14, project: 'Web Development' },
-    { id: 9, title: 'Content strategy planning', model: 'Gemini', time: '1 week ago', messages: 27, project: 'Marketing' },
-    { id: 10, title: 'General chat about AI', model: 'Mistral', time: '2 weeks ago', messages: 5, project: null },
-    { id: 11, title: 'Quick question about coding', model: 'GPT-4', time: '2 weeks ago', messages: 3, project: null },
-    { id: 12, title: 'Random brainstorming', model: 'Claude', time: '3 weeks ago', messages: 12, project: null },
-  ];
+  useEffect(() => {
+    loadConversations();
+  }, [userId]);
 
-  // Project filter options
-  const projectOptions = [
-    { value: 'all', label: 'All Projects' },
-    { value: 'none', label: 'No Project' },
-    { value: 'Web Development', label: 'Web Development' },
-    { value: 'Data Science', label: 'Data Science' },
-    { value: 'Marketing', label: 'Marketing' },
-    { value: 'Business', label: 'Business' },
-  ];
-
-  const filteredChats = chats.filter(chat => {
-    const matchesSearch = chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      chat.model.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    let matchesProject = true;
-    if (selectedProject === 'all') {
-      matchesProject = true;
-    } else if (selectedProject === 'none') {
-      matchesProject = chat.project === null;
-    } else {
-      matchesProject = chat.project === selectedProject;
+  const loadConversations = async () => {
+    try {
+      setIsLoading(true);
+      
+      // FIXED: Load both conversations AND projects
+      const [conversations, projects] = await Promise.all([
+        apiService.getConversations(userId),
+        apiService.getProjects(userId)
+      ]);
+      
+      // Create project ID to name map
+      const projectMap = {};
+      projects.forEach(proj => {
+        projectMap[proj.id] = proj.name;
+      });
+      
+      // Transform with real project names
+      const formattedChats = conversations.map(conv => ({
+        id: conv.id,
+        title: conv.title || 'Untitled Chat',
+        model: conv.model_used || 'Unknown',
+        time: formatTime(conv.updated_at),
+        messages: conv.message_count,
+        project: conv.project_id ? conv.project_id : null,
+        projectName: conv.project_id ? projectMap[conv.project_id] : null
+      }));
+      
+      setChats(formattedChats);
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
+      setChats([]);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now - date;
+    const diffInMinutes = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMs / 3600000);
+    const diffInDays = Math.floor(diffInMs / 86400000);
+
+    if (diffInMinutes < 1) return 'just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+    if (diffInHours < 24) return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+    if (diffInDays === 1) return '1 day ago';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 14) return '1 week ago';
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    return date.toLocaleDateString();
+  };
+
+  const [availableProjects, setAvailableProjects] = useState([]);
+
+  useEffect(() => {
+    loadProjectsForFilter();
+  }, [userId]);
+
+  const loadProjectsForFilter = async () => {
+    try {
+      const data = await apiService.getProjects(userId);
+      setAvailableProjects(data);
+    } catch (error) {
+      console.error('Failed to load projects for filter:', error);
+    }
+  };
+
+  const projectOptions = useMemo(() => {
+    const options = [
+      { value: 'all', label: 'All Projects' },
+      { value: 'none', label: 'No Project' }
+    ];
     
-    return matchesSearch && matchesProject;
-  });
+    availableProjects.forEach(proj => {
+      options.push({
+        value: proj.id,
+        label: proj.name
+      });
+    });
+    
+    return options;
+  }, [availableProjects]);
+
+  const filteredChats = useMemo(() => {
+    return chats.filter(chat => {
+      const matchesSearch = chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        chat.model.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      let matchesProject = true;
+      if (selectedProject === 'all') {
+        matchesProject = true;
+      } else if (selectedProject === 'none') {
+        matchesProject = chat.project === null;
+      } else {
+        matchesProject = chat.project && Number(chat.project) === Number(selectedProject);
+      }
+      
+      return matchesSearch && matchesProject;
+    });
+  }, [chats, searchQuery, selectedProject]);
 
   const handleChatClick = (chatId) => {
-    // Navigate to chat page with the specific chat loaded
-    navigate('/chat', { state: { chatId } });
+    navigate(`/chat?conversation=${chatId}`);
   };
 
   const handleCheckboxClick = (e, chatId) => {
@@ -78,24 +150,40 @@ function HistoryPage() {
     setSelectedChats([]);
   };
 
-  const handleDeleteSelected = () => {
-    if (window.confirm(`Delete ${selectedChats.length} conversation${selectedChats.length > 1 ? 's' : ''}?`)) {
-      console.log('Deleting chats:', selectedChats);
-      // TODO: Implement actual delete functionality
-      setSelectedChats([]);
+  const handleDeleteSelected = async () => {
+    const confirmed = await notify.confirm({
+      title: 'Delete Conversations',
+      message: `Delete ${selectedChats.length} conversation${selectedChats.length > 1 ? 's' : ''}? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+
+    if (confirmed) {
+      try {
+        for (const chatId of selectedChats) {
+          await apiService.deleteConversation(chatId);
+        }
+        await loadConversations();
+        setSelectedChats([]);
+        notify.success(`${selectedChats.length} conversation${selectedChats.length > 1 ? 's' : ''} deleted`);
+      } catch (error) {
+        console.error('Failed to delete conversations:', error);
+        notify.error('Failed to delete conversations');
+      }
     }
   };
 
   return (
     <div className="page-container">
       <div className="page-content">
-        {/* Header */}
         <div className="page-header">
           <h1 className="page-title">CHAT HISTORY</h1>
-          <p className="page-subtitle">View all your conversations</p>
+          <p className="page-subtitle">
+            {isLoading ? 'Loading...' : `${chats.length} conversation${chats.length !== 1 ? 's' : ''}`}
+          </p>
         </div>
 
-        {/* Controls */}
         <div className="controls-section">
           <div className="search-container">
             <Search size={18} className="search-icon" />
@@ -119,7 +207,6 @@ function HistoryPage() {
           </div>
         </div>
 
-        {/* Action Bar - Shows when chats are selected */}
         <div className={`action-bar ${selectedChats.length === 0 ? 'hidden' : ''}`}>
           <div className="selection-info">
             <span className="selection-count">
@@ -138,8 +225,13 @@ function HistoryPage() {
           </div>
         </div>
 
-        {/* Chat List */}
-        {filteredChats.length === 0 ? (
+        {isLoading ? (
+          <div className="empty-state">
+            <Clock size={60} className="empty-state-icon" />
+            <h3 className="empty-state-title">LOADING...</h3>
+            <p className="empty-state-text">Fetching your conversations</p>
+          </div>
+        ) : filteredChats.length === 0 ? (
           <div className="empty-state">
             <MessageSquare size={60} className="empty-state-icon" />
             <h3 className="empty-state-title">No Conversations Found</h3>
@@ -156,7 +248,6 @@ function HistoryPage() {
                 key={chat.id}
                 className={`list-item list-item-clickable chat-item ${selectedChats.includes(chat.id) ? 'selected' : ''}`}
               >
-                {/* Checkbox */}
                 <div 
                   className="chat-checkbox-container"
                   onClick={(e) => handleCheckboxClick(e, chat.id)}
@@ -166,10 +257,8 @@ function HistoryPage() {
                   </div>
                 </div>
 
-                {/* Chat Icon */}
                 <MessageSquare size={20} className="chat-icon" />
                 
-                {/* Chat Content - Clickable */}
                 <div className="chat-content" onClick={() => handleChatClick(chat.id)}>
                   <h3 className="chat-title">{chat.title}</h3>
                   <div className="chat-meta">
@@ -184,14 +273,13 @@ function HistoryPage() {
                   </div>
                 </div>
                 
-                {/* Project Badge */}
-                {chat.project ? (
-                  <span className="project-badge">{chat.project}</span>
+                {/* FIXED: Show real project name */}
+                {chat.projectName ? (
+                  <span className="project-badge">{chat.projectName}</span>
                 ) : (
                   <span className="no-project-badge">No Project</span>
                 )}
                 
-                {/* Chevron Icon - Clickable */}
                 <ChevronRight 
                   size={18} 
                   className="chevron-icon" 

@@ -2,13 +2,20 @@ import React, { useState } from 'react';
 import { Settings, User, Shield, CreditCard, Zap, Database, LogOut } from 'lucide-react';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
 import { useUser } from '../../contexts/UserContext';
+import { useNavigate } from 'react-router-dom';
 import './Settings.css';
 
 function SettingsPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('general');
   const [defaultModel, setDefaultModel] = useState('gpt-4');
   const [language, setLanguage] = useState('english');
   const { analyticsEnabled, setAnalyticsEnabled } = useUser();
+  
+  // Get user data from localStorage
+  const [displayName, setDisplayName] = useState(localStorage.getItem('sharedlm_user_name') || '');
+  const userEmail = localStorage.getItem('sharedlm_user_email') || '';
+  const userId = localStorage.getItem('sharedlm_user_id') || '';
 
   const settingsTabs = [
     { id: 'general', label: 'GENERAL', icon: <Settings size={18} /> },
@@ -34,7 +41,15 @@ function SettingsPage() {
 
   const handleLogout = () => {
     localStorage.removeItem('sharedlm_user_id');
-    window.location.href = '/';
+    localStorage.removeItem('sharedlm_user_email');
+    localStorage.removeItem('sharedlm_user_name');
+    localStorage.removeItem('sharedlm_session');
+    navigate('/login');
+  };
+
+  const handleUpdateDisplayName = () => {
+    localStorage.setItem('sharedlm_user_name', displayName);
+    alert('Display name updated!');
   };
 
   return (
@@ -150,7 +165,13 @@ function SettingsPage() {
                       <label className="setting-label">Email Address</label>
                       <p className="setting-description">Your account email</p>
                     </div>
-                    <input type="email" placeholder="user@example.com" className="setting-input" />
+                    <input 
+                      type="email" 
+                      value={userEmail}
+                      className="setting-input" 
+                      readOnly
+                      style={{ opacity: 0.7, cursor: 'not-allowed' }}
+                    />
                   </div>
 
                   <div className="setting-item">
@@ -158,7 +179,12 @@ function SettingsPage() {
                       <label className="setting-label">Display Name</label>
                       <p className="setting-description">How your name appears in the app</p>
                     </div>
-                    <input type="text" placeholder="John Doe" className="setting-input" />
+                    <input 
+                      type="text" 
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="setting-input"
+                    />
                   </div>
 
                   <div className="setting-item">
@@ -168,10 +194,10 @@ function SettingsPage() {
                     </div>
                     <input 
                       type="text" 
-                      value={localStorage.getItem('sharedlm_user_id') || 'user_xxxxx'} 
+                      value={userId}
                       className="setting-input" 
                       disabled 
-                      style={{ opacity: 0.7 }}
+                      style={{ opacity: 0.7, cursor: 'not-allowed' }}
                     />
                   </div>
 
@@ -192,6 +218,15 @@ function SettingsPage() {
                       <input type="checkbox" />
                       <span className="toggle-slider"></span>
                     </label>
+                  </div>
+
+                  <div className="action-buttons">
+                    <button 
+                      className="button-base button-primary"
+                      onClick={handleUpdateDisplayName}
+                    >
+                      SAVE CHANGES
+                    </button>
                   </div>
 
                   <div className="danger-zone">

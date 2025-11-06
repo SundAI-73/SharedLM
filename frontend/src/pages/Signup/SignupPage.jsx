@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight } from 'lucide-react';
 import logo from '../../assets/images/logo main.svg';
+import apiService from '../../services/api';
 import '../Login/Login.css';
 
 function SignupPage() {
@@ -53,15 +54,32 @@ function SignupPage() {
 
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      // Create user session
-      localStorage.setItem('sharedlm_session', 'authenticated');
-      localStorage.setItem('sharedlm_user_email', formData.email);
-      localStorage.setItem('sharedlm_user_name', formData.name);
-      navigate('/chat');
+    try {
+      // REAL API CALL
+      const response = await apiService.signup(
+        formData.email,
+        formData.password,
+        formData.name
+      );
+      
+      if (response.success) {
+        // Store user session
+        localStorage.setItem('sharedlm_session', 'authenticated');
+        localStorage.setItem('sharedlm_user_id', response.user.id);
+        localStorage.setItem('sharedlm_user_email', response.user.email);
+        localStorage.setItem('sharedlm_user_name', response.user.display_name);
+        
+        // Navigate to chat
+        navigate('/chat');
+      } else {
+        setError('Signup failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError(err.message || 'Failed to create account');
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   const isFormValid = formData.name && formData.email && formData.password && 
@@ -101,6 +119,7 @@ function SignupPage() {
                     placeholder="John Doe"
                     className="auth-input"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -118,6 +137,7 @@ function SignupPage() {
                     placeholder="your@email.com"
                     className="auth-input"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -135,11 +155,13 @@ function SignupPage() {
                     placeholder="Minimum 8 characters"
                     className="auth-input"
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="auth-input-action"
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -159,11 +181,13 @@ function SignupPage() {
                     placeholder="Re-enter your password"
                     className="auth-input"
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="auth-input-action"
+                    disabled={loading}
                   >
                     {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -183,6 +207,7 @@ function SignupPage() {
                   type="checkbox" 
                   checked={agreedToTerms}
                   onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  disabled={loading}
                 />
                 <span className="checkbox-custom"></span>
                 <span className="checkbox-label">
@@ -226,10 +251,10 @@ function SignupPage() {
 
             {/* Social Signup */}
             <div className="auth-social-section">
-              <button className="auth-social-btn">
+              <button className="auth-social-btn" disabled>
                 <span>Continue with Google</span>
               </button>
-              <button className="auth-social-btn">
+              <button className="auth-social-btn" disabled>
                 <span>Continue with GitHub</span>
               </button>
             </div>

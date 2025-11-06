@@ -2,6 +2,7 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import NothingSidebar from './components/layout/Sidebar/Sidebar';
 import { UserProvider, useUser } from './contexts/UserContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import apiService from './services/api/index';
 import './styles/index.css';
 
@@ -26,7 +27,7 @@ const PageLoader = () => (
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '100vh',
-    fontFamily: 'Courier New, monospace',
+    fontFamily: '__anthropicSans__, -apple-system, sans-serif',
     color: '#666'
   }}>
     Loading...
@@ -112,9 +113,11 @@ function AppContent() {
 
 function App() {
   return (
-    <UserProvider>
-      <AppContent />
-    </UserProvider>
+    <NotificationProvider>
+      <UserProvider>
+        <AppContent />
+      </UserProvider>
+    </NotificationProvider>
   );
 }
 
