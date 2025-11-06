@@ -79,19 +79,25 @@ class APIService {
   // CHAT
   // ============================================
   
-  async sendMessage(userId, message, modelChoice, sessionId = null, projectId = null) {
+  async sendMessage(userId, message, modelChoice, sessionId = null, projectId = null, specificModel = null) {
     try {
+      const modelProvider = modelChoice === 'openai' ? 'openai' : 
+                          modelChoice === 'anthropic' ? 'anthropic' : 'mistral';
+
+      const modelToUse = specificModel || (
+        modelChoice === 'openai' ? 'gpt-4o-mini' :
+        modelChoice === 'anthropic' ? 'claude-3-haiku-20240307' : 
+        'mistral-small-latest'
+      );
+
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userId,
           message: message,
-          model_provider: modelChoice === 'openai' ? 'openai' : 
-                          modelChoice === 'anthropic' ? 'anthropic' : 'mistral',
-          model_choice: modelChoice === 'openai' ? 'gpt-4o-mini' :
-                        modelChoice === 'anthropic' ? 'claude-3-haiku-20240307' : 
-                        'mistral-small-latest',
+          model_provider: modelProvider,
+          model_choice: modelToUse,
           session_id: sessionId,
           project_id: projectId
         })

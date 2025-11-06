@@ -78,6 +78,40 @@ const Message = React.memo(({ msg }) => {
 
 Message.displayName = 'Message';
 
+// Model Providers
+const modelProviders = [
+  { value: 'mistral', label: 'MISTRAL AI' },
+  { value: 'openai', label: 'OPENAI' },
+  { value: 'anthropic', label: 'ANTHROPIC' }
+];
+
+// Model Variants for each provider
+const modelVariants = {
+  mistral: [
+    { value: 'mistral-small-latest', label: 'SMALL' },
+    { value: 'mistral-medium-latest', label: 'MEDIUM' },
+    { value: 'mistral-large-latest', label: 'LARGE' },
+    { value: 'open-mistral-7b', label: '7B' },
+    { value: 'open-mixtral-8x7b', label: '8X7B' },
+    { value: 'open-mixtral-8x22b', label: '8X22B' }
+  ],
+  openai: [
+    { value: 'gpt-4o', label: 'GPT-4O' },
+    { value: 'gpt-4o-mini', label: 'GPT-4O MINI' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 TURBO' },
+    { value: 'gpt-4', label: 'GPT-4' },
+    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 TURBO' }
+  ],
+  anthropic: [
+    { value: 'claude-sonnet-4-20250514', label: 'SONNET 4' },
+    { value: 'claude-3-5-sonnet-20241022', label: 'SONNET 3.5' },
+    { value: 'claude-3-5-haiku-20241022', label: 'HAIKU 3.5' },
+    { value: 'claude-3-opus-20240229', label: 'OPUS 3' },
+    { value: 'claude-3-sonnet-20240229', label: 'SONNET 3' },
+    { value: 'claude-3-haiku-20240307', label: 'HAIKU 3' }
+  ]
+};
+
 function ChatPage({ backendStatus }) {
   const { userId, currentModel, setCurrentModel } = useUser();
   const navigate = useNavigate();
@@ -94,17 +128,22 @@ function ChatPage({ backendStatus }) {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [attachedFiles, setAttachedFiles] = useState([]);
   
+  // NEW: Model variant state
+  const [selectedModelVariant, setSelectedModelVariant] = useState('mistral-small-latest');
+  
   const messagesEndRef = useRef(null);
   const optionsRef = useRef(null);
   const titleInputRef = useRef(null);
   const initialMessageSent = useRef(false);
   const fileInputRef = useRef(null);
 
-  const modelOptions = useMemo(() => [
-    { value: 'mistral', label: 'MISTRAL AI' },
-    { value: 'openai', label: 'GPT-4' },
-    { value: 'anthropic', label: 'CLAUDE' }
-  ], []);
+  // NEW: Update variant when provider changes
+  useEffect(() => {
+    const variants = modelVariants[currentModel] || [];
+    if (variants.length > 0 && !variants.find(v => v.value === selectedModelVariant)) {
+      setSelectedModelVariant(variants[0].value);
+    }
+  }, [currentModel, selectedModelVariant]);
 
   // Load conversation from URL query parameter
   useEffect(() => {
@@ -180,7 +219,6 @@ function ChatPage({ backendStatus }) {
       window.history.replaceState({ projectId, projectName }, '');
     }
 
-    // Only clear if no conversation ID in URL
     if (!projectId && !projectName && !initialMessage && !conversationId) {
       setMessages([]);
       setChatTitle('');
@@ -247,7 +285,6 @@ function ChatPage({ backendStatus }) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       alert('File size must be less than 10MB');
       return;
@@ -256,13 +293,12 @@ function ChatPage({ backendStatus }) {
     try {
       setLoading(true);
       
-      // FIXED: Create conversation first if none exists
       let convId = currentConversationId;
       if (!convId) {
         const conv = await apiService.createConversation(
           userId,
           null,
-          currentModel,
+          selectedModelVariant,
           selectedProject?.id || null
         );
         convId = conv.id;
@@ -273,12 +309,9 @@ function ChatPage({ backendStatus }) {
       
       if (result.success) {
         setAttachedFiles(prev => [...prev, result.file]);
-        // Use notification instead of console.log
-        // notify.success(`File uploaded: ${file.name}`);
       }
     } catch (error) {
       console.error('File upload failed:', error);
-      // notify.error('Failed to upload file. Please try again.');
       alert('Failed to upload file. Please try again.');
     } finally {
       setLoading(false);
@@ -307,12 +340,14 @@ function ChatPage({ backendStatus }) {
     try {
       const modelToUse = currentModel || 'mistral';
       
+      // UPDATED: Pass selectedModelVariant to API
       const response = await apiService.sendMessage(
         userId, 
         messageText, 
         modelToUse,
         currentConversationId,
-        selectedProject?.id || null
+        selectedProject?.id || null,
+        selectedModelVariant
       );
 
       if (response) {
@@ -323,12 +358,11 @@ function ChatPage({ backendStatus }) {
         setMessages(prev => [...prev, {
           role: 'assistant',
           content: response.reply,
-          model: response.used_model || modelToUse,
+          model: selectedModelVariant,
           memories: response.memories,
           timestamp: new Date().toISOString()
         }]);
         
-        // Clear attached files after successful send
         setAttachedFiles([]);
       }
     } catch (error) {
@@ -342,7 +376,7 @@ function ChatPage({ backendStatus }) {
     } finally {
       setLoading(false);
     }
-  }, [currentModel, userId, currentConversationId, selectedProject]);
+  }, [currentModel, selectedModelVariant, userId, currentConversationId, selectedProject]);
 
   const handleSend = useCallback(() => {
     handleSendWithMessage(input);
@@ -460,27 +494,45 @@ function ChatPage({ backendStatus }) {
 
             <img src={logo} alt="SharedLM" className="chat-top-bar-logo" />
 
+            {/* UPDATED: Two Dropdowns */}
             <div className="chat-right-section">
               <CustomDropdown
                 value={currentModel}
                 onChange={setCurrentModel}
-                options={modelOptions.filter(opt =>
+                options={modelProviders.filter(opt =>
                   availableModels.includes(opt.value) || opt.value === 'mistral'
                 )}
+                className="chat-model-dropdown-custom"
+              />
+              
+              <CustomDropdown
+                value={selectedModelVariant}
+                onChange={setSelectedModelVariant}
+                options={modelVariants[currentModel] || []}
                 className="chat-model-dropdown-custom"
               />
             </div>
           </div>
         ) : (
           <div className="chat-top-bar">
-            <CustomDropdown
-              value={currentModel}
-              onChange={setCurrentModel}
-              options={modelOptions.filter(opt =>
-                availableModels.includes(opt.value) || opt.value === 'mistral'
-              )}
-              className="chat-model-dropdown-custom"
-            />
+            {/* UPDATED: Two Dropdowns for empty state */}
+            <div className="chat-right-section">
+              <CustomDropdown
+                value={currentModel}
+                onChange={setCurrentModel}
+                options={modelProviders.filter(opt =>
+                  availableModels.includes(opt.value) || opt.value === 'mistral'
+                )}
+                className="chat-model-dropdown-custom"
+              />
+              
+              <CustomDropdown
+                value={selectedModelVariant}
+                onChange={setSelectedModelVariant}
+                options={modelVariants[currentModel] || []}
+                className="chat-model-dropdown-custom"
+              />
+            </div>
           </div>
         )}
 
@@ -520,7 +572,6 @@ function ChatPage({ backendStatus }) {
         </div>
 
         <div className="chat-input-wrapper">
-          {/* File attachments preview */}
           {attachedFiles.length > 0 && (
             <div style={{
               display: 'flex',

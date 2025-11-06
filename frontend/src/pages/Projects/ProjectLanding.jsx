@@ -21,6 +21,36 @@ import { useNotification } from '../../contexts/NotificationContext';
 import apiService from '../../services/api';
 import './ProjectLanding.css';
 
+// Model Providers
+const modelProviders = [
+  { value: 'mistral', label: 'MISTRAL AI' },
+  { value: 'openai', label: 'OPENAI' },
+  { value: 'anthropic', label: 'ANTHROPIC' }
+];
+
+// Model Variants
+const modelVariants = {
+  mistral: [
+    { value: 'mistral-small-latest', label: 'SMALL' },
+    { value: 'mistral-medium-latest', label: 'MEDIUM' },
+    { value: 'mistral-large-latest', label: 'LARGE' },
+    { value: 'open-mistral-7b', label: '7B' },
+    { value: 'open-mixtral-8x7b', label: '8X7B' }
+  ],
+  openai: [
+    { value: 'gpt-4o', label: 'GPT-4O' },
+    { value: 'gpt-4o-mini', label: 'GPT-4O MINI' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 TURBO' },
+    { value: 'gpt-4', label: 'GPT-4' }
+  ],
+  anthropic: [
+    { value: 'claude-sonnet-4-20250514', label: 'SONNET 4' },
+    { value: 'claude-3-5-sonnet-20241022', label: 'SONNET 3.5' },
+    { value: 'claude-3-5-haiku-20241022', label: 'HAIKU 3.5' },
+    { value: 'claude-3-opus-20240229', label: 'OPUS 3' }
+  ]
+};
+
 function ProjectLanding() {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -29,19 +59,22 @@ function ProjectLanding() {
   const [activeTab, setActiveTab] = useState('files');
   const [chatInput, setChatInput] = useState('');
   const [selectedModel, setSelectedModel] = useState('mistral');
+  const [selectedModelVariant, setSelectedModelVariant] = useState('mistral-small-latest');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [loading, setLoading] = useState(false);
   const moreMenuRef = useRef(null);
   const [project, setProject] = useState(null);
   const [projectConversations, setProjectConversations] = useState([]);
 
-  const modelOptions = [
-    { value: 'mistral', label: 'MISTRAL AI' },
-    { value: 'openai', label: 'GPT-4' },
-    { value: 'anthropic', label: 'CLAUDE' }
-  ];
-
   const isStarred = starredProjects.some(p => p.id === parseInt(projectId));
+
+  // Update variant when provider changes
+  useEffect(() => {
+    const variants = modelVariants[selectedModel] || [];
+    if (variants.length > 0 && !variants.find(v => v.value === selectedModelVariant)) {
+      setSelectedModelVariant(variants[0].value);
+    }
+  }, [selectedModel, selectedModelVariant]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -54,7 +87,6 @@ function ProjectLanding() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Load real project data from backend
   useEffect(() => {
     loadProjectData();
     loadProjectActivity();
@@ -67,7 +99,6 @@ function ProjectLanding() {
       const foundProject = projects.find(p => p.id === parseInt(projectId));
       
       if (foundProject) {
-        // Get project files
         const files = await apiService.getProjectFiles(foundProject.id);
         
         setProject({
@@ -106,12 +137,10 @@ function ProjectLanding() {
     }
   };
 
-  // Load project conversations for recent activity
   const loadProjectActivity = async () => {
     try {
       const allConversations = await apiService.getConversations(userId);
       
-      // Filter conversations for this project
       const projectChats = allConversations
         .filter(conv => conv.project_id === parseInt(projectId))
         .slice(0, 10)
@@ -165,7 +194,8 @@ function ProjectLanding() {
           projectId: project.id, 
           projectName: project.name,
           initialMessage: chatInput,
-          modelChoice: selectedModel
+          modelChoice: selectedModel,
+          modelVariant: selectedModelVariant
         } 
       });
       setChatInput('');
@@ -358,11 +388,18 @@ function ProjectLanding() {
             </button>
           </div>
 
+          {/* UPDATED: Two Dropdowns */}
           <div className="project-model-selector">
             <CustomDropdown
               value={selectedModel}
               onChange={setSelectedModel}
-              options={modelOptions}
+              options={modelProviders}
+              className="project-model-dropdown"
+            />
+            <CustomDropdown
+              value={selectedModelVariant}
+              onChange={setSelectedModelVariant}
+              options={modelVariants[selectedModel] || []}
               className="project-model-dropdown"
             />
           </div>
@@ -470,7 +507,6 @@ function ProjectLanding() {
             </div>
           </div>
 
-          {/* Right Column - Recent Activity with Real Chats */}
           <div className="project-right-column">
             <div className="activity-header">
               <h3 className="activity-title">RECENT ACTIVITY</h3>
