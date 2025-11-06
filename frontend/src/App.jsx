@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import NothingSidebar from './components/layout/Sidebar/Sidebar';
+import TitleBar from './components/common/TitleBar/TitleBar';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import apiService from './services/api/index';
@@ -27,24 +28,35 @@ const PageLoader = () => (
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '100vh',
-    fontFamily: '__anthropicSans__, -apple-system, sans-serif',
-    color: '#666'
+    fontFamily: 'Courier New, monospace',
+    color: '#666666',
+    letterSpacing: '2px',
+    fontSize: '0.9rem'
   }}>
-    Loading...
+    LOADING...
   </div>
 );
 
-// Layout wrapper that conditionally shows sidebar
+// Layout wrapper that conditionally shows sidebar and titlebar
 function AppLayout({ children }) {
   const location = useLocation();
   
   // Pages that should NOT show the sidebar
-  const noSidebarRoutes = ['/login', '/signup', '/forgot-password'];
+  const noSidebarRoutes = ['/login', '/signup', '/forgot-password', '/auth/github/callback'];
   const shouldShowSidebar = !noSidebarRoutes.includes(location.pathname);
+  
+  // Check if running in Electron
+  const isElectron = window.electron?.isElectron || false;
 
   return (
-    <div className="nothing-app">
+    <div className={`nothing-app ${isElectron ? 'electron-app' : ''}`}>
+      {/* Show custom titlebar only in Electron */}
+      {isElectron && <TitleBar />}
+      
+      {/* Show sidebar for authenticated pages */}
       {shouldShowSidebar && <NothingSidebar />}
+      
+      {/* Main content area */}
       <main className={shouldShowSidebar ? 'nothing-main' : 'nothing-main-fullwidth'}>
         {children}
       </main>
@@ -58,14 +70,28 @@ function AppContent() {
   const [backendStatus, setBackendStatus] = useState('checking');
   const { analyticsEnabled } = useUser();
 
-  // Check backend on mount only
+  // Check backend on mount
   useEffect(() => {
     let mounted = true;
     
     const checkBackend = async () => {
-      const health = await apiService.checkHealth();
-      if (mounted) {
-        setBackendStatus(health.status === 'ok' ? 'connected' : 'disconnected');
+      // In Electron, wait longer for backend to initialize
+      if (window.electron) {
+        console.log('🖥️ Running in Electron - waiting for backend...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+      
+      try {
+        const health = await apiService.checkHealth();
+        if (mounted) {
+          setBackendStatus(health.status === 'ok' ? 'connected' : 'disconnected');
+          console.log('✅ Backend status:', health.status);
+        }
+      } catch (error) {
+        console.error('❌ Backend check failed:', error);
+        if (mounted) {
+          setBackendStatus('disconnected');
+        }
       }
     };
 
@@ -73,23 +99,40 @@ function AppContent() {
     return () => { mounted = false; };
   }, []);
 
+  // Log Electron environment info
+  useEffect(() => {
+    if (window.electron) {
+      console.log('🖥️ Running in Electron');
+      console.log('Platform:', window.electron.platform);
+    } else {
+      console.log('🌐 Running in browser');
+    }
+  }, []);
+
   return (
     <BrowserRouter>
       <AppLayout>
         <Suspense fallback={<PageLoader />}>
           <Routes>
+            {/* Root redirect */}
             <Route path="/" element={<Navigate to="/login" replace />} />
+            
+            {/* Authentication routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/auth/github/callback" element={<GitHubCallback />} />
+            
+            {/* Main app routes */}
             <Route path="/chat" element={<ChatPage backendStatus={backendStatus} />} />
+            
             <Route path="/integrations" element={
               <IntegrationsPage 
                 connectedLLMs={connectedLLMs}
                 setSelectedLLM={setSelectedLLM}
               />
             } />
+            
             <Route path="/auth" element={
               <AuthPage
                 selectedLLM={selectedLLM}
@@ -97,13 +140,19 @@ function AppContent() {
                 connectedLLMs={connectedLLMs}
               />
             } />
+            
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:projectId" element={<ProjectLanding />} />
             <Route path="/history" element={<HistoryPage />} />
+            
             <Route path="/analytics" element={
               analyticsEnabled ? <AnalyticsPage /> : <Navigate to="/chat" replace />
             } />
+            
             <Route path="/settings" element={<SettingsPage />} />
+            
+            {/* Catch all - redirect to chat */}
+            <Route path="*" element={<Navigate to="/chat" replace />} />
           </Routes>
         </Suspense>
       </AppLayout>
@@ -111,6 +160,7 @@ function AppContent() {
   );
 }
 
+// Main App component
 function App() {
   return (
     <NotificationProvider>

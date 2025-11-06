@@ -7,7 +7,7 @@ from database.connection import engine
 from database import models
 
 # Import route modules
-from api.routes import health, auth, chat, projects, conversations
+from api.routes import health, auth, chat, projects, conversations, api_keys
 
 # Create tables
 models.Base.metadata.create_all(bind=engine)
@@ -38,6 +38,7 @@ app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(projects.router)
 app.include_router(conversations.router)
+app.include_router(api_keys.router)
 
 # Startup event
 @app.on_event("startup")

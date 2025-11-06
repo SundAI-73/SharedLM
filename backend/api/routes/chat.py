@@ -131,3 +131,81 @@ async def upload_file(
     except Exception as e:
         logger.error(f"Upload error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest, db: Session = Depends(get_db)):
+    """Main chat endpoint with database integration"""
+    try:
+        # 1. Get or create conversation
+        conversation = None
+        if request.session_id:
+            conversation = crud.get_conversation(db, int(request.session_id))
+        
+        if not conversation:
+            conversation = crud.create_conversation(
+                db,
+                user_id=request.user_id,
+                model_used=request.model_choice,
+                project_id=request.project_id
+            )
+        
+        # 2. Save user message to database
+        crud.create_message(
+            db,
+            conversation_id=conversation.id,
+            role="user",
+            content=request.message
+        )
+        
+        # 3. Search memories (Mem0)
+        memories = mem0_client.search_memories(
+            user_id=request.user_id,
+            query=request.message,
+        )
+        
+        # 4. Compose prompt with memories
+        prompt = compose_prompt(memories, request.message)
+        
+        # 5. Route to LLM - PASS DB SESSION
+        reply, used_model = await route_chat(
+            model_provider=request.model_provider,
+            model_choice=request.model_choice,
+            prompt=prompt,
+            user_id=request.user_id,  # Add user_id
+            db=db  # Add db session
+        )
+        
+        # 6. Save assistant message to database
+        crud.create_message(
+            db,
+            conversation_id=conversation.id,
+            role="assistant",
+            content=reply,
+            model=used_model
+        )
+        
+        # 7. Update conversation title if first message
+        if conversation.message_count == 2:
+            title = request.message[:50] + "..." if len(request.message) > 50 else request.message
+            crud.update_conversation_title(db, conversation.id, title)
+        
+        # 8. Store in Mem0
+        mem0_client.add_memory(
+            user_id=request.user_id,
+            messages=[
+                {"role": "user", "content": request.message},
+                {"role": "assistant", "content": reply}
+            ]
+        )
+        
+        # 9. Return response with conversation_id for new conversations
+        return ChatResponse(
+            reply=reply,
+            used_model=used_model,
+            memories=memories,
+            conversation_id=conversation.id
+        )
+        
+    except Exception as e:
+        logger.error(f"Chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

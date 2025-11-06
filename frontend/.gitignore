@@ -12,6 +12,18 @@
 /build
 .vercel
 
+# Electron Desktop Build
+/dist
+/dist-electron
+/out
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.snap
+.cache
+
 # misc
 .DS_Store
 .env.local

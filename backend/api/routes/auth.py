@@ -67,3 +67,48 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Login error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/change-password")
+async def change_password(data: dict, db: Session = Depends(get_db)):
+    """Change user password"""
+    try:
+        user_id = data.get('user_id')
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        
+        if not all([user_id, current_password, new_password]):
+            raise HTTPException(status_code=400, detail="Missing required fields")
+        
+        # Get user
+        user = crud.get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Verify current password
+        if not crud.verify_password(current_password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Current password is incorrect")
+        
+        # Validate new password
+        if len(new_password) < 8:
+            raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+        
+        # Hash new password
+        import bcrypt
+        new_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Update password
+        user.password_hash = new_hash
+        db.commit()
+        
+        logger.info(f"Password changed for user {user_id}")
+        
+        return {
+            "success": True,
+            "message": "Password changed successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Change password error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

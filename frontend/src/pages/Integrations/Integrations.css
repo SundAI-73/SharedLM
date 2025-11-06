@@ -293,3 +293,87 @@
     padding: 10px 16px;
   }
 }
+
+.integration-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.integration-card:hover .integration-logo {
+  transform: scale(1.05);
+}
+
+.integration-icon-placeholder {
+  width: 36px;
+  height: 36px;
+  background: #1F1F1F;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 1px solid #252525;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.integration-card:hover .integration-icon-placeholder {
+  background: #252525;
+  border-color: #2A2A2A;
+}
+
+.integration-card.connected .integration-icon-placeholder {
+  background: rgba(185, 69, 57, 0.1);
+  border-color: rgba(185, 69, 57, 0.3);
+}
+
+/* SVG logos should inherit color */
+.integration-icon-placeholder svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .integration-logo {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+  }
+  
+  .integration-icon-placeholder {
+    width: 32px;
+    height: 32px;
+    padding: 3px;
+  }
+
+  .integration-icon-placeholder svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .integration-logo {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+  }
+  
+  .integration-icon-placeholder {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    padding: 3px;
+  }
+
+  .integration-icon-placeholder svg {
+    width: 22px;
+    height: 22px;
+  }
+}

@@ -137,12 +137,28 @@ function ProjectLanding() {
     }
   };
 
+  // FIXED: Enhanced debug logging and proper filtering
   const loadProjectActivity = async () => {
     try {
+      console.log('Loading activity for project ID:', projectId);
       const allConversations = await apiService.getConversations(userId);
+      console.log('Total conversations loaded:', allConversations.length);
+      console.log('All conversations:', allConversations);
+      
+      const targetProjectId = parseInt(projectId);
+      console.log('Target project ID (parsed):', targetProjectId);
       
       const projectChats = allConversations
-        .filter(conv => conv.project_id === parseInt(projectId))
+        .filter(conv => {
+          const convProjectId = conv.project_id;
+          const matches = convProjectId === targetProjectId;
+          console.log(`Conversation ${conv.id}:`);
+          console.log(`   - project_id: ${convProjectId} (type: ${typeof convProjectId})`);
+          console.log(`   - target: ${targetProjectId} (type: ${typeof targetProjectId})`);
+          console.log(`   - matches: ${matches}`);
+          console.log(`   - title: ${conv.title}`);
+          return matches;
+        })
         .slice(0, 10)
         .map(conv => ({
           id: conv.id,
@@ -153,9 +169,11 @@ function ProjectLanding() {
           messages: conv.message_count
         }));
       
+      console.log('Filtered project chats:', projectChats.length);
+      console.log('Project chats data:', projectChats);
       setProjectConversations(projectChats);
     } catch (error) {
-      console.error('Failed to load project conversations:', error);
+      console.error('❌ Failed to load project conversations:', error);
     }
   };
 
@@ -388,7 +406,6 @@ function ProjectLanding() {
             </button>
           </div>
 
-          {/* UPDATED: Two Dropdowns */}
           <div className="project-model-selector">
             <CustomDropdown
               value={selectedModel}
@@ -512,9 +529,16 @@ function ProjectLanding() {
               <h3 className="activity-title">RECENT ACTIVITY</h3>
             </div>
 
-            {projectConversations.length === 0 ? (
+            {loading ? (
+              <div className="empty-activity">
+                <p className="empty-activity-text">Loading...</p>
+              </div>
+            ) : projectConversations.length === 0 ? (
               <div className="empty-activity">
                 <p className="empty-activity-text">No activity yet</p>
+                <p className="empty-activity-text" style={{ fontSize: '0.75rem', marginTop: '8px', color: '#555555' }}>
+                  Start a conversation in this project to see activity
+                </p>
               </div>
             ) : (
               <div className="activity-list">

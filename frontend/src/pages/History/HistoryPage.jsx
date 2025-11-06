@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MessageSquare, Search, ChevronRight, Clock, Filter, Trash2, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
@@ -15,21 +15,27 @@ function HistoryPage() {
   const [selectedChats, setSelectedChats] = useState([]);
   const [chats, setChats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [availableProjects, setAvailableProjects] = useState([]);
   const notify = useNotification();
 
+  // Load conversations on mount
   useEffect(() => {
     loadConversations();
+    loadProjectsForFilter();
   }, [userId]);
 
   const loadConversations = async () => {
     try {
       setIsLoading(true);
       
-      // FIXED: Load both conversations AND projects
+      // Load both conversations AND projects
       const [conversations, projects] = await Promise.all([
         apiService.getConversations(userId),
         apiService.getProjects(userId)
       ]);
+      
+      console.log('Loaded conversations:', conversations);
+      console.log('Loaded projects:', projects);
       
       // Create project ID to name map
       const projectMap = {};
@@ -37,17 +43,25 @@ function HistoryPage() {
         projectMap[proj.id] = proj.name;
       });
       
-      // Transform with real project names
-      const formattedChats = conversations.map(conv => ({
-        id: conv.id,
-        title: conv.title || 'Untitled Chat',
-        model: conv.model_used || 'Unknown',
-        time: formatTime(conv.updated_at),
-        messages: conv.message_count,
-        project: conv.project_id ? conv.project_id : null,
-        projectName: conv.project_id ? projectMap[conv.project_id] : null
-      }));
+      console.log('Project map:', projectMap);
       
+      // Transform with real project names
+      const formattedChats = conversations.map(conv => {
+        const projectName = conv.project_id ? projectMap[conv.project_id] : null;
+        console.log(`Chat ${conv.id}: project_id=${conv.project_id}, projectName=${projectName}`);
+        
+        return {
+          id: conv.id,
+          title: conv.title || 'Untitled Chat',
+          model: conv.model_used || 'Unknown',
+          time: formatTime(conv.updated_at),
+          messages: conv.message_count,
+          project: conv.project_id,
+          projectName: projectName
+        };
+      });
+      
+      console.log('Formatted chats:', formattedChats);
       setChats(formattedChats);
     } catch (error) {
       console.error('Failed to load conversations:', error);
@@ -75,15 +89,10 @@ function HistoryPage() {
     return date.toLocaleDateString();
   };
 
-  const [availableProjects, setAvailableProjects] = useState([]);
-
-  useEffect(() => {
-    loadProjectsForFilter();
-  }, [userId]);
-
   const loadProjectsForFilter = async () => {
     try {
       const data = await apiService.getProjects(userId);
+      console.log('Projects for filter:', data);
       setAvailableProjects(data);
     } catch (error) {
       console.error('Failed to load projects for filter:', error);
@@ -92,14 +101,14 @@ function HistoryPage() {
 
   const projectOptions = useMemo(() => {
     const options = [
-      { value: 'all', label: 'All Projects' },
-      { value: 'none', label: 'No Project' }
+      { value: 'all', label: 'ALL PROJECTS' },
+      { value: 'none', label: 'NO PROJECT' }
     ];
     
     availableProjects.forEach(proj => {
       options.push({
-        value: proj.id,
-        label: proj.name
+        value: proj.id.toString(), // Ensure string for comparison
+        label: proj.name.toUpperCase()
       });
     });
     
@@ -117,7 +126,7 @@ function HistoryPage() {
       } else if (selectedProject === 'none') {
         matchesProject = chat.project === null;
       } else {
-        matchesProject = chat.project && Number(chat.project) === Number(selectedProject);
+        matchesProject = chat.project && chat.project.toString() === selectedProject.toString();
       }
       
       return matchesSearch && matchesProject;
@@ -135,14 +144,6 @@ function HistoryPage() {
       setSelectedChats(selectedChats.filter(id => id !== chatId));
     } else {
       setSelectedChats([...selectedChats, chatId]);
-    }
-  };
-
-  const handleSelectAll = () => {
-    if (selectedChats.length === filteredChats.length) {
-      setSelectedChats([]);
-    } else {
-      setSelectedChats(filteredChats.map(chat => chat.id));
     }
   };
 
@@ -273,11 +274,11 @@ function HistoryPage() {
                   </div>
                 </div>
                 
-                {/* FIXED: Show real project name */}
+                {/*FIXED: Always show project info */}
                 {chat.projectName ? (
                   <span className="project-badge">{chat.projectName}</span>
                 ) : (
-                  <span className="no-project-badge">No Project</span>
+                  <span className="no-project-badge">NO PROJECT</span>
                 )}
                 
                 <ChevronRight 

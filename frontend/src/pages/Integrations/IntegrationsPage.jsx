@@ -1,47 +1,104 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Check } from 'lucide-react';
+import { useNotification } from '../../contexts/NotificationContext';
+import mistralLogo from '../../assets/images/m-boxed-orange.png';
+import openaiLogo from '../../assets/images/openai-logo.svg';
+import anthropicLogo from '../../assets/images/claude-color.svg';
 import './Integrations.css';
 
-function IntegrationsPage({ connectedLLMs, setSelectedLLM }) {
+function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
   const navigate = useNavigate();
+  const notify = useNotification();
+
+  // Check localStorage for saved API keys on mount
+  useEffect(() => {
+    const connected = [];
+    
+    if (localStorage.getItem('sharedlm_api_openai')) {
+      connected.push('openai');
+    }
+    if (localStorage.getItem('sharedlm_api_anthropic')) {
+      connected.push('anthropic');
+    }
+    if (localStorage.getItem('sharedlm_api_mistral')) {
+      connected.push('mistral');
+    }
+    
+    if (connected.length > 0 && setConnectedLLMs) {
+      setConnectedLLMs(connected);
+    }
+  }, [setConnectedLLMs]);
 
   const llms = [
-    // Available models
-    { id: 'mistral', name: 'MIXTRAL', provider: 'Mistral AI', status: 'available' },
-    { id: 'deepseek', name: 'DEEPSEEK-V3', provider: 'DeepSeek', status: 'available' },
-    { id: 'whisper ', name: 'Whisper', provider: 'OpenAI', status: 'available' },
-    { id: 'meta', name: 'LLAMA 3', provider: 'Meta', status: 'available' },
-    { id: 'openai', name: 'GPT-4O', provider: 'OpenAI', status: 'available' },
-    { id: 'anthropic', name: 'CLAUDE 3.5', provider: 'Anthropic', status: 'available' },
-    { id: 'google', name: 'GEMINI 2.0', provider: 'Google AI', status: 'available' },
-
-    { id: 'cohere', name: 'COMMAND', provider: 'Cohere', status: 'available' },
-    { id: 'microsoft', name: 'PHI-3', provider: 'Microsoft', status: 'available' },
-    { id: 'nvidia', name: 'NEMOTRON-4', provider: 'NVIDIA', status: 'available' },
- 
+    { 
+      id: 'mistral', 
+      name: 'MISTRAL', 
+      provider: 'Mistral AI', 
+      status: 'available', 
+      logo: mistralLogo 
+    },
+    { 
+      id: 'openai', 
+      name: 'Chat-GPT', 
+      provider: 'OpenAI', 
+      status: 'available', 
+      logo: openaiLogo 
+    },
+    { 
+      id: 'anthropic', 
+      name: 'CLAUDE', 
+      provider: 'Anthropic', 
+      status: 'available', 
+      logo: anthropicLogo 
+    },
+    { 
+      id: 'deepseek', 
+      name: 'DEEPSEEK', 
+      provider: 'DeepSeek', 
+      status: 'coming', 
+      logo: null 
+    },
+    { 
+      id: 'google', 
+      name: 'GEMINI', 
+      provider: 'Google AI', 
+      status: 'coming', 
+      logo: null 
+    },
+    { 
+      id: 'meta', 
+      name: 'LLAMA', 
+      provider: 'Meta', 
+      status: 'coming', 
+      logo: null 
+    },
+    { 
+      id: 'microsoft', 
+      name: 'CoPilot', 
+      provider: 'Microsoft', 
+      status: 'coming', 
+      logo: null 
+    },
   ];
 
   const handleLLMClick = (llm) => {
     if (llm.status === 'available' && !connectedLLMs.includes(llm.id)) {
       setSelectedLLM(llm);
       navigate('/auth');
+    } else if (connectedLLMs.includes(llm.id)) {
+      notify.info(`${llm.name} is already connected. Manage your API key in Settings.`);
     }
-  };
-
-  const handleCustomIntegration = () => {
-    console.log('Custom integration clicked');
   };
 
   return (
     <div className="page-container">
       <div className="page-content">
-        {/* Header */}
         <div className="page-header">
           <h1 className="page-title">MULTI LM</h1>
           <p className="page-subtitle">Connect and manage your AI models</p>
         </div>
 
-        {/* LLM Grid */}
         <div className="grid-4 integrations-grid">
           {llms.map(llm => (
             <button
@@ -51,14 +108,25 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM }) {
               disabled={llm.status === 'coming'}
               style={{
                 opacity: llm.status === 'coming' ? 0.5 : 1,
-                cursor: llm.status === 'coming' ? 'not-allowed' : 'pointer'
+                cursor: llm.status === 'coming' ? 'not-allowed' : 
+                        connectedLLMs.includes(llm.id) ? 'default' : 'pointer'
               }}
             >
               {llm.status === 'coming' && (
                 <div className="coming-soon-badge">SOON</div>
               )}
               <div className="integration-content">
-                <div className="integration-icon-placeholder"></div>
+                <div className="integration-icon-placeholder">
+                  {llm.logo ? (
+                    <img 
+                      src={llm.logo} 
+                      alt={`${llm.name} logo`} 
+                      className="integration-logo"
+                    />
+                  ) : connectedLLMs.includes(llm.id) ? (
+                    <Check size={20} color="#00ff88" />
+                  ) : null}
+                </div>
                 <div className="integration-text">
                   <h3 className="integration-name">{llm.name}</h3>
                   <p className="integration-provider">{llm.provider}</p>
@@ -71,12 +139,10 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM }) {
           ))}
         </div>
 
-        {/* Custom Section */}
         <div className="custom-section">
           <p className="custom-label">CUSTOM INTEGRATIONS</p>
           <button
             className="button-base button-primary custom-integration-btn coming-soon"
-            onClick={handleCustomIntegration}
             disabled
           >
             ADD CUSTOM INTEGRATIONS

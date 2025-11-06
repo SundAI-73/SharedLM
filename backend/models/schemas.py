@@ -117,3 +117,25 @@ class MessageResponse(BaseModel):
 class FileUploadResponse(BaseModel):
     success: bool
     file: dict
+
+# ============================================
+# API KEY SCHEMAS
+# ============================================
+
+class APIKeyCreate(BaseModel):
+    provider: str
+    api_key: str
+    key_name: Optional[str] = None
+
+class APIKeyResponse(BaseModel):
+    id: int
+    provider: str
+    key_name: Optional[str]
+    key_preview: str
+    is_active: bool
+    created_at: str
+    updated_at: str
+
+class APIKeyDecrypted(BaseModel):
+    provider: str
+    api_key: str
