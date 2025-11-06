@@ -2,12 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FolderOpen, Clock, MoreVertical, Search, Plus, Trash2, Edit3, Archive, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import apiService from '../../services/api';
 import './Projects.css';
 
 function ProjectsPage() {
   const navigate = useNavigate();
   const { userId, starredProjects, toggleStarProject } = useUser();
+  const notify = useNotification();
   const [searchQuery, setSearchQuery] = useState('');
   const [openMenuId, setOpenMenuId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -15,10 +17,15 @@ function ProjectsPage() {
   const [newProjectType, setNewProjectType] = useState('');
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Rename modal state
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameProjectId, setRenameProjectId] = useState(null);
+  const [renameProjectName, setRenameProjectName] = useState('');
+  
   const menuRef = useRef(null);
   const modalRef = useRef(null);
 
-  // Load projects from backend
   useEffect(() => {
     loadProjects();
   }, [userId]);
@@ -28,18 +35,18 @@ function ProjectsPage() {
       setIsLoading(true);
       const data = await apiService.getProjects(userId);
       
-      // Transform to match your UI format
       const formattedProjects = data.map(proj => ({
         id: proj.id,
         name: proj.name,
         type: proj.type || 'General',
-        chats: 0, // TODO: Add conversation count from backend
+        chats: 0,
         lastActive: formatTime(proj.updated_at)
       }));
       
       setProjects(formattedProjects);
     } catch (error) {
       console.error('Failed to load projects:', error);
+      notify.error('Failed to load projects');
     } finally {
       setIsLoading(false);
     }
@@ -75,6 +82,7 @@ function ProjectsPage() {
       }
       if (modalRef.current && !modalRef.current.contains(event.target)) {
         setShowCreateModal(false);
+        setShowRenameModal(false);
       }
     };
 
@@ -89,12 +97,12 @@ function ProjectsPage() {
   };
 
   const handleCreateProject = async () => {
-    if (newProjectName.trim()) {  // Only name is required
+    if (newProjectName.trim()) {
       try {
         const result = await apiService.createProject(
           userId,
           newProjectName.trim(),
-          newProjectType.trim() || 'General'  // Default to 'General' if empty
+          newProjectType.trim() || 'General'
         );
         
         if (result.success) {
@@ -103,11 +111,12 @@ function ProjectsPage() {
           setNewProjectName('');
           setNewProjectType('');
           
+          notify.success('Project created successfully');
           navigate(`/projects/${result.project.id}`);
         }
       } catch (error) {
         console.error('Failed to create project:', error);
-        alert('Failed to create project');
+        notify.error('Failed to create project');
       }
     }
   };
@@ -133,48 +142,79 @@ function ProjectsPage() {
       toggleStarProject(projectData);
       
       await loadProjects();
+      notify.success(newStarred ? 'Project starred' : 'Project unstarred');
     } catch (error) {
       console.error('Failed to star project:', error);
+      notify.error('Failed to update project');
     }
     
     setOpenMenuId(null);
   };
 
+  // REPLACED: prompt() with custom modal
   const handleRenameProject = (e, projectId) => {
     e.stopPropagation();
     const project = projects.find(p => p.id === projectId);
-    const newName = prompt('Enter new project name:', project.name);
     
-    if (newName && newName.trim()) {
-      apiService.updateProject(projectId, { name: newName.trim() })
-        .then(() => loadProjects())
-        .catch(err => console.error('Failed to rename:', err));
-    }
+    setRenameProjectId(projectId);
+    setRenameProjectName(project.name);
+    setShowRenameModal(true);
     setOpenMenuId(null);
   };
 
-  const handleArchiveProject = (e, projectId) => {
+  const handleSaveRename = async () => {
+    if (renameProjectName.trim() && renameProjectId) {
+      try {
+        await apiService.updateProject(renameProjectId, { name: renameProjectName.trim() });
+        await loadProjects();
+        notify.success('Project renamed');
+        setShowRenameModal(false);
+      } catch (error) {
+        console.error('Failed to rename:', error);
+        notify.error('Failed to rename project');
+      }
+    }
+  };
+
+  // REPLACED: window.confirm() with notify.confirm()
+  const handleArchiveProject = async (e, projectId) => {
     e.stopPropagation();
     const project = projects.find(p => p.id === projectId);
     
-    if (window.confirm(`Archive "${project.name}"?`)) {
-      console.log('Archive feature coming soon');
-      // TODO: Implement archive when backend supports it
+    const confirmed = await notify.confirm({
+      title: 'Archive Project',
+      message: `Archive "${project.name}"? This feature is coming soon.`,
+      confirmText: 'OK',
+      cancelText: 'Cancel'
+    });
+    
+    if (confirmed) {
+      notify.info('Archive feature coming soon');
     }
     setOpenMenuId(null);
   };
 
+  // REPLACED: window.confirm() and alert() with notifications
   const handleDeleteProject = async (e, projectId) => {
     e.stopPropagation();
     const project = projects.find(p => p.id === projectId);
     
-    if (window.confirm(`Delete "${project.name}"? This will remove all conversations in this project.`)) {
+    const confirmed = await notify.confirm({
+      title: 'Delete Project',
+      message: `Delete "${project.name}"? This will remove all conversations in this project.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+    
+    if (confirmed) {
       try {
         await apiService.deleteProject(projectId);
         await loadProjects();
+        notify.success('Project deleted');
       } catch (error) {
         console.error('Failed to delete project:', error);
-        alert('Failed to delete project');
+        notify.error('Failed to delete project');
       }
     }
     setOpenMenuId(null);
@@ -183,7 +223,6 @@ function ProjectsPage() {
   return (
     <div className="page-container">
       <div className="page-content">
-        {/* Header */}
         <div className="page-header">
           <h1 className="page-title">PROJECTS</h1>
           <p className="page-subtitle">
@@ -191,7 +230,6 @@ function ProjectsPage() {
           </p>
         </div>
 
-        {/* Controls Section */}
         <div className="controls-section">
           <div className="search-container">
             <Search size={18} className="search-icon" />
@@ -210,7 +248,6 @@ function ProjectsPage() {
           </button>
         </div>
 
-        {/* Projects Grid or Empty State */}
         {isLoading ? (
           <div className="empty-state">
             <FolderOpen size={60} className="empty-state-icon" />
@@ -336,6 +373,45 @@ function ProjectsPage() {
                     disabled={!newProjectName.trim()}
                   >
                     Create Project
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Rename Project Modal */}
+        {showRenameModal && (
+          <div className="modal-overlay">
+            <div className="modal-content" ref={modalRef}>
+              <h2 className="modal-title">RENAME PROJECT</h2>
+              
+              <div className="modal-form">
+                <div className="form-group">
+                  <label className="form-label">Project Name</label>
+                  <input
+                    type="text"
+                    placeholder="Enter new name..."
+                    value={renameProjectName}
+                    onChange={(e) => setRenameProjectName(e.target.value)}
+                    className="form-input"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="modal-actions">
+                  <button 
+                    className="button-base button-secondary" 
+                    onClick={() => setShowRenameModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className="button-base button-primary" 
+                    onClick={handleSaveRename}
+                    disabled={!renameProjectName.trim()}
+                  >
+                    Save
                   </button>
                 </div>
               </div>

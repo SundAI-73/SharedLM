@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, File, UploadFile  # ✅ ADDED File, UploadFile
 from sqlalchemy.orm import Session
 from typing import List
 from database.connection import get_db
@@ -72,7 +72,7 @@ async def delete_project(project_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Delete project error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.post("/{project_id}/upload")
 async def upload_project_file(
     project_id: int,
@@ -117,4 +117,32 @@ async def upload_project_file(
         }
     except Exception as e:
         logger.error(f"Project file upload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{project_id}/files")
+async def get_project_files(project_id: int, db: Session = Depends(get_db)):
+    """Get all files for a project"""
+    try:
+        files = crud.get_project_files(db, project_id)
+        return [
+            {
+                "id": f.id,
+                "filename": f.filename,
+                "file_size": f.file_size,
+                "uploaded_at": str(f.uploaded_at)
+            }
+            for f in files
+        ]
+    except Exception as e:
+        logger.error(f"Get project files error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/files/{file_id}")
+async def delete_project_file(file_id: int, db: Session = Depends(get_db)):
+    """Delete project file"""
+    try:
+        crud.delete_project_file(db, file_id)
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Delete project file error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

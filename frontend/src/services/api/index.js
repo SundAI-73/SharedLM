@@ -49,6 +49,30 @@ class APIService {
     }
   }
 
+  async changePassword(userId, currentPassword, newPassword) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          current_password: currentPassword,
+          new_password: newPassword
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to change password');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Change password failed:', error);
+      throw error;
+    }
+  }
+
   // ============================================
   // HEALTH & MODELS
   // ============================================
@@ -79,19 +103,25 @@ class APIService {
   // CHAT
   // ============================================
   
-  async sendMessage(userId, message, modelChoice, sessionId = null, projectId = null) {
+  async sendMessage(userId, message, modelChoice, sessionId = null, projectId = null, specificModel = null) {
     try {
+      const modelProvider = modelChoice === 'openai' ? 'openai' : 
+                          modelChoice === 'anthropic' ? 'anthropic' : 'mistral';
+
+      const modelToUse = specificModel || (
+        modelChoice === 'openai' ? 'gpt-4o-mini' :
+        modelChoice === 'anthropic' ? 'claude-3-haiku-20240307' : 
+        'mistral-small-latest'
+      );
+
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userId,
           message: message,
-          model_provider: modelChoice === 'openai' ? 'openai' : 
-                          modelChoice === 'anthropic' ? 'anthropic' : 'mistral',
-          model_choice: modelChoice === 'openai' ? 'gpt-4o-mini' :
-                        modelChoice === 'anthropic' ? 'claude-3-haiku-20240307' : 
-                        'mistral-small-latest',
+          model_provider: modelProvider,
+          model_choice: modelToUse,
           session_id: sessionId,
           project_id: projectId
         })
@@ -329,6 +359,93 @@ class APIService {
       return await response.json();
     } catch (error) {
       console.error('Delete conversation failed:', error);
+      throw error;
+    }
+  }
+
+  // ============================================
+  // API KEYS MANAGEMENT
+  // ============================================
+
+  async getApiKeys(userId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api-keys/${userId}`);
+      if (!response.ok) throw new Error('Failed to fetch API keys');
+      return await response.json();
+    } catch (error) {
+      console.error('Get API keys failed:', error);
+      return [];
+    }
+  }
+
+  async saveApiKey(userId, provider, apiKey, keyName = null) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api-keys/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: provider,
+          api_key: apiKey,
+          key_name: keyName || `${provider.toUpperCase()} API Key`
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to save API key');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Save API key failed:', error);
+      throw error;
+    }
+  }
+
+  async deleteApiKey(userId, provider) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api-keys/${userId}/${provider}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) throw new Error('Failed to delete API key');
+      return await response.json();
+    } catch (error) {
+      console.error('Delete API key failed:', error);
+      throw error;
+    }
+  }
+
+  async testApiKey(userId, provider) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api-keys/${userId}/${provider}/test`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'API key test failed');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Test API key failed:', error);
+      throw error;
+    }
+  }
+
+  async getDecryptedApiKey(userId, provider) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api-keys/${userId}/${provider}/decrypt`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to get API key');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get decrypted API key failed:', error);
       throw error;
     }
   }

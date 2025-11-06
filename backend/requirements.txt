@@ -15,3 +15,6 @@ llama-api-client
 sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
 bcrypt==4.1.1
+
+# Encryption
+cryptography==41.0.7

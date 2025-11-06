@@ -13,16 +13,8 @@ const NothingSidebar = React.memo(() => {
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const { analyticsEnabled } = useUser();
-  
-  const [starredProjects, setStarredProjects] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sharedlm_starred_projects');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+
+  const { analyticsEnabled, starredProjects, toggleStarProject } = useUser();
 
   // Check if mobile view
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -67,11 +59,6 @@ const NothingSidebar = React.memo(() => {
     return base;
   }, [analyticsEnabled]);
 
-  // Persist starred projects
-  useEffect(() => {
-    localStorage.setItem('sharedlm_starred_projects', JSON.stringify(starredProjects));
-  }, [starredProjects]);
-
   // Update main margin only on desktop
   useEffect(() => {
     if (!isMobile) {
@@ -95,11 +82,14 @@ const NothingSidebar = React.memo(() => {
     navigate(`/projects/${id}`);
     setIsMobileOpen(false);
   }, [navigate]);
-  
+
   const handleUnstarProject = useCallback((e, projectId) => {
     e.stopPropagation();
-    setStarredProjects(prev => prev.filter(p => p.id !== projectId));
-  }, []);
+    const project = starredProjects.find(p => p.id === projectId);
+    if (project) {
+      toggleStarProject(project);
+    }
+  }, [starredProjects, toggleStarProject]);
 
   const handleMenuItemClick = useCallback((path) => {
     navigate(path);

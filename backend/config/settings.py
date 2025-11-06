@@ -15,16 +15,19 @@ class Settings(BaseSettings):
     db_password: str = "password"
     db_name: str = "sharedlm"
     
-    # API Keys
+    # API Keys (Fallback)
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     mistral_api_key: str = ""
     mem0_api_key: str = ""
     
+    # Encryption (NEW)
+    encryption_key: str = ""
+    
     # Model Defaults
     default_model_openai: str = "gpt-4o-mini"
     default_model_anthropic: str = "claude-3-5-sonnet-20241022"
-    default_model_mistral: str = "mistral-tiny"
+    default_model_mistral: str = "mistral-small-latest"
     default_top_k: int = 5
     
     # CORS
@@ -44,7 +47,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
-        extra = "allow"  # Allow extra fields from .env
+        extra = "allow"
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

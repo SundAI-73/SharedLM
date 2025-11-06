@@ -199,3 +199,23 @@ select::-ms-expand {
   min-height: 100vh;
   background: transparent;
 }
+
+/* Electron titlebar spacing */
+body.electron-app {
+  padding-top: 40px;
+}
+
+.nothing-sidebar {
+  top: 40px;
+  height: calc(100vh - 40px);
+}
+
+.nothing-main {
+  padding-top: 40px;
+}
+
+.nothing-main-fullwidth {
+  padding-top: 40px;
+}
+
+/* Rest of your existing CSS... */

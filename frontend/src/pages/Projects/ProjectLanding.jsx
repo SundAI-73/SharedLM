@@ -21,6 +21,36 @@ import { useNotification } from '../../contexts/NotificationContext';
 import apiService from '../../services/api';
 import './ProjectLanding.css';
 
+// Model Providers
+const modelProviders = [
+  { value: 'mistral', label: 'MISTRAL AI' },
+  { value: 'openai', label: 'OPENAI' },
+  { value: 'anthropic', label: 'ANTHROPIC' }
+];
+
+// Model Variants
+const modelVariants = {
+  mistral: [
+    { value: 'mistral-small-latest', label: 'SMALL' },
+    { value: 'mistral-medium-latest', label: 'MEDIUM' },
+    { value: 'mistral-large-latest', label: 'LARGE' },
+    { value: 'open-mistral-7b', label: '7B' },
+    { value: 'open-mixtral-8x7b', label: '8X7B' }
+  ],
+  openai: [
+    { value: 'gpt-4o', label: 'GPT-4O' },
+    { value: 'gpt-4o-mini', label: 'GPT-4O MINI' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 TURBO' },
+    { value: 'gpt-4', label: 'GPT-4' }
+  ],
+  anthropic: [
+    { value: 'claude-sonnet-4-20250514', label: 'SONNET 4' },
+    { value: 'claude-3-5-sonnet-20241022', label: 'SONNET 3.5' },
+    { value: 'claude-3-5-haiku-20241022', label: 'HAIKU 3.5' },
+    { value: 'claude-3-opus-20240229', label: 'OPUS 3' }
+  ]
+};
+
 function ProjectLanding() {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -29,19 +59,22 @@ function ProjectLanding() {
   const [activeTab, setActiveTab] = useState('files');
   const [chatInput, setChatInput] = useState('');
   const [selectedModel, setSelectedModel] = useState('mistral');
+  const [selectedModelVariant, setSelectedModelVariant] = useState('mistral-small-latest');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [loading, setLoading] = useState(false);
   const moreMenuRef = useRef(null);
   const [project, setProject] = useState(null);
   const [projectConversations, setProjectConversations] = useState([]);
 
-  const modelOptions = [
-    { value: 'mistral', label: 'MISTRAL AI' },
-    { value: 'openai', label: 'GPT-4' },
-    { value: 'anthropic', label: 'CLAUDE' }
-  ];
-
   const isStarred = starredProjects.some(p => p.id === parseInt(projectId));
+
+  // Update variant when provider changes
+  useEffect(() => {
+    const variants = modelVariants[selectedModel] || [];
+    if (variants.length > 0 && !variants.find(v => v.value === selectedModelVariant)) {
+      setSelectedModelVariant(variants[0].value);
+    }
+  }, [selectedModel, selectedModelVariant]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -54,7 +87,6 @@ function ProjectLanding() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Load real project data from backend
   useEffect(() => {
     loadProjectData();
     loadProjectActivity();
@@ -67,7 +99,6 @@ function ProjectLanding() {
       const foundProject = projects.find(p => p.id === parseInt(projectId));
       
       if (foundProject) {
-        // Get project files
         const files = await apiService.getProjectFiles(foundProject.id);
         
         setProject({
@@ -106,14 +137,28 @@ function ProjectLanding() {
     }
   };
 
-  // Load project conversations for recent activity
+  // FIXED: Enhanced debug logging and proper filtering
   const loadProjectActivity = async () => {
     try {
+      console.log('Loading activity for project ID:', projectId);
       const allConversations = await apiService.getConversations(userId);
+      console.log('Total conversations loaded:', allConversations.length);
+      console.log('All conversations:', allConversations);
       
-      // Filter conversations for this project
+      const targetProjectId = parseInt(projectId);
+      console.log('Target project ID (parsed):', targetProjectId);
+      
       const projectChats = allConversations
-        .filter(conv => conv.project_id === parseInt(projectId))
+        .filter(conv => {
+          const convProjectId = conv.project_id;
+          const matches = convProjectId === targetProjectId;
+          console.log(`Conversation ${conv.id}:`);
+          console.log(`   - project_id: ${convProjectId} (type: ${typeof convProjectId})`);
+          console.log(`   - target: ${targetProjectId} (type: ${typeof targetProjectId})`);
+          console.log(`   - matches: ${matches}`);
+          console.log(`   - title: ${conv.title}`);
+          return matches;
+        })
         .slice(0, 10)
         .map(conv => ({
           id: conv.id,
@@ -124,9 +169,11 @@ function ProjectLanding() {
           messages: conv.message_count
         }));
       
+      console.log('Filtered project chats:', projectChats.length);
+      console.log('Project chats data:', projectChats);
       setProjectConversations(projectChats);
     } catch (error) {
-      console.error('Failed to load project conversations:', error);
+      console.error('❌ Failed to load project conversations:', error);
     }
   };
 
@@ -165,7 +212,8 @@ function ProjectLanding() {
           projectId: project.id, 
           projectName: project.name,
           initialMessage: chatInput,
-          modelChoice: selectedModel
+          modelChoice: selectedModel,
+          modelVariant: selectedModelVariant
         } 
       });
       setChatInput('');
@@ -362,7 +410,13 @@ function ProjectLanding() {
             <CustomDropdown
               value={selectedModel}
               onChange={setSelectedModel}
-              options={modelOptions}
+              options={modelProviders}
+              className="project-model-dropdown"
+            />
+            <CustomDropdown
+              value={selectedModelVariant}
+              onChange={setSelectedModelVariant}
+              options={modelVariants[selectedModel] || []}
               className="project-model-dropdown"
             />
           </div>
@@ -470,15 +524,21 @@ function ProjectLanding() {
             </div>
           </div>
 
-          {/* Right Column - Recent Activity with Real Chats */}
           <div className="project-right-column">
             <div className="activity-header">
               <h3 className="activity-title">RECENT ACTIVITY</h3>
             </div>
 
-            {projectConversations.length === 0 ? (
+            {loading ? (
+              <div className="empty-activity">
+                <p className="empty-activity-text">Loading...</p>
+              </div>
+            ) : projectConversations.length === 0 ? (
               <div className="empty-activity">
                 <p className="empty-activity-text">No activity yet</p>
+                <p className="empty-activity-text" style={{ fontSize: '0.75rem', marginTop: '8px', color: '#555555' }}>
+                  Start a conversation in this project to see activity
+                </p>
               </div>
             ) : (
               <div className="activity-list">

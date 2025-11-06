@@ -523,9 +523,12 @@
     font-size: 0.58rem;
   }
 
+  /* ✅ FIXED: Show project badges on mobile */
   .project-badge,
   .no-project-badge {
-    display: none;
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 4px 8px;
   }
 
   .chevron-icon {
