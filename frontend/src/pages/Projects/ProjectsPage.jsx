@@ -2,42 +2,72 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FolderOpen, Clock, MoreVertical, Search, Plus, Trash2, Edit3, Archive, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
+import apiService from '../../services/api';
 import './Projects.css';
 
 function ProjectsPage() {
   const navigate = useNavigate();
-  const { starredProjects, toggleStarProject } = useUser();
+  const { userId, starredProjects, toggleStarProject } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [openMenuId, setOpenMenuId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectType, setNewProjectType] = useState('');
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const menuRef = useRef(null);
   const modalRef = useRef(null);
 
-  const [projects, setProjects] = useState([
-    { id: 1, name: 'Website Redesign', type: 'UI/UX', chats: 12, lastActive: '2 hours ago' },
-    { id: 2, name: 'Marketing Campaign', type: 'Content', chats: 8, lastActive: '1 day ago' },
-    { id: 3, name: 'Data Analysis', type: 'Python', chats: 24, lastActive: '3 days ago' },
-    { id: 4, name: 'Product Development', type: 'Features', chats: 15, lastActive: '5 days ago' },
-    { id: 5, name: 'API Integration', type: 'Backend', chats: 7, lastActive: '1 week ago' },
-    { id: 6, name: 'Mobile App', type: 'React Native', chats: 19, lastActive: '2 weeks ago' },
-    { id: 7, name: 'E-commerce Platform', type: 'Full Stack', chats: 31, lastActive: '4 days ago' },
-    { id: 8, name: 'AI Chatbot', type: 'Machine Learning', chats: 16, lastActive: '6 days ago' },
-    { id: 9, name: 'Cloud Migration', type: 'DevOps', chats: 11, lastActive: '3 days ago' },
-  ]);
+  // Load projects from backend
+  useEffect(() => {
+    loadProjects();
+  }, [userId]);
+
+  const loadProjects = async () => {
+    try {
+      setIsLoading(true);
+      const data = await apiService.getProjects(userId);
+      
+      // Transform to match your UI format
+      const formattedProjects = data.map(proj => ({
+        id: proj.id,
+        name: proj.name,
+        type: proj.type || 'General',
+        chats: 0, // TODO: Add conversation count from backend
+        lastActive: formatTime(proj.updated_at)
+      }));
+      
+      setProjects(formattedProjects);
+    } catch (error) {
+      console.error('Failed to load projects:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now - date) / (1000 * 60 * 60);
+
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 2) return '1 hour ago';
+    if (diffInHours < 24) return `${Math.floor(diffInHours)} hours ago`;
+    if (diffInHours < 48) return '1 day ago';
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)} days ago`;
+    if (diffInHours < 336) return '1 week ago';
+    return `${Math.floor(diffInHours / 168)} weeks ago`;
+  };
 
   const filteredProjects = projects.filter(project =>
     project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     project.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Check if project is starred
   const isProjectStarred = (projectId) => {
     return starredProjects.some(p => p.id === projectId);
   };
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -58,27 +88,31 @@ function ProjectsPage() {
     setNewProjectType('');
   };
 
-  const handleCreateProject = () => {
-    if (newProjectName.trim() && newProjectType.trim()) {
-      const newProject = {
-        id: Math.max(...projects.map(p => p.id)) + 1,
-        name: newProjectName.trim(),
-        type: newProjectType.trim(),
-        chats: 0,
-        lastActive: 'Just now'
-      };
-      setProjects([newProject, ...projects]);
-      setShowCreateModal(false);
-      setNewProjectName('');
-      setNewProjectType('');
-      
-      // Navigate to the new project
-      navigate(`/projects/${newProject.id}`);
+  const handleCreateProject = async () => {
+    if (newProjectName.trim()) {  // Only name is required
+      try {
+        const result = await apiService.createProject(
+          userId,
+          newProjectName.trim(),
+          newProjectType.trim() || 'General'  // Default to 'General' if empty
+        );
+        
+        if (result.success) {
+          await loadProjects();
+          setShowCreateModal(false);
+          setNewProjectName('');
+          setNewProjectType('');
+          
+          navigate(`/projects/${result.project.id}`);
+        }
+      } catch (error) {
+        console.error('Failed to create project:', error);
+        alert('Failed to create project');
+      }
     }
   };
 
   const handleProjectClick = (projectId) => {
-    // Navigate to project landing page
     navigate(`/projects/${projectId}`);
   };
 
@@ -87,13 +121,22 @@ function ProjectsPage() {
     setOpenMenuId(openMenuId === projectId ? null : projectId);
   };
 
-  const handleStarProject = (e, project) => {
+  const handleStarProject = async (e, project) => {
     e.stopPropagation();
-    const projectData = {
-      id: project.id,
-      name: project.name
-    };
-    toggleStarProject(projectData);
+    
+    try {
+      const newStarred = !isProjectStarred(project.id);
+      
+      await apiService.updateProject(project.id, { is_starred: newStarred });
+      
+      const projectData = { id: project.id, name: project.name };
+      toggleStarProject(projectData);
+      
+      await loadProjects();
+    } catch (error) {
+      console.error('Failed to star project:', error);
+    }
+    
     setOpenMenuId(null);
   };
 
@@ -103,9 +146,9 @@ function ProjectsPage() {
     const newName = prompt('Enter new project name:', project.name);
     
     if (newName && newName.trim()) {
-      setProjects(projects.map(p => 
-        p.id === projectId ? { ...p, name: newName.trim() } : p
-      ));
+      apiService.updateProject(projectId, { name: newName.trim() })
+        .then(() => loadProjects())
+        .catch(err => console.error('Failed to rename:', err));
     }
     setOpenMenuId(null);
   };
@@ -115,18 +158,24 @@ function ProjectsPage() {
     const project = projects.find(p => p.id === projectId);
     
     if (window.confirm(`Archive "${project.name}"?`)) {
-      console.log('Archived project:', projectId);
-      // TODO: Implement archive functionality
+      console.log('Archive feature coming soon');
+      // TODO: Implement archive when backend supports it
     }
     setOpenMenuId(null);
   };
 
-  const handleDeleteProject = (e, projectId) => {
+  const handleDeleteProject = async (e, projectId) => {
     e.stopPropagation();
     const project = projects.find(p => p.id === projectId);
     
-    if (window.confirm(`Delete "${project.name}"? This will remove all ${project.chats} conversations in this project.`)) {
-      setProjects(projects.filter(p => p.id !== projectId));
+    if (window.confirm(`Delete "${project.name}"? This will remove all conversations in this project.`)) {
+      try {
+        await apiService.deleteProject(projectId);
+        await loadProjects();
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+        alert('Failed to delete project');
+      }
     }
     setOpenMenuId(null);
   };
@@ -137,7 +186,9 @@ function ProjectsPage() {
         {/* Header */}
         <div className="page-header">
           <h1 className="page-title">PROJECTS</h1>
-          <p className="page-subtitle">Organize your AI conversations</p>
+          <p className="page-subtitle">
+            {isLoading ? 'Loading...' : `${projects.length} project${projects.length !== 1 ? 's' : ''}`}
+          </p>
         </div>
 
         {/* Controls Section */}
@@ -160,7 +211,13 @@ function ProjectsPage() {
         </div>
 
         {/* Projects Grid or Empty State */}
-        {filteredProjects.length === 0 ? (
+        {isLoading ? (
+          <div className="empty-state">
+            <FolderOpen size={60} className="empty-state-icon" />
+            <h3 className="empty-state-title">LOADING...</h3>
+            <p className="empty-state-text">Fetching your projects</p>
+          </div>
+        ) : filteredProjects.length === 0 ? (
           <div className="empty-state">
             <FolderOpen size={60} className="empty-state-icon" />
             <h3 className="empty-state-title">No Projects Found</h3>
@@ -188,7 +245,6 @@ function ProjectsPage() {
                       <MoreVertical size={16} />
                     </button>
 
-                    {/* Options Menu */}
                     {openMenuId === project.id && (
                       <div className="project-options-menu">
                         <button 
@@ -277,7 +333,7 @@ function ProjectsPage() {
                   <button 
                     className="button-base button-primary" 
                     onClick={handleCreateProject}
-                    disabled={!newProjectName.trim() || !newProjectType.trim()}
+                    disabled={!newProjectName.trim()}
                   >
                     Create Project
                   </button>

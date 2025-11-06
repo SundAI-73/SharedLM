@@ -41,3 +41,22 @@ yarn-debug.log*
 backend/models/__pycache__/
 backend/services/__pycache__/
 
+backend/database/__pycache__/__init__.cpython-313.pyc
+backend/database/__pycache__/crud.cpython-313.pyc
+backend/database/__pycache__/models.cpython-313.pyc
+backend/database/__pycache__/connection.cpython-313.pyc
+backend/config/__pycache__/settings.cpython-313.pyc
+backend/config/__pycache__/__init__.cpython-313.pyc
+backend/database/__init__.py
+backend/config/__init__.py
+frontend/src/services/api/index.js
+backend/api/routes/__pycache__/projects.cpython-313.pyc
+backend/api/routes/__pycache__/health.cpython-313.pyc
+backend/api/routes/__pycache__/conversations.cpython-313.pyc
+backend/api/routes/__pycache__/chat.cpython-313.pyc
+backend/api/routes/__pycache__/auth.cpython-313.pyc
+backend/api/routes/__pycache__/__init__.cpython-313.pyc
+backend/api/routes/__init__.py
+backend/api/__pycache__/dependencies.cpython-313.pyc
+backend/api/__pycache__/__init__.cpython-313.pyc
+backend/api/__init__.py

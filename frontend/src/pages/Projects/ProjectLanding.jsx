@@ -17,32 +17,32 @@ import {
 } from 'lucide-react';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
 import { useUser } from '../../contexts/UserContext';
+import { useNotification } from '../../contexts/NotificationContext';
+import apiService from '../../services/api';
 import './ProjectLanding.css';
 
 function ProjectLanding() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { starredProjects, toggleStarProject } = useUser();
+  const { userId, starredProjects, toggleStarProject } = useUser();
+  const notify = useNotification();
   const [activeTab, setActiveTab] = useState('files');
   const [chatInput, setChatInput] = useState('');
   const [selectedModel, setSelectedModel] = useState('mistral');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [loading, setLoading] = useState(false);
   const moreMenuRef = useRef(null);
-
-  // Mock project data
   const [project, setProject] = useState(null);
+  const [projectConversations, setProjectConversations] = useState([]);
 
-  // Model options
   const modelOptions = [
     { value: 'mistral', label: 'MISTRAL AI' },
     { value: 'openai', label: 'GPT-4' },
     { value: 'anthropic', label: 'CLAUDE' }
   ];
 
-  // Check if current project is starred
   const isStarred = starredProjects.some(p => p.id === parseInt(projectId));
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
@@ -54,78 +54,95 @@ function ProjectLanding() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Load real project data from backend
   useEffect(() => {
-    // Mock data - replace with actual data fetching
-    const mockProjects = {
-      '1': {
-        id: 1,
-        name: 'Website Redesign',
-        type: 'UI/UX',
-        description: 'Complete redesign of the company website with modern UI/UX principles',
-        createdAt: '2 weeks ago',
-        storageUsed: 2.4,
-        storageTotal: 10,
-        memory: [
-          'User prefers minimalist design approach',
-          'Target audience is tech-savvy millennials',
-          'Budget constraint: $50k-75k',
-          'Timeline: 3 months delivery',
-          'Brand colors: Blue and white palette'
-        ],
-        instructions: 'Focus on modern, clean UI/UX principles. Prioritize mobile-first design. Use accessible color contrasts and typography. Follow Material Design guidelines.',
-        files: [
-          { id: 1, name: 'design-mockups.fig', size: '2.4 MB', uploadedAt: '2 days ago' },
-          { id: 2, name: 'brand-guidelines.pdf', size: '1.1 MB', uploadedAt: '1 week ago' },
-          { id: 3, name: 'user-research.xlsx', size: '856 KB', uploadedAt: '1 week ago' }
-        ],
-        recentActivity: [
-          { id: 1, type: 'chat', title: 'Initial brainstorming', model: 'Claude', time: '2 hours ago', messages: 15 },
-          { id: 2, type: 'chat', title: 'Color scheme discussion', model: 'GPT-4', time: '1 day ago', messages: 23 },
-          { id: 3, type: 'file', title: 'design-mockups.fig uploaded', time: '2 days ago' },
-          { id: 4, type: 'chat', title: 'Component library setup', model: 'Claude', time: '2 days ago', messages: 18 },
-          { id: 5, type: 'memory', title: 'Added user preference for minimalism', time: '3 days ago' },
-        ]
-      },
-      '2': {
-        id: 2,
-        name: 'Marketing Campaign',
-        type: 'Content',
-        description: 'Q4 marketing campaign strategy and content creation',
-        createdAt: '1 week ago',
-        storageUsed: 1.2,
-        storageTotal: 10,
-        memory: [
-          'Target: B2B SaaS companies',
-          'Focus on LinkedIn and Twitter',
-          'Campaign runs Oct-Dec 2024'
-        ],
-        instructions: 'Create engaging, professional content for B2B audience. Use data-driven insights. Keep tone professional yet approachable.',
-        files: [],
-        recentActivity: [
-          { id: 1, type: 'chat', title: 'Campaign brainstorm', model: 'GPT-4', time: '3 hours ago', messages: 12 },
-        ]
-      },
-    };
+    loadProjectData();
+    loadProjectActivity();
+  }, [projectId, userId]);
 
-    const foundProject = mockProjects[projectId];
-    if (foundProject) {
-      setProject(foundProject);
-    } else {
-      setProject({
-        id: projectId,
-        name: 'Project',
-        type: 'General',
-        description: '',
-        createdAt: 'Recently',
-        storageUsed: 0,
-        storageTotal: 10,
-        memory: [],
-        instructions: '',
-        files: [],
-        recentActivity: []
-      });
+  const loadProjectData = async () => {
+    try {
+      setLoading(true);
+      const projects = await apiService.getProjects(userId);
+      const foundProject = projects.find(p => p.id === parseInt(projectId));
+      
+      if (foundProject) {
+        // Get project files
+        const files = await apiService.getProjectFiles(foundProject.id);
+        
+        setProject({
+          id: foundProject.id,
+          name: foundProject.name,
+          type: foundProject.type || 'General',
+          description: '',
+          createdAt: formatTime(foundProject.created_at),
+          storageUsed: 0,
+          storageTotal: 10,
+          memory: [],
+          instructions: '',
+          files: files || [],
+          isStarred: foundProject.is_starred
+        });
+      } else {
+        setProject({
+          id: projectId,
+          name: 'Project',
+          type: 'General',
+          description: '',
+          createdAt: 'Recently',
+          storageUsed: 0,
+          storageTotal: 10,
+          memory: [],
+          instructions: '',
+          files: [],
+          isStarred: false
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load project:', error);
+      notify.error('Failed to load project data');
+    } finally {
+      setLoading(false);
     }
-  }, [projectId]);
+  };
+
+  // Load project conversations for recent activity
+  const loadProjectActivity = async () => {
+    try {
+      const allConversations = await apiService.getConversations(userId);
+      
+      // Filter conversations for this project
+      const projectChats = allConversations
+        .filter(conv => conv.project_id === parseInt(projectId))
+        .slice(0, 10)
+        .map(conv => ({
+          id: conv.id,
+          type: 'chat',
+          title: conv.title || 'Untitled Chat',
+          model: conv.model_used || 'Unknown',
+          time: formatTime(conv.updated_at),
+          messages: conv.message_count
+        }));
+      
+      setProjectConversations(projectChats);
+    } catch (error) {
+      console.error('Failed to load project conversations:', error);
+    }
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now - date) / (1000 * 60 * 60);
+
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 2) return '1 hour ago';
+    if (diffInHours < 24) return `${Math.floor(diffInHours)} hours ago`;
+    if (diffInHours < 48) return '1 day ago';
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)} days ago`;
+    if (diffInHours < 336) return '1 week ago';
+    return `${Math.floor(diffInHours / 168)} weeks ago`;
+  };
 
   if (!project) {
     return (
@@ -151,46 +168,92 @@ function ProjectLanding() {
           modelChoice: selectedModel
         } 
       });
+      setChatInput('');
     }
   };
 
   const handleActivityClick = (activity) => {
     if (activity.type === 'chat') {
-      navigate('/chat', { 
-        state: { 
-          chatId: activity.id, 
-          projectId: project.id, 
-          projectName: project.name 
-        } 
-      });
+      navigate(`/chat?conversation=${activity.id}`);
     }
   };
 
   const handleAddFile = () => {
-    console.log('Add file clicked');
-    // TODO: Implement file upload
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.csv,.xlsx';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (file.size > 10 * 1024 * 1024) {
+        notify.error('File size must be less than 10MB');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const result = await apiService.uploadProjectFile(file, project.id, userId);
+        
+        if (result.success) {
+          notify.success(`File uploaded: ${file.name}`);
+          await loadProjectData();
+        }
+      } catch (error) {
+        console.error('File upload failed:', error);
+        notify.error('Failed to upload file');
+      } finally {
+        setLoading(false);
+      }
+    };
+    input.click();
   };
 
   const handleAddInstructions = () => {
-    console.log('Add instructions clicked');
-    // TODO: Implement instructions editor
+    notify.info('Instructions feature coming soon');
   };
 
-  const handleDeleteFile = (fileId, e) => {
+  const handleDeleteFile = async (fileId, e) => {
     e.stopPropagation();
-    if (window.confirm('Delete this file?')) {
-      console.log('Delete file:', fileId);
-      // TODO: Implement file deletion
+    
+    const confirmed = await notify.confirm({
+      title: 'Delete File',
+      message: 'Are you sure you want to delete this file? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+
+    if (confirmed) {
+      try {
+        setLoading(true);
+        await apiService.deleteProjectFile(fileId);
+        notify.success('File deleted');
+        await loadProjectData();
+      } catch (error) {
+        console.error('Delete file failed:', error);
+        notify.error('Failed to delete file');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const handleToggleStar = () => {
+  const handleToggleStar = async () => {
     if (project) {
-      const projectData = {
-        id: project.id,
-        name: project.name
-      };
-      toggleStarProject(projectData);
+      try {
+        const newStarred = !isStarred;
+        await apiService.updateProject(project.id, { is_starred: newStarred });
+        
+        const projectData = { id: project.id, name: project.name };
+        toggleStarProject(projectData);
+        
+        notify.success(newStarred ? 'Project starred' : 'Project unstarred');
+        await loadProjectData();
+      } catch (error) {
+        console.error('Failed to toggle star:', error);
+        notify.error('Failed to update project');
+      }
     }
   };
 
@@ -206,13 +269,11 @@ function ProjectLanding() {
   return (
     <div className="page-container">
       <div className="page-content project-landing">
-        {/* Back Button */}
         <button className="back-button" onClick={handleBack}>
           <ArrowLeft size={20} />
           <span>All PROJECTS</span>
         </button>
 
-        {/* Project Header */}
         <div className="project-header">
           <div className="project-info">
             <div className="project-title-row">
@@ -222,6 +283,7 @@ function ProjectLanding() {
                   className={`icon-button star-button ${isStarred ? 'starred' : ''}`}
                   onClick={handleToggleStar}
                   title={isStarred ? 'Unstar project' : 'Star project'}
+                  disabled={loading}
                 >
                   <Star 
                     size={18} 
@@ -229,7 +291,7 @@ function ProjectLanding() {
                     color={isStarred ? '#B94539' : '#888888'}
                   />
                 </button>
-                <button className="icon-button share-button">
+                <button className="icon-button share-button" onClick={() => notify.info('Share feature coming soon')}>
                   <span>Share</span>
                 </button>
                 <div className="more-menu-wrapper" ref={moreMenuRef}>
@@ -238,19 +300,19 @@ function ProjectLanding() {
                   </button>
                   {showMoreMenu && (
                     <div className="more-dropdown">
-                      <button className="dropdown-item">
+                      <button className="dropdown-item" onClick={() => notify.info('Edit feature coming soon')}>
                         <Edit3 size={16} />
                         <span>Edit details</span>
                       </button>
-                      <button className="dropdown-item">
+                      <button className="dropdown-item" onClick={() => notify.info('Report feature coming soon')}>
                         <MessageSquare size={16} />
                         <span>Report</span>
                       </button>
-                      <button className="dropdown-item">
+                      <button className="dropdown-item" onClick={() => notify.info('Archive feature coming soon')}>
                         <Archive size={16} />
                         <span>Archive</span>
                       </button>
-                      <button className="dropdown-item danger">
+                      <button className="dropdown-item danger" onClick={() => notify.info('Delete feature coming soon')}>
                         <Trash2 size={16} />
                         <span>Delete</span>
                       </button>
@@ -262,12 +324,11 @@ function ProjectLanding() {
             <div className="project-meta">
               <span className="meta-item">Created {project.createdAt}</span>
               <span className="meta-divider">•</span>
-              <span className="meta-item">{project.recentActivity.filter(a => a.type === 'chat').length} conversations</span>
+              <span className="meta-item">{projectConversations.length} conversations</span>
             </div>
           </div>
         </div>
 
-        {/* Chat Input Bar + Model Selector */}
         <div className="project-chat-section">
           <div className="chat-bar-container">
             <button className="chat-bar-attach-btn">
@@ -290,7 +351,7 @@ function ProjectLanding() {
 
             <button
               onClick={handleStartChat}
-              disabled={!chatInput.trim()}
+              disabled={!chatInput.trim() || loading}
               className={`chat-bar-send-btn ${chatInput.trim() ? 'active' : ''}`}
             >
               <Send size={20} />
@@ -307,11 +368,8 @@ function ProjectLanding() {
           </div>
         </div>
 
-        {/* Two Column Layout */}
         <div className="project-content-layout">
-          {/* Left Column - Tabs Content */}
           <div className="project-left-column">
-            {/* Tabs Navigation */}
             <div className="project-tabs">
               {tabs.map(tab => (
                 <button
@@ -324,11 +382,9 @@ function ProjectLanding() {
               ))}
             </div>
 
-            {/* Tab Content */}
             <div className="tab-content">
               {activeTab === 'files' && (
                 <div className="files-section">
-                  {/* Storage Info - Always show at top */}
                   {project.files.length > 0 && (
                     <div className="storage-info-container">
                       <span className="storage-text">{storageStatus}</span>
@@ -338,11 +394,15 @@ function ProjectLanding() {
                     </div>
                   )}
 
-                  <button className="tab-add-button" onClick={handleAddFile}>
+                  <button className="tab-add-button" onClick={handleAddFile} disabled={loading}>
                     <Plus size={16} />
                   </button>
 
-                  {project.files.length === 0 ? (
+                  {loading && project.files.length === 0 ? (
+                    <div className="empty-tab-content">
+                      <p className="empty-tab-text">Loading files...</p>
+                    </div>
+                  ) : project.files.length === 0 ? (
                     <div className="empty-tab-content">
                       <p className="empty-tab-text">No files uploaded</p>
                       <p className="empty-tab-hint">Click the + icon above to upload files</p>
@@ -353,12 +413,13 @@ function ProjectLanding() {
                         <div key={file.id} className="file-item">
                           <div className="file-icon-placeholder"></div>
                           <div className="file-info">
-                            <p className="file-name">{file.name}</p>
-                            <p className="file-meta">{file.size}</p>
+                            <p className="file-name">{file.filename}</p>
+                            <p className="file-meta">{Math.round(file.file_size / 1024)} KB</p>
                           </div>
                           <button 
                             className="file-delete-btn"
                             onClick={(e) => handleDeleteFile(file.id, e)}
+                            disabled={loading}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -409,49 +470,38 @@ function ProjectLanding() {
             </div>
           </div>
 
-          {/* Right Column - Recent Activity */}
+          {/* Right Column - Recent Activity with Real Chats */}
           <div className="project-right-column">
             <div className="activity-header">
               <h3 className="activity-title">RECENT ACTIVITY</h3>
             </div>
 
-            {project.recentActivity.length === 0 ? (
+            {projectConversations.length === 0 ? (
               <div className="empty-activity">
                 <p className="empty-activity-text">No activity yet</p>
               </div>
             ) : (
               <div className="activity-list">
-                {project.recentActivity.map(activity => (
+                {projectConversations.map(activity => (
                   <div
                     key={activity.id}
-                    className={`activity-item ${activity.type === 'chat' ? 'clickable' : ''}`}
-                    onClick={() => activity.type === 'chat' && handleActivityClick(activity)}
+                    className="activity-item clickable"
+                    onClick={() => handleActivityClick(activity)}
                   >
                     <div className="activity-icon-placeholder">
-                      {activity.type === 'chat' && <MessageSquare size={14} />}
-                      {activity.type === 'file' && <FileText size={14} />}
+                      <MessageSquare size={14} />
                     </div>
                     <div className="activity-content">
                       <p className="activity-title">{activity.title}</p>
                       <div className="activity-meta">
-                        {activity.model && (
-                          <>
-                            <span className="activity-model">{activity.model}</span>
-                            <span className="meta-divider">•</span>
-                          </>
-                        )}
-                        {activity.messages && (
-                          <>
-                            <span>{activity.messages} msgs</span>
-                            <span className="meta-divider">•</span>
-                          </>
-                        )}
+                        <span className="activity-model">{activity.model}</span>
+                        <span className="meta-divider">•</span>
+                        <span>{activity.messages} msgs</span>
+                        <span className="meta-divider">•</span>
                         <span className="activity-time">{activity.time}</span>
                       </div>
                     </div>
-                    {activity.type === 'chat' && (
-                      <ChevronRight size={16} className="activity-chevron" />
-                    )}
+                    <ChevronRight size={16} className="activity-chevron" />
                   </div>
                 ))}
               </div>
