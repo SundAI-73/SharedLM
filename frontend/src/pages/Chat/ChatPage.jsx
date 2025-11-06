@@ -1,62 +1,159 @@
-// src/pages/ChatPage.jsx
-import React, { useState, useEffect } from 'react';
-import { Send, Mic, Paperclip, MoreVertical, AlertCircle, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Send, Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, X } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
+import { useNavigate, useLocation } from 'react-router-dom';
+import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
 import apiService from '../../services/api/index';
-import './Chat.css';
+import logo from '../../assets/images/logo main.svg';
+import './styles/chat-base.css';
+import './styles/chat-header.css';
+import './styles/chat-messages.css';
+import './styles/chat-input.css';
+import './styles/chat-responsive.css';
+
+const formatMessage = (text) => {
+  if (!text) return '';
+  
+  let formatted = text;
+  formatted = formatted.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+  formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+  
+  formatted = formatted.split('\n\n').map(para => {
+    return para.trim() ? `<p>${para.replace(/\n/g, ' ')}</p>` : '';
+  }).join('');
+  
+  if (!formatted.includes('<p>')) {
+    formatted = `<p>${formatted}</p>`;
+  }
+  
+  return formatted;
+};
+
+const generateChatTitle = (userMessage) => {
+  const message = userMessage.toLowerCase();
+  const cleaned = message
+    .replace(/^(what|how|why|when|where|who|can|could|would|should|is|are|do|does|tell me|explain|show me|help me with)\s+/i, '')
+    .replace(/\?+$/, '')
+    .trim();
+  
+  const title = cleaned
+    .split(' ')
+    .slice(0, 6)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+  
+  return title.length > 40 ? title.substring(0, 40) + '...' : title;
+};
+
+const Message = React.memo(({ msg }) => {
+  const formattedContent = formatMessage(msg.content);
+  
+  return (
+    <div className={`chat-message ${msg.role}`}>
+      <div className="message-avatar">
+        {msg.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+      </div>
+      <div className="message-content">
+        <div 
+          className="message-text"
+          dangerouslySetInnerHTML={{ __html: formattedContent }}
+        />
+        {msg.model && (
+          <div className="message-meta">
+            <span className="message-model">{msg.model.toUpperCase()}</span>
+            <span className="message-time">
+              {new Date(msg.timestamp).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+Message.displayName = 'Message';
 
 function ChatPage({ backendStatus }) {
   const { userId, currentModel, setCurrentModel } = useUser();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [availableModels, setAvailableModels] = useState(['openai', 'anthropic']);
+  const [availableModels, setAvailableModels] = useState(['mistral', 'openai', 'anthropic']);
+  const [chatTitle, setChatTitle] = useState('');
+  const [showOptions, setShowOptions] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [currentConversationId, setCurrentConversationId] = useState(null);
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  
+  const messagesEndRef = useRef(null);
+  const optionsRef = useRef(null);
+  const titleInputRef = useRef(null);
+  const initialMessageSent = useRef(false);
+  const fileInputRef = useRef(null);
 
+  const modelOptions = useMemo(() => [
+    { value: 'mistral', label: 'MISTRAL AI' },
+    { value: 'openai', label: 'GPT-4' },
+    { value: 'anthropic', label: 'CLAUDE' }
+  ], []);
+
+  // Load conversation from URL query parameter
   useEffect(() => {
-    const fetchModels = async () => {
-      const modelsData = await apiService.getModels();
-      if (modelsData) {
-        setAvailableModels(modelsData.available_models);
-      }
-    };
-    if (backendStatus === 'connected') {
-      fetchModels();
+    const urlParams = new URLSearchParams(location.search);
+    const conversationId = urlParams.get('conversation');
+    
+    if (conversationId) {
+      loadConversation(conversationId);
     }
-  }, [backendStatus]);
+  }, [location.search]);
 
-  const handleSend = async () => {
-    if (!input.trim() || backendStatus !== 'connected') return;
-
-    const userMessage = {
-      role: 'user',
-      content: input,
-      timestamp: new Date().toISOString()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setLoading(true);
-
+  const loadConversation = async (conversationId) => {
     try {
-      const response = await apiService.sendMessage(userId, userMessage.content, currentModel);
-
-      if (response) {
-        const assistantMessage = {
-          role: 'assistant',
-          content: response.reply,
-          model: response.used_model,
-          memories: response.memories,
-          timestamp: new Date().toISOString()
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
+      setLoading(true);
+      
+      const loadedMessages = await apiService.getMessages(conversationId);
+      
+      if (!loadedMessages || loadedMessages.length === 0) {
+        console.warn('No messages found for conversation:', conversationId);
+        setMessages([]);
+        setLoading(false);
+        return;
+      }
+      
+      setMessages(loadedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        model: msg.model,
+        timestamp: msg.created_at
+      })));
+      
+      setCurrentConversationId(parseInt(conversationId));
+      
+      const conversations = await apiService.getConversations(userId);
+      const conversation = conversations.find(c => c.id === parseInt(conversationId));
+      
+      if (conversation) {
+        setChatTitle(conversation.title || '');
+        if (conversation.project_id) {
+          setSelectedProject({ id: conversation.project_id, name: 'Project' });
+        } else {
+          setSelectedProject(null);
+        }
       }
     } catch (error) {
-      console.error('Chat error:', error);
-      setMessages(prev => [...prev, {
+      console.error('Failed to load conversation:', error);
+      setMessages([{
         role: 'assistant',
-        content: 'Sorry, there was an error processing your message. Please try again.',
-        error: true,
+        content: 'Failed to load conversation. Please try again.',
         timestamp: new Date().toISOString()
       }]);
     } finally {
@@ -64,190 +161,446 @@ function ChatPage({ backendStatus }) {
     }
   };
 
-  const retryConnection = () => {
-    window.location.reload();
+  // Handle navigation state and clear when needed
+  useEffect(() => {
+    const { projectId, projectName, initialMessage } = location.state || {};
+    const urlParams = new URLSearchParams(location.search);
+    const conversationId = urlParams.get('conversation');
+    
+    if (projectId && projectName) {
+      setSelectedProject({ id: projectId, name: projectName });
+    }
+
+    if (initialMessage && initialMessage.trim() && !initialMessageSent.current) {
+      initialMessageSent.current = true;
+      setTimeout(() => {
+        handleSendWithMessage(initialMessage);
+      }, 200);
+      
+      window.history.replaceState({ projectId, projectName }, '');
+    }
+
+    // Only clear if no conversation ID in URL
+    if (!projectId && !projectName && !initialMessage && !conversationId) {
+      setMessages([]);
+      setChatTitle('');
+      setCurrentConversationId(null);
+      setSelectedProject(null);
+      setAttachedFiles([]);
+      initialMessageSent.current = false;
+    }
+  }, [location]);
+
+  useEffect(() => {
+    if (!currentModel) setCurrentModel('mistral');
+  }, [currentModel, setCurrentModel]);
+
+  useEffect(() => {
+    if (backendStatus === 'connected') {
+      apiService.getModels().then(data => {
+        if (data) setAvailableModels(data.available_models);
+      });
+    } else {
+      setAvailableModels(['mistral']);
+      setCurrentModel('mistral');
+    }
+  }, [backendStatus, setCurrentModel]);
+
+  useEffect(() => {
+    if (messages.length === 2 && !chatTitle) {
+      const firstMessage = messages.find(m => m.role === 'user');
+      if (firstMessage) {
+        const title = generateChatTitle(firstMessage.content);
+        setChatTitle(title);
+        
+        if (currentConversationId) {
+          apiService.updateConversationTitle(currentConversationId, title).catch(err => {
+            console.error('Failed to update title:', err);
+          });
+        }
+      }
+    }
+  }, [messages, chatTitle, currentConversationId]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (optionsRef.current && !optionsRef.current.contains(e.target)) {
+        setShowOptions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [isEditingTitle]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // FIXED: Create conversation first if none exists
+      let convId = currentConversationId;
+      if (!convId) {
+        const conv = await apiService.createConversation(
+          userId,
+          null,
+          currentModel,
+          selectedProject?.id || null
+        );
+        convId = conv.id;
+        setCurrentConversationId(convId);
+      }
+      
+      const result = await apiService.uploadFile(file, userId, convId);
+      
+      if (result.success) {
+        setAttachedFiles(prev => [...prev, result.file]);
+        // Use notification instead of console.log
+        // notify.success(`File uploaded: ${file.name}`);
+      }
+    } catch (error) {
+      console.error('File upload failed:', error);
+      // notify.error('Failed to upload file. Please try again.');
+      alert('Failed to upload file. Please try again.');
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveFile = (filename) => {
+    setAttachedFiles(prev => prev.filter(f => f.filename !== filename));
+  };
+
+  const handleSendWithMessage = useCallback(async (messageText) => {
+    if (!messageText.trim()) return;
+
+    const userMessage = {
+      role: 'user',
+      content: messageText,
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setLoading(true);
+
+    try {
+      const modelToUse = currentModel || 'mistral';
+      
+      const response = await apiService.sendMessage(
+        userId, 
+        messageText, 
+        modelToUse,
+        currentConversationId,
+        selectedProject?.id || null
+      );
+
+      if (response) {
+        if (!currentConversationId && response.conversation_id) {
+          setCurrentConversationId(response.conversation_id);
+        }
+
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: response.reply,
+          model: response.used_model || modelToUse,
+          memories: response.memories,
+          timestamp: new Date().toISOString()
+        }]);
+        
+        // Clear attached files after successful send
+        setAttachedFiles([]);
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Connection issue. Please check settings or try again.',
+        model: 'mistral',
+        timestamp: new Date().toISOString()
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentModel, userId, currentConversationId, selectedProject]);
+
+  const handleSend = useCallback(() => {
+    handleSendWithMessage(input);
+    setInput('');
+  }, [input, handleSendWithMessage]);
+
+  const handleRename = useCallback(() => {
+    setEditedTitle(chatTitle);
+    setIsEditingTitle(true);
+    setShowOptions(false);
+  }, [chatTitle]);
+
+  const handleSaveTitle = useCallback(async () => {
+    if (editedTitle.trim() && currentConversationId) {
+      try {
+        await apiService.updateConversationTitle(currentConversationId, editedTitle.trim());
+        setChatTitle(editedTitle.trim());
+      } catch (error) {
+        console.error('Failed to update title:', error);
+      }
+    }
+    setIsEditingTitle(false);
+  }, [editedTitle, currentConversationId]);
+
+  const handleDelete = useCallback(async () => {
+    if (window.confirm('Delete this conversation?')) {
+      if (currentConversationId) {
+        try {
+          await apiService.deleteConversation(currentConversationId);
+        } catch (error) {
+          console.error('Failed to delete:', error);
+        }
+      }
+      setMessages([]);
+      setChatTitle('');
+      setCurrentConversationId(null);
+      setShowOptions(false);
+      navigate('/chat');
+    }
+  }, [navigate, currentConversationId]);
+
+  const handleStarChat = async () => {
+    if (currentConversationId) {
+      try {
+        await apiService.toggleStarConversation(currentConversationId);
+      } catch (error) {
+        console.error('Failed to star chat:', error);
+      }
+    }
+    setShowOptions(false);
   };
 
   return (
-    <div className="chat-page">
-      {/* Header */}
-      <div className="chat-header">
-        <div className="chat-header-left">
-          <h2 className="chat-title">NEW CONVERSATION</h2>
-          <span className="chat-subtitle">
-            {currentModel === 'openai' ? 'GPT-4' : 'Claude'} • Active
-          </span>
-        </div>
+    <div className="chat-page-container">
+      <div className="chat-page-content">
+        {messages.length > 0 ? (
+          <div className="chat-top-bar-with-content">
+            <div className="chat-left-section">
+              {selectedProject && (
+                <>
+                  <button 
+                    className="chat-project-badge" 
+                    onClick={() => navigate(`/projects/${selectedProject.id}`)}
+                  >
+                    <FolderOpen size={14} />
+                    <span>{selectedProject.name}</span>
+                  </button>
+                  <div className="title-divider">/</div>
+                </>
+              )}
 
-        <div className="chat-header-right">
-          <select
-            className="model-dropdown"
-            value={currentModel}
-            onChange={(e) => setCurrentModel(e.target.value)}
-            disabled={backendStatus !== 'connected'}
-          >
-            <option value="openai">GPT-4</option>
-            <option value="anthropic">Claude</option>
-          </select>
-
-          <button className="header-btn">
-            <MoreVertical size={20} />
-          </button>
-        </div>
-      </div>
-
-      {/* Chat Content */}
-      <div className="chat-content">
-        {backendStatus !== 'connected' ? (
-          <div className="connection-error">
-            <AlertCircle size={48} />
-            <h2>Unable to Connect</h2>
-            <p>Please ensure the backend server is running</p>
-            <div className="connection-instructions">
-              <code>cd backend && python app.py</code>
-            </div>
-            <button onClick={retryConnection} className="btn-nothing">
-              <RefreshCw size={18} />
-              Retry Connection
-            </button>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="welcome-screen">
-            <div className="dot-matrix-logo">
-              <div className="dot-grid">
-                {[...Array(25)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={`dot ${[6, 7, 8, 11, 13, 16, 17, 18].includes(i) ? 'active' : ''}`}
-                    style={{ animationDelay: `${i * 0.05}s` }}
+              <div className="chat-title-wrapper" ref={optionsRef}>
+                {isEditingTitle ? (
+                  <input
+                    ref={titleInputRef}
+                    type="text"
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveTitle();
+                      if (e.key === 'Escape') setIsEditingTitle(false);
+                    }}
+                    onBlur={handleSaveTitle}
+                    className="chat-title-input"
                   />
-                ))}
+                ) : (
+                  <h1 className="chat-title-display">{chatTitle || 'NEW CHAT'}</h1>
+                )}
+
+                <button
+                  className="chat-title-dropdown-btn"
+                  onClick={() => setShowOptions(!showOptions)}
+                >
+                  <MoreVertical size={16} />
+                </button>
+
+                {showOptions && !isEditingTitle && (
+                  <div className="chat-title-options-menu">
+                    <button className="option-item" onClick={handleRename}>
+                      <Edit3 size={16} />
+                      <span>Rename</span>
+                    </button>
+                    <button className="option-item" onClick={handleStarChat}>
+                      <Star size={16} />
+                      <span>Star</span>
+                    </button>
+                    <button className="option-item danger" onClick={handleDelete}>
+                      <Trash2 size={16} />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            <h1 className="welcome-title">How can I assist you today?</h1>
+            <img src={logo} alt="SharedLM" className="chat-top-bar-logo" />
 
-            <div className="main-input-container">
-              <button className="input-btn">
-                <Paperclip size={18} />
-              </button>
-
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !loading && handleSend()}
-                placeholder="Type your message..."
-                className="main-input"
-                disabled={loading}
-                autoFocus
+            <div className="chat-right-section">
+              <CustomDropdown
+                value={currentModel}
+                onChange={setCurrentModel}
+                options={modelOptions.filter(opt =>
+                  availableModels.includes(opt.value) || opt.value === 'mistral'
+                )}
+                className="chat-model-dropdown-custom"
               />
-
-              <button className="input-btn">
-                <Mic size={18} />
-              </button>
-
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || loading}
-                className={`send-btn ${input.trim() ? 'active' : ''}`}
-              >
-                <Send size={18} />
-              </button>
-            </div>
-
-            <div className="quick-prompts">
-              <button
-                className="quick-prompt-btn"
-                onClick={() => setInput("Tell me about machine learning")}
-              >
-                Tell me about machine learning
-              </button>
-              <button
-                className="quick-prompt-btn"
-                onClick={() => setInput("Help me write code")}
-              >
-                Help me write code
-              </button>
-              <button
-                className="quick-prompt-btn"
-                onClick={() => setInput("Explain quantum computing")}
-              >
-                Explain quantum computing
-              </button>
             </div>
           </div>
         ) : (
-          <div className="messages-wrapper">
-            <div className="messages-container">
+          <div className="chat-top-bar">
+            <CustomDropdown
+              value={currentModel}
+              onChange={setCurrentModel}
+              options={modelOptions.filter(opt =>
+                availableModels.includes(opt.value) || opt.value === 'mistral'
+              )}
+              className="chat-model-dropdown-custom"
+            />
+          </div>
+        )}
+
+        <div className={`chat-messages-wrapper ${messages.length === 0 ? 'full-height' : ''}`}>
+          {messages.length === 0 ? (
+            <div className="chat-empty-state">
+              <div className="empty-state-logo-container">
+                <img src={logo} alt="SharedLM Logo" className="empty-state-logo" />
+              </div>
+              <h2 className="empty-state-title">START A CONVERSATION</h2>
+              {selectedProject && (
+                <p className="empty-state-project">in {selectedProject.name}</p>
+              )}
+              <p className="empty-state-text">Type your message below to begin</p>
+            </div>
+          ) : (
+            <div className="chat-messages-list">
               {messages.map((msg, idx) => (
-                <div key={idx} className={`message ${msg.role} ${msg.error ? 'error' : ''}`}>
-                  <div className="message-content">
-                    <p>{msg.content}</p>
-                    {msg.model && (
-                      <div className="message-meta">
-                        <span className="message-model">{msg.model}</span>
-                        <span className="message-time">
-                          {new Date(msg.timestamp).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <Message key={idx} msg={msg} />
               ))}
 
               {loading && (
-                <div className="message assistant">
+                <div className="chat-message assistant">
+                  <div className="message-avatar">
+                    <Bot size={20} />
+                  </div>
                   <div className="message-content">
                     <div className="typing-indicator">
-                      <span></span>
-                      <span></span>
-                      <span></span>
+                      <span /><span /><span />
                     </div>
                   </div>
                 </div>
               )}
+              <div ref={messagesEndRef} />
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Input Bar for Active Chat */}
-      {messages.length > 0 && backendStatus === 'connected' && (
-        <div className="chat-input-bar">
-          <button className="input-btn">
-            <Paperclip size={18} />
-          </button>
-
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && !loading && handleSend()}
-            placeholder="Type your message..."
-            className="chat-input"
-            disabled={loading}
-            autoFocus
-          />
-
-          <button className="input-btn">
-            <Mic size={18} />
-          </button>
-
-          <button
-            onClick={handleSend}
-            className={`send-btn ${input.trim() ? 'active' : ''}`}
-            disabled={!input.trim() || loading}
-          >
-            <Send size={18} />
-          </button>
+          )}
         </div>
-      )}
+
+        <div className="chat-input-wrapper">
+          {/* File attachments preview */}
+          {attachedFiles.length > 0 && (
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              padding: '8px 16px',
+              flexWrap: 'wrap'
+            }}>
+              {attachedFiles.map((file, idx) => (
+                <div key={idx} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#1F1F1F',
+                  border: '1px solid #2A2A2A',
+                  borderRadius: '8px',
+                  padding: '6px 10px',
+                  fontSize: '0.75rem',
+                  color: '#888888'
+                }}>
+                  <Paperclip size={12} />
+                  <span>{file.filename}</span>
+                  <button
+                    onClick={() => handleRemoveFile(file.filename)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#666666',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      display: 'flex'
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="chat-input-container">
+            <button 
+              className="chat-attach-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+            >
+              <Paperclip size={18} />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+              accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.csv,.xlsx"
+            />
+
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !loading) handleSend();
+              }}
+              placeholder="Type your message here..."
+              className="chat-input-field"
+              disabled={loading}
+              autoFocus
+            />
+
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || loading}
+              className={`chat-send-btn ${input.trim() ? 'active' : ''}`}
+            >
+              <Send size={20} />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-export default ChatPage;
+export default React.memo(ChatPage);

@@ -1,0 +1,257 @@
+.page-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  animation: fadeInUp var(--transition-smooth);
+  position: relative;
+}
+.page-container::before {
+  content: '';
+  position: absolute;
+  top: 15%;
+  left: 10%;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(185, 69, 57, 0.06) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(60px);
+  animation: float 25s ease-in-out infinite;
+  pointer-events: none;
+}
+.page-container::after {
+  content: '';
+  position: absolute;
+  bottom: 15%;
+  right: 10%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(185, 69, 57, 0.05) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: float 30s ease-in-out infinite reverse;
+  pointer-events: none;
+}
+
+.page-content {
+  background: #0A0A0A;
+  border-radius: 24px;
+  padding: 60px;
+  width: 100%;
+  max-width: 1400px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 50px;
+  position: relative;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.page-header::before {
+  display: none;
+}
+
+.page-title {
+  font-size: 2.8rem;
+  font-weight: 400;
+  color: #FFFFFF;
+  letter-spacing: 8px;
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  font-family: 'Courier New', monospace;
+  opacity: 0.95;
+}
+
+.page-subtitle {
+  font-size: 0.95rem;
+  color: #888888;
+  letter-spacing: 2px;
+  margin: 0;
+  opacity: 0.8;
+  font-weight: 300;
+}
+
+.section-title {
+  font-size: 0.85rem;
+  color: #888888;
+  margin-bottom: 25px;
+  letter-spacing: 2.5px;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  font-weight: 300;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    transform: translateY(-15px) translateX(10px);
+  }
+  50% {
+    transform: translateY(10px) translateX(-10px);
+  }
+  75% {
+    transform: translateY(-8px) translateX(5px);
+  }
+}
+
+@media (max-width: 1024px) {
+  .page-container {
+    padding: 30px;
+  }
+
+  .page-content {
+    max-width: 1200px;
+    padding: 45px 40px;
+  }
+  
+  .page-title {
+    font-size: 2.4rem;
+    letter-spacing: 6px;
+  }
+
+  .page-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .page-header {
+    margin-bottom: 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 20px;
+    align-items: flex-start;
+    padding-top: 40px;
+  }
+
+  .page-container::before {
+    width: 180px;
+    height: 180px;
+    filter: blur(50px);
+  }
+
+  .page-container::after {
+    width: 200px;
+    height: 200px;
+    filter: blur(60px);
+  }
+
+  .page-content {
+    padding: 35px 25px;
+    border-radius: 20px;
+  }
+
+  .page-header {
+    margin-bottom: 35px;
+  }
+
+  .page-title {
+    font-size: 2rem;
+    letter-spacing: 4px;
+  }
+
+  .page-subtitle {
+    font-size: 0.85rem;
+    letter-spacing: 1.5px;
+  }
+
+  .section-title {
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-container {
+    padding: 16px;
+    padding-top: 70px;
+  }
+
+  .page-container::before {
+    width: 150px;
+    height: 150px;
+    top: 10%;
+    filter: blur(40px);
+  }
+
+  .page-container::after {
+    width: 170px;
+    height: 170px;
+    bottom: 10%;
+    filter: blur(50px);
+  }
+
+  .page-content {
+    padding: 28px 20px;
+    border-radius: 16px;
+    max-width: 100%;
+  }
+
+  .page-header {
+    margin-bottom: 30px;
+  }
+
+  .page-title {
+    font-size: 1.6rem;
+    letter-spacing: 3px;
+  }
+
+  .page-subtitle {
+    font-size: 0.8rem;
+    letter-spacing: 1.2px;
+  }
+
+  .section-title {
+    font-size: 0.75rem;
+    letter-spacing: 1.8px;
+    margin-bottom: 18px;
+  }
+}
+
+@media (max-width: 375px) {
+  .page-container {
+    padding: 12px;
+    padding-top: 65px;
+  }
+
+  .page-content {
+    padding: 24px 16px;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+  }
+
+  .page-subtitle {
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+  }
+
+  .section-title {
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+  }
+}

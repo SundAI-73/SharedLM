@@ -1,7 +1,10 @@
 import logging
+import os
 from typing import List, Dict, Any
 from mem0 import MemoryClient
-from backend.config import settings
+from dotenv import load_dotenv
+
+config = load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +12,7 @@ logger = logging.getLogger(__name__)
 class Mem0Client:
     def __init__(self):
         self.client = MemoryClient(
-            api_key=settings.mem0_api_key,
+            api_key=os.environ["mem0_api_key"],
             # org_id=settings.mem0_org_id,
             # project_id=settings.mem0_project_id
         )

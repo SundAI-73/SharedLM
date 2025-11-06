@@ -1,23 +1,28 @@
 # backend/services/llm_router.py
 import logging
 import asyncio
+import os
 from typing import Dict, Any
 import openai
 from anthropic import Anthropic
-from config import settings
+from mistralai.client import MistralClient
+from mistralai.models import chat_completion
+from llama_api_client import LlamaAPIClient
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
+config = load_dotenv()
+
 # Initialize clients
-openai_client = openai.OpenAI(api_key=settings.openai_api_key)
-anthropic_client = Anthropic(api_key=settings.anthropic_api_key)
+openai_client = openai.OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+anthropic_client = Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
+mistral_client = MistralClient(api_key=os.environ['MISTRAL_API_KEY'])
+# llama_client = LlamaAPIClient(api_key=os.environ['LLAMA_API_KEY'])
 
 
 async def call_openai(prompt: str, model: str = None) -> str:
     """Call OpenAI API"""
-    if model is None:
-        model = settings.default_model_openai
-    
     try:
         response = await asyncio.to_thread(
             openai_client.chat.completions.create,
@@ -37,14 +42,7 @@ async def call_openai(prompt: str, model: str = None) -> str:
 
 
 async def call_anthropic(prompt: str, model: str = None) -> str:
-    """Call Anthropic API"""
-    # Use the correct model names for the new Anthropic API
-    if model is None:
-        model = "claude-3-haiku-20240307"  # Fast and cost-effective
-        # Other options:
-        # model = "claude-3-sonnet-20240229"  # Balanced
-        # model = "claude-3-opus-20240229"  # Most capable
-    
+    """Call Anthropic API"""    
     try:
         # New Anthropic API uses messages.create
         response = await asyncio.to_thread(
@@ -64,13 +62,57 @@ async def call_anthropic(prompt: str, model: str = None) -> str:
         raise Exception(f"Anthropic API error: {str(e)}")
 
 
-async def route_chat(model_choice: str, prompt: str) -> tuple[str, str]:
+async def call_mistral(prompt: str, model: str = None) -> str:
+    """Call Mistral API"""
+    try: 
+        response = await asyncio.to_thread(
+            mistral_client.chat,
+            model=model,
+            messages=[chat_completion.ChatMessage(role="user", content=prompt)],
+        )
+
+        reply = response.choices[0].message.content
+        logger.info(f"Mistral {model} response generated")
+        return reply
+
+    except Exception as e:
+        logger.error(f"Mistral API error: {e}")
+        raise Exception(f"Mistral API error: {str(e)}")
+
+
+# async def call_llama(prompt: str, model: str = None) -> str:
+#     """Call LLama API"""
+#     try:
+#         response = await asyncio.to_thread(
+#             await llama_client.chat.completions.create(
+#                 messages=[
+#                     {
+#                         "content": "string",
+#                         "role": "user",
+#                     }
+#                 ],
+#                 model="model",
+#         )
+#         )        
+#         reply = response.completion_message
+#         logger.info(f"LLAMA {model} response generated")
+#         return reply
+
+#     except Exception as e:
+#         logger.error(f"LLAMA API error: {e}")
+#         raise Exception(f"LLAMA API error: {str(e)}")
+
+
+async def route_chat(model_provider: str, model_choice: str, prompt: str) -> tuple[str, str]:
     """Route chat to the appropriate model"""
-    if model_choice == "openai":
-        reply = await call_openai(prompt)
-        return reply, settings.default_model_openai
-    elif model_choice == "anthropic":
-        reply = await call_anthropic(prompt)
-        return reply, "claude-3-haiku"  # Return simplified name
+    if model_provider == "openai":
+        reply = await call_openai(prompt=prompt, model=model_choice)
+        return reply, model_choice
+    elif model_provider == "anthropic":
+        reply = await call_anthropic(prompt=prompt, model=model_choice)
+        return reply, model_choice
+    elif model_provider == "mistral":
+        reply = await call_mistral(prompt=prompt, model=model_choice)
+        return reply, model_choice
     else:
         raise ValueError(f"Unknown model choice: {model_choice}")

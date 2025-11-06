@@ -1,4 +1,3 @@
-// src/contexts/UserContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const UserContext = createContext();
@@ -23,17 +22,57 @@ export const UserProvider = ({ children }) => {
   };
 
   const [userId, setUserId] = useState(getOrCreateUserId());
-  const [currentModel, setCurrentModel] = useState('openai');
+  const [currentModel, setCurrentModel] = useState('mistral');
   const [connectedModels, setConnectedModels] = useState({
     openai: false,
     anthropic: false
   });
   const [backendConnected, setBackendConnected] = useState(false);
+  
+  // Analytics page visibility state - default enabled
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(() => {
+    const saved = localStorage.getItem('sharedlm_analytics_enabled');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  // Starred projects state
+  const [starredProjects, setStarredProjects] = useState(() => {
+    const saved = localStorage.getItem('sharedlm_starred_projects');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Update localStorage when userId changes
   useEffect(() => {
     localStorage.setItem('sharedlm_user_id', userId);
   }, [userId]);
+
+  // Update localStorage when analytics preference changes
+  useEffect(() => {
+    localStorage.setItem('sharedlm_analytics_enabled', JSON.stringify(analyticsEnabled));
+  }, [analyticsEnabled]);
+
+  // Update localStorage when starred projects change
+  useEffect(() => {
+    localStorage.setItem('sharedlm_starred_projects', JSON.stringify(starredProjects));
+  }, [starredProjects]);
+
+  // Function to toggle star on a project (max 4)
+  const toggleStarProject = (project) => {
+    const isStarred = starredProjects.some(p => p.id === project.id);
+    
+    if (isStarred) {
+      // Unstar
+      setStarredProjects(starredProjects.filter(p => p.id !== project.id));
+    } else {
+      // Star - check limit
+      if (starredProjects.length >= 4) {
+        alert('Maximum 4 projects can be starred. Unstar a project first.');
+        return false;
+      }
+      setStarredProjects([...starredProjects, project]);
+    }
+    return true;
+  };
 
   const value = {
     userId,
@@ -43,7 +82,12 @@ export const UserProvider = ({ children }) => {
     connectedModels,
     setConnectedModels,
     backendConnected,
-    setBackendConnected
+    setBackendConnected,
+    analyticsEnabled,
+    setAnalyticsEnabled,
+    starredProjects,
+    setStarredProjects,
+    toggleStarProject
   };
 
   return (

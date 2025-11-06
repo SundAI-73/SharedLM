@@ -1,16 +1,14 @@
-// src/pages/AuthPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Key, Github } from 'lucide-react';
+import { ArrowLeft, Key } from 'lucide-react';
 import './Auth.css';
 
 function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
   const navigate = useNavigate();
-  const [authMethod, setAuthMethod] = useState('account');
   const [apiKey, setApiKey] = useState('');
 
   const handleConnect = () => {
-    if (selectedLLM) {
+    if (selectedLLM && apiKey.trim()) {
       setConnectedLLMs([...connectedLLMs, selectedLLM.id]);
       navigate('/integrations');
     }
@@ -23,84 +21,56 @@ function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
 
   return (
     <div className="auth-page">
-      <button 
+      <button
         className="back-button"
         onClick={() => navigate('/integrations')}
       >
         <ArrowLeft size={20} />
-        <span className="led-text">BACK</span>
+        <span>BACK</span>
       </button>
 
       <div className="auth-container">
         <div className="auth-header">
-          <h2 className="auth-title led-text">CONNECT {selectedLLM.name}</h2>
-          <p className="auth-subtitle">Choose your authentication method</p>
-        </div>
-
-        <div className="auth-tabs">
-          <button
-            className={`auth-tab ${authMethod === 'account' ? 'active' : ''}`}
-            onClick={() => setAuthMethod('account')}
-          >
-            <User size={18} />
-            <span className="led-text">OAUTH</span>
-          </button>
-          <button
-            className={`auth-tab ${authMethod === 'api' ? 'active' : ''}`}
-            onClick={() => setAuthMethod('api')}
-          >
-            <Key size={18} />
-            <span className="led-text">API KEY</span>
-          </button>
+          <h2 className="auth-title">CONNECT {selectedLLM.name}</h2>
+          <p className="auth-subtitle">Enter your API key to authenticate</p>
         </div>
 
         <div className="auth-content">
-          {authMethod === 'account' ? (
-            <div className="oauth-section">
-              <p className="auth-description">
-                Sign in with your account to continue
-              </p>
-              
-              <div className="auth-buttons">
-                <button className="auth-btn">
-                  <span className="led-text">CONTINUE WITH GOOGLE</span>
-                </button>
-                <button className="auth-btn">
-                  <Github size={18} />
-                  <span className="led-text">CONTINUE WITH GITHUB</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="api-section">
-              <p className="auth-description">
-                Enter your API key to authenticate
-              </p>
-              
+          <div className="api-section">
+            <p className="auth-description">
+              Enter your {selectedLLM.name} API key to connect
+            </p>
+
+            <div className="api-input-wrapper">
               <input
                 type="password"
                 placeholder="sk-..."
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && apiKey.trim()) {
+                    handleConnect();
+                  }
+                }}
                 className="api-input"
+                autoFocus
               />
-              
-              <p className="api-hint">
-                Your API key is encrypted and stored locally
-              </p>
             </div>
-          )}
+
+            <p className="api-hint">
+              Your API key is encrypted and stored securely
+            </p>
+          </div>
         </div>
 
-        <button 
-          className={`connect-button ${authMethod === 'api' && !apiKey ? 'disabled' : ''}`}
+        <button
+          className={`connect-button ${!apiKey.trim() ? 'disabled' : ''}`}
           onClick={handleConnect}
-          disabled={authMethod === 'api' && !apiKey}
+          disabled={!apiKey.trim()}
         >
-          <span className="led-text">CONNECT {selectedLLM.name}</span>
+          <span>CONNECT {selectedLLM.name}</span>
         </button>
       </div>
-
     </div>
   );
 }

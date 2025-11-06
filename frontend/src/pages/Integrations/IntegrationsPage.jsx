@@ -1,23 +1,28 @@
-// src/pages/IntegrationsPage.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bot, Brain, Zap, Sparkles, Search, Cloud, CheckCircle, Plus } from 'lucide-react';
 import './Integrations.css';
 
 function IntegrationsPage({ connectedLLMs, setSelectedLLM }) {
   const navigate = useNavigate();
 
   const llms = [
-    { id: 'claude', name: 'CLAUDE', icon: <Bot size={24} strokeWidth={1} />, provider: 'Anthropic' },
-    { id: 'chatgpt', name: 'CHATGPT', icon: <Brain size={24} strokeWidth={1} />, provider: 'OpenAI' },
-    { id: 'gemini', name: 'GEMINI', icon: <Sparkles size={24} strokeWidth={1} />, provider: 'Google' },
-    { id: 'perplexity', name: 'PERPLEXITY', icon: <Search size={24} strokeWidth={1} />, provider: 'Search AI' },
-    { id: 'mistral', name: 'MISTRAL', icon: <Cloud size={24} strokeWidth={1} />, provider: 'Open LLM' },
-    { id: 'cursor', name: 'CURSOR', icon: <Zap size={24} strokeWidth={1} />, provider: 'Code AI' },
+    // Available models
+    { id: 'mistral', name: 'MIXTRAL', provider: 'Mistral AI', status: 'available' },
+    { id: 'deepseek', name: 'DEEPSEEK-V3', provider: 'DeepSeek', status: 'available' },
+    { id: 'whisper ', name: 'Whisper', provider: 'OpenAI', status: 'available' },
+    { id: 'meta', name: 'LLAMA 3', provider: 'Meta', status: 'available' },
+    { id: 'openai', name: 'GPT-4O', provider: 'OpenAI', status: 'available' },
+    { id: 'anthropic', name: 'CLAUDE 3.5', provider: 'Anthropic', status: 'available' },
+    { id: 'google', name: 'GEMINI 2.0', provider: 'Google AI', status: 'available' },
+
+    { id: 'cohere', name: 'COMMAND', provider: 'Cohere', status: 'available' },
+    { id: 'microsoft', name: 'PHI-3', provider: 'Microsoft', status: 'available' },
+    { id: 'nvidia', name: 'NEMOTRON-4', provider: 'NVIDIA', status: 'available' },
+ 
   ];
 
   const handleLLMClick = (llm) => {
-    if (!connectedLLMs.includes(llm.id)) {
+    if (llm.status === 'available' && !connectedLLMs.includes(llm.id)) {
       setSelectedLLM(llm);
       navigate('/auth');
     }
@@ -29,43 +34,56 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM }) {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title led-text">MULTI LLM</h1>
-        <p className="page-subtitle">CONNECT AND MANAGE YOUR AI MODELS</p>
-      </div>
+      <div className="page-content">
+        {/* Header */}
+        <div className="page-header">
+          <h1 className="page-title">MULTI LM</h1>
+          <p className="page-subtitle">Connect and manage your AI models</p>
+        </div>
 
-      <div className="integrations-grid">
-        {llms.map(llm => (
-          <button
-            key={llm.id}
-            className={`integration-card ${connectedLLMs.includes(llm.id) ? 'connected' : ''}`}
-            onClick={() => handleLLMClick(llm)}
-          >
-            <div className="integration-content">
-              <h3 className="integration-name led-text">{llm.name}</h3>
-            </div>
-            {connectedLLMs.includes(llm.id) && (
-              <div className="connected-indicator">
-                <CheckCircle size={16} />
+        {/* LLM Grid */}
+        <div className="grid-4 integrations-grid">
+          {llms.map(llm => (
+            <button
+              key={llm.id}
+              className={`card-base integration-card ${connectedLLMs.includes(llm.id) ? 'connected' : ''}`}
+              onClick={() => handleLLMClick(llm)}
+              disabled={llm.status === 'coming'}
+              style={{
+                opacity: llm.status === 'coming' ? 0.5 : 1,
+                cursor: llm.status === 'coming' ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {llm.status === 'coming' && (
+                <div className="coming-soon-badge">SOON</div>
+              )}
+              <div className="integration-content">
+                <div className="integration-icon-placeholder"></div>
+                <div className="integration-text">
+                  <h3 className="integration-name">{llm.name}</h3>
+                  <p className="integration-provider">{llm.provider}</p>
+                </div>
               </div>
-            )}
+              {connectedLLMs.includes(llm.id) && (
+                <div className="connected-indicator"></div>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Custom Section */}
+        <div className="custom-section">
+          <p className="custom-label">CUSTOM INTEGRATIONS</p>
+          <button
+            className="button-base button-primary custom-integration-btn coming-soon"
+            onClick={handleCustomIntegration}
+            disabled
+          >
+            ADD CUSTOM INTEGRATIONS
+            <span className="coming-soon-badge">SOON</span>
           </button>
-        ))}
+        </div>
       </div>
-
-      <div className="custom-section">
-        <p className="custom-label led-text">CUSTOM INTEGRATIONS</p>
-        <button 
-          className="custom-integration-btn"
-          onClick={handleCustomIntegration}
-        >
-          <span className="led-text">ADD CUSTOM INTEGRATIONS</span>
-        </button>
-      </div>
-
-      <style>{`
-        
-      `}</style>
     </div>
   );
 }
