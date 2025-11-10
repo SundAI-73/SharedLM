@@ -37,7 +37,10 @@ const CustomDropdown = ({ value, onChange, options, disabled = false, className 
               key={option.value}
               className={`option ${value === option.value ? 'selected' : ''}`}
               onClick={() => {
-                onChange(option.value);
+                // Only call onChange if the value actually changed
+                if (value !== option.value) {
+                  onChange(option.value);
+                }
                 setIsOpen(false);
               }}
             >

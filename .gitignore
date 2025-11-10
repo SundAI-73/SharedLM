@@ -60,3 +60,6 @@ yarn-error.log*
 # Testing
 /coverage
 .pytest_cache/
+backend/sharedlm.db-shm
+backend/sharedlm.db
+backend/sharedlm.db-wal

@@ -162,6 +162,9 @@ function ChatPage({ backendStatus }) {
   const fileInputRef = useRef(null);
   const settingsMenuRef = useRef(null);
   const historyMenuRef = useRef(null);
+  const previousModelRef = useRef(currentModel);
+  const previousModelVariantRef = useRef(selectedModelVariant);
+  const modelChangedDuringLoadingRef = useRef(false);
 
   useEffect(() => {
     const loadCustomIntegrations = async () => {
@@ -207,6 +210,66 @@ function ChatPage({ backendStatus }) {
       setSelectedModelVariant('');
     }
   }, [currentModel, selectedModelVariant, modelVariants]);
+
+  // Handle model changes - only create new chat if model actually changed and there are messages
+  useEffect(() => {
+    // Skip if model hasn't actually changed (initial render or same value)
+    if (previousModelRef.current === currentModel && previousModelVariantRef.current === selectedModelVariant) {
+      // If loading just finished and model changed during loading, handle it now
+      if (!loading && modelChangedDuringLoadingRef.current) {
+        modelChangedDuringLoadingRef.current = false;
+        const hasMessages = messages.length > 0;
+        const hasConversation = currentConversationId !== null;
+
+        if (hasMessages || hasConversation) {
+          // Clear current conversation state to start new chat
+          setMessages([]);
+          setChatTitle('');
+          setCurrentConversationId(null);
+          setAttachedFiles([]);
+          initialMessageSent.current = false;
+          // Navigate to new chat (clear conversation ID from URL)
+          navigate('/chat', { replace: true });
+        }
+      }
+      return;
+    }
+
+    // Check if model actually changed
+    const modelChanged = previousModelRef.current !== currentModel || previousModelVariantRef.current !== selectedModelVariant;
+    
+    if (!modelChanged) {
+      return;
+    }
+
+    // Update refs to track current model
+    previousModelRef.current = currentModel;
+    previousModelVariantRef.current = selectedModelVariant;
+
+    // Skip navigation if currently loading - mark that model changed during loading
+    // The CustomDropdown fix ensures onChange is only called when value actually changes,
+    // so if we're here, the model did change. But we don't want to interrupt a loading message.
+    if (loading) {
+      modelChangedDuringLoadingRef.current = true;
+      return;
+    }
+
+    // Only create new chat if there are existing messages or an active conversation
+    // Don't create new chat if user is on a fresh/empty chat
+    const hasMessages = messages.length > 0;
+    const hasConversation = currentConversationId !== null;
+
+    if (hasMessages || hasConversation) {
+      // Clear current conversation state to start new chat
+      setMessages([]);
+      setChatTitle('');
+      setCurrentConversationId(null);
+      setAttachedFiles([]);
+      initialMessageSent.current = false;
+      // Navigate to new chat (clear conversation ID from URL)
+      navigate('/chat', { replace: true });
+    }
+  }, [currentModel, selectedModelVariant, messages.length, currentConversationId, loading, navigate]);
 
   const loadConversation = useCallback(async (conversationId) => {
     try {
@@ -490,6 +553,8 @@ function ChatPage({ backendStatus }) {
       }]);
     } finally {
       setLoading(false);
+      // Check if model changed during loading - if so, handle it now
+      // This is handled by the useEffect that watches currentModel and loading state
     }
   }, [currentModel, selectedModelVariant, userId, currentConversationId, selectedProject]);
 
