@@ -38,8 +38,9 @@ function AuthPage({ selectedLLM, setConnectedLLMs, connectedLLMs }) {
       );
 
       if (result.success) {
-        // Also save to localStorage for quick access
-        localStorage.setItem(`sharedlm_api_${selectedLLM.id}`, apiKey.trim());
+        // DO NOT save API keys to localStorage - they should only be in the backend
+        // localStorage is vulnerable to XSS attacks
+        // API keys are stored securely in the backend database
         
         // Mark as connected
         setConnectedLLMs([...connectedLLMs, selectedLLM.id]);

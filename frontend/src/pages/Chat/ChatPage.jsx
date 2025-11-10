@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, X, Plus, SlidersHorizontal, Clock, ArrowUp, Search, Globe, Settings } from 'lucide-react';
 import { motion } from 'motion/react';
+import DOMPurify from 'dompurify';
 import { useUser } from '../../contexts/UserContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
 import ConnectorsModal from '../../components/ConnectorsModal/ConnectorsModal';
 import apiService from '../../services/api/index';
+import { logEvent, EventType, LogLevel } from '../../utils/auditLogger';
 import logo from '../../assets/images/logo main.svg';
 import './styles/chat-base.css';
 import './styles/chat-header.css';
@@ -30,7 +32,12 @@ const formatMessage = (text) => {
     formatted = `<p>${formatted}</p>`;
   }
   
-  return formatted;
+  // Sanitize HTML to prevent XSS attacks
+  return DOMPurify.sanitize(formatted, {
+    ALLOWED_TAGS: ['p', 'strong', 'em', 'code', 'br'],
+    ALLOWED_ATTR: [],
+    KEEP_CONTENT: true
+  });
 };
 
 const generateChatTitle = (userMessage) => {
@@ -317,8 +324,38 @@ function ChatPage({ backendStatus }) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Validate file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
       alert('File size must be less than 10MB');
+      return;
+    }
+
+    // Validate file type - check extension and MIME type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'image/png',
+      'image/jpeg',
+      'image/jpg',
+      'text/csv',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.png', '.jpg', '.jpeg', '.csv', '.xlsx'];
+    const fileName = file.name.toLowerCase();
+    const fileExtension = fileName.substring(fileName.lastIndexOf('.'));
+
+    if (!allowedExtensions.includes(fileExtension) || !allowedTypes.includes(file.type)) {
+      // Log invalid file upload attempt
+      logEvent(EventType.INVALID_INPUT, LogLevel.WARNING, 'Invalid file type upload attempt', {
+        fileName: file.name,
+        fileType: file.type,
+        fileExtension
+      });
+      
+      alert('Invalid file type. Please upload PDF, DOC, DOCX, TXT, PNG, JPG, CSV, or XLSX files only.');
       return;
     }
 
@@ -340,11 +377,29 @@ function ChatPage({ backendStatus }) {
       const result = await apiService.uploadFile(file, userId, convId);
       
       if (result.success) {
+        // Log successful file upload
+        logEvent(EventType.FILE_UPLOAD, LogLevel.INFO, 'File uploaded successfully', {
+          userId,
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          conversationId: convId
+        });
+        
         setAttachedFiles(prev => [...prev, result.file]);
       }
     } catch (error) {
-      console.error('File upload failed:', error);
-      alert('Failed to upload file. Please try again.');
+      // Log file upload error
+      logEvent(EventType.FILE_UPLOAD, LogLevel.ERROR, 'File upload failed', {
+        userId,
+        fileName: file.name,
+        error: error.message
+      });
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('File upload failed:', error);
+      }
+      alert(error.message.includes('Rate limit') ? error.message : 'Failed to upload file. Please try again.');
     } finally {
       setLoading(false);
       if (fileInputRef.current) {
@@ -360,9 +415,22 @@ function ChatPage({ backendStatus }) {
   const handleSendWithMessage = useCallback(async (messageText) => {
     if (!messageText.trim()) return;
 
+    // Sanitize user input before sending
+    const sanitizedMessage = messageText.trim();
+    
+    // Check for potential XSS in user input
+    const xssPatterns = [/<script[^>]*>/i, /javascript:/i, /onerror=/i, /onload=/i];
+    if (xssPatterns.some(pattern => pattern.test(sanitizedMessage))) {
+      logEvent(EventType.XSS_ATTEMPT, LogLevel.SECURITY, 'Potential XSS attempt in chat message', {
+        userId,
+        messagePreview: sanitizedMessage.substring(0, 50)
+      });
+      // Still allow the message but it will be sanitized on display
+    }
+
     const userMessage = {
       role: 'user',
-      content: messageText,
+      content: sanitizedMessage,
       timestamp: new Date().toISOString()
     };
 
@@ -397,10 +465,26 @@ function ChatPage({ backendStatus }) {
         setAttachedFiles([]);
       }
     } catch (error) {
-      console.error('Chat error:', error);
+      // Log chat error
+      logEvent(EventType.ERROR, LogLevel.ERROR, 'Chat message error', {
+        userId,
+        error: error.message,
+        model: selectedModelVariant
+      });
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Chat error:', error);
+      }
+      
+      const errorMessage = error.message.includes('Rate limit') 
+        ? error.message 
+        : error.message.includes('Session expired')
+        ? 'Your session has expired. Please refresh the page.'
+        : 'Connection issue. Please check settings or try again.';
+        
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Connection issue. Please check settings or try again.',
+        content: errorMessage,
         model: 'mistral',
         timestamp: new Date().toISOString()
       }]);

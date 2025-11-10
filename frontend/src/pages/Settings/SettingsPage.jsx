@@ -7,6 +7,8 @@ import { useUser } from '../../contexts/UserContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import apiService from '../../services/api';
+import { clearAuth } from '../../utils/auth';
+import { logEvent, EventType, LogLevel } from '../../utils/auditLogger';
 import './Settings.css';
 
 function SettingsPage() {
@@ -227,13 +229,12 @@ function SettingsPage() {
     });
 
     if (confirmed) {
-      localStorage.removeItem('sharedlm_user_id');
-      localStorage.removeItem('sharedlm_user_email');
-      localStorage.removeItem('sharedlm_user_name');
-      localStorage.removeItem('sharedlm_session');
-      localStorage.removeItem('sharedlm_api_openai');
-      localStorage.removeItem('sharedlm_api_anthropic');
-      localStorage.removeItem('sharedlm_api_mistral');
+      // Log logout event
+      logEvent(EventType.LOGOUT, LogLevel.INFO, 'User logged out', { userId });
+      
+      // Use auth utility to clear all auth data
+      clearAuth();
+      
       notify.success('Logged out of all devices successfully');
       navigate('/login');
     }
@@ -323,8 +324,15 @@ function SettingsPage() {
       );
 
       if (result.success) {
-        // Also save to localStorage for quick access
-        localStorage.setItem(`sharedlm_api_${provider}`, key);
+        // DO NOT save API keys to localStorage - they should only be in the backend
+        // localStorage is vulnerable to XSS attacks
+        // API keys are stored securely in the backend database
+        
+        // Log API key save event
+        logEvent(EventType.API_KEY_SAVED, LogLevel.INFO, 'API key saved', {
+          userId,
+          provider
+        });
         
         // Reload keys to get updated state
         await loadApiKeys();
@@ -358,6 +366,13 @@ function SettingsPage() {
       try {
         await apiService.deleteApiKey(userId, provider);
         
+        // Log API key deletion event
+        logEvent(EventType.API_KEY_DELETED, LogLevel.INFO, 'API key deleted', {
+          userId,
+          provider
+        });
+        
+        // Remove from localStorage if it exists (cleanup)
         localStorage.removeItem(`sharedlm_api_${provider}`);
         
         await loadApiKeys();

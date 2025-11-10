@@ -8,6 +8,7 @@
   "homepage": "./",
   "private": true,
   "dependencies": {
+    "dompurify": "^3.3.0",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.1.4",
     "lucide-react": "^0.546.0",

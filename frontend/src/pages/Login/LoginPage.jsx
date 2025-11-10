@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import logo from '../../assets/images/logo main.svg';
 import apiService from '../../services/api';
+import { setAuth, isAuthenticated } from '../../utils/auth';
+import { logEvent, EventType, LogLevel } from '../../utils/auditLogger';
 import './Login.css';
 
 function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -20,27 +23,53 @@ function LoginPage() {
     setLoading(true);
 
     try {
-      // REAL API CALL - Not setTimeout!
       const response = await apiService.login(email, password);
       
       if (response.success) {
-        // Store user info in localStorage
-        localStorage.setItem('sharedlm_session', 'authenticated');
-        localStorage.setItem('sharedlm_user_id', response.user.id);
-        localStorage.setItem('sharedlm_user_email', response.user.email);
-        localStorage.setItem('sharedlm_user_name', response.user.display_name);
+        // Store user info using auth utility
+        setAuth(response.user);
         
-        // Navigate to chat
-        navigate('/chat');
+        // Log successful login
+        logEvent(EventType.LOGIN, LogLevel.INFO, 'User logged in successfully', {
+          userId: response.user.id,
+          email: response.user.email
+        });
+        
+        // Navigate to intended page or chat
+        const from = location.state?.from?.pathname || '/chat';
+        navigate(from, { replace: true });
       } else {
         setError('Login failed. Please try again.');
+        logEvent(EventType.LOGIN_FAILED, LogLevel.WARNING, 'Login failed', { email });
       }
     } catch (err) {
-      setError(err.message || 'Invalid email or password');
+      // Log failed login attempt
+      logEvent(EventType.LOGIN_FAILED, LogLevel.WARNING, 'Login attempt failed', {
+        email,
+        error: err.message
+      });
+      
+      // Don't reveal specific error details to prevent information disclosure
+      setError(err.message.includes('Rate limit') ? err.message : 'Invalid email or password');
     } finally {
       setLoading(false);
     }
   };
+
+  // Check if user is already logged in
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate('/chat', { replace: true });
+    }
+  }, [navigate]);
+
+  // Check for expired session query parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    if (urlParams.get('expired') === 'true') {
+      setError('Your session has expired. Please log in again.');
+    }
+  }, [location.search]);
 
   return (
     <motion.div 
