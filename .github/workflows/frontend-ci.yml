@@ -1,0 +1,58 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - gagan
+      - nwl
+    paths:
+      - 'apps/web/**'
+      - 'package.json'
+      - '.github/workflows/frontend-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/web/**'
+      - 'package.json'
+      - '.github/workflows/frontend-ci.yml'
+
+jobs:
+  check:
+    name: Check Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+      
+      - name: Install root dependencies
+        run: npm install
+      
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: apps/web
+      
+      - name: Build check
+        run: npm run build
+        working-directory: apps/web
+        env:
+          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL || 'https://sharedlm.onrender.com' }}
+      
+      - name: Check build output
+        run: |
+          if [ ! -d "build" ]; then
+            echo "Build directory not found!"
+            exit 1
+          fi
+          echo "✓ Build successful"
+        working-directory: apps/web
+

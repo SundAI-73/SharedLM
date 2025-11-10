@@ -1,0 +1,19 @@
+{
+  "buildCommand": "cd apps/web && npm run build",
+  "outputDirectory": "apps/web/build",
+  "installCommand": "npm install && cd apps/web && npm install",
+  "framework": "create-react-app",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_API_URL": "https://sharedlm.onrender.com"
+  },
+  "github": {
+    "silent": true
+  }
+}
+

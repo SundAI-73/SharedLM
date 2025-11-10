@@ -1,0 +1,249 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #000000;
+  color: var(--n-white);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Apply Courier New to all elements by default */
+* {
+  font-family: 'Courier New', monospace;
+}
+
+/* Specific overrides for buttons, inputs, etc. */
+button, input, textarea, select {
+  font-family: 'Courier New', monospace;
+}
+
+.nothing-app {
+  display: flex;
+  min-height: 100vh;
+  height: 100vh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  /* Dual gradient - top right and bottom left red glows */
+  background: 
+    radial-gradient(
+      ellipse at top right,
+      rgba(185, 69, 57, 0.35) 0%,
+      rgba(151, 39, 33, 0.25) 15%,
+      rgba(100, 20, 20, 0.15) 30%,
+      rgba(50, 10, 10, 0.08) 45%,
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse at bottom left,
+      rgba(185, 69, 57, 0.3) 0%,
+      rgba(151, 39, 33, 0.2) 15%,
+      rgba(100, 20, 20, 0.12) 30%,
+      rgba(50, 10, 10, 0.06) 45%,
+      transparent 65%
+    ),
+    linear-gradient(
+      to bottom,
+      #000000 0%,
+      #050000 50%,
+      #000000 100%
+    );
+  background-attachment: fixed;
+  background-size: 100% 100%;
+  background-position: center;
+  position: relative;
+}
+
+.nothing-main {
+  flex: 1;
+  margin-left: 280px;
+  transition: margin-left var(--transition-smooth);
+  overflow-y: auto;
+  min-height: 100vh;
+  height: 100vh;
+  background: transparent;
+  padding: 0;
+  margin-top: 0;
+}
+
+/* When sidebar is collapsed, adjust main content margin */
+.nothing-sidebar.collapsed ~ .nothing-main {
+  margin-left: 76px;
+}
+
+/* Hide Scrollbar but keep scrolling functionality */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+  display: none;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* IE and Edge */
+* {
+  -ms-overflow-style: none;
+}
+
+/* Selection */
+::selection {
+  background: var(--n-white);
+  color: var(--n-black);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 1px solid var(--n-white);
+  outline-offset: 2px;
+}
+
+/* Custom Dropdown Styles - Nothing Phone Aesthetic */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: rgba(16, 16, 16, 0.8);
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  border: 1px solid var(--n-medium-gray);
+  border-radius: 12px;
+  color: var(--n-white);
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  padding: 10px 36px 10px 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+  backdrop-filter: blur(10px);
+}
+
+select:hover {
+  border-color: var(--n-light-gray);
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+select:focus {
+  border-color: var(--n-white);
+  background-color: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Option styles */
+select option {
+  background: var(--n-pure-black);
+  color: var(--n-white);
+  padding: 8px;
+  font-family: 'Courier New', monospace;
+}
+
+select option:hover {
+  background: var(--n-dark-gray);
+}
+
+/* For better cross-browser consistency */
+select::-ms-expand {
+  display: none;
+}
+
+/* Custom styling for specific dropdowns */
+.model-dropdown {
+  min-width: 120px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background-color: rgba(16, 16, 16, 0.9);
+  backdrop-filter: blur(15px);
+}
+
+/* Settings page selects */
+.setting-select {
+  background-color: rgba(16, 16, 16, 0.9);
+  border: 1px solid var(--n-medium-gray);
+  border-radius: 8px;
+  padding: 8px 32px 8px 12px;
+  color: var(--n-white);
+  min-width: 150px;
+  backdrop-filter: blur(10px);
+  font-family: 'Courier New', monospace;
+}
+
+.nothing-main-fullwidth {
+  flex: 1;
+  margin-left: 0 !important;
+  overflow-y: auto;
+  min-height: 100vh;
+  height: 100vh;
+  background: transparent;
+  padding: 0;
+  margin-top: 0;
+}
+
+/* Electron titlebar spacing - only apply when electron-app class is present */
+.nothing-app.electron-app .nothing-sidebar {
+  top: 40px;
+  height: calc(100vh - 40px);
+}
+
+.nothing-app.electron-app .nothing-main {
+  padding-top: 40px;
+  height: calc(100vh - 40px);
+  min-height: calc(100vh - 40px);
+}
+
+.nothing-app.electron-app .nothing-main-fullwidth {
+  padding-top: 40px;
+  height: calc(100vh - 40px);
+  min-height: calc(100vh - 40px);
+}
+
+/* Rest of your existing CSS... */
