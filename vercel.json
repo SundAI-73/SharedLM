@@ -1,6 +1,7 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "build",
+  "buildCommand": "cd apps/web && npm run build",
+  "outputDirectory": "apps/web/build",
+  "installCommand": "npm install && cd apps/web && npm install",
   "framework": "create-react-app",
   "rewrites": [
     {
@@ -15,3 +16,4 @@
     "silent": true
   }
 }
+

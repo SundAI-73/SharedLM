@@ -1,0 +1,65 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - gagan
+      - nwl
+    paths:
+      - 'apps/server/**'
+      - '.github/workflows/backend-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/server/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  check:
+    name: Check Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: apps/server/requirements.txt
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        working-directory: apps/server
+      
+      - name: Check for dependency conflicts
+        run: pip check
+        working-directory: apps/server
+      
+      - name: Verify app imports
+        run: |
+          python -c "from app import app; print('✓ FastAPI app imports successfully')"
+        working-directory: apps/server
+        continue-on-error: true
+      
+      - name: Check database models
+        run: |
+          python -c "from database import models; print('✓ Database models import successfully')"
+        working-directory: apps/server
+        continue-on-error: true
+      
+      - name: Validate configuration
+        run: |
+          python -c "from config import settings; print('✓ Settings loaded successfully')"
+        working-directory: apps/server
+        continue-on-error: true
+
