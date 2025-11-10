@@ -36,6 +36,16 @@
     height: 100px;
   }
 
+  .welcome-greeting {
+    font-size: 1.6rem;
+    letter-spacing: 1.5px;
+  }
+
+  .welcome-logo {
+    width: 100px;
+    height: 100px;
+  }
+
   .chat-title-input {
     min-width: 180px;
     max-width: 250px;
@@ -67,6 +77,32 @@
 
   .chat-input-wrapper {
     padding: 16px 24px;
+  }
+
+  .chat-input-field-main {
+    padding: 14px 18px;
+    padding-right: 56px;
+    font-size: 0.9rem;
+  }
+
+  .chat-send-btn-inside {
+    width: 36px;
+    height: 36px;
+    right: 6px;
+  }
+
+  .chat-control-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .chat-model-variant-dropdown {
+    min-width: 150px;
+  }
+
+  .chat-settings-menu {
+    left: 24px;
+    min-width: 240px;
   }
 
   .chat-left-section {
@@ -112,6 +148,20 @@
   .empty-state-title {
     font-size: 1.1rem;
     letter-spacing: 2px;
+  }
+
+  .welcome-greeting {
+    font-size: 1.4rem;
+    letter-spacing: 1.2px;
+  }
+
+  .welcome-logo {
+    width: 90px;
+    height: 90px;
+  }
+
+  .welcome-subtitle {
+    font-size: 0.9rem;
   }
 
   .message-content {
@@ -164,6 +214,57 @@
     padding: 12px 16px;
   }
 
+  .chat-input-field-main {
+    padding: 12px 16px;
+    padding-right: 52px;
+    font-size: 0.85rem;
+    border-radius: 12px;
+  }
+
+  .chat-input-container-main {
+    border-radius: 12px;
+  }
+
+  .chat-send-btn-inside {
+    width: 32px;
+    height: 32px;
+    right: 6px;
+  }
+
+  .chat-send-btn-inside svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .chat-input-controls {
+    gap: 12px;
+  }
+
+  .chat-control-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .chat-control-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .chat-model-variant-dropdown {
+    min-width: 120px;
+  }
+
+  .chat-settings-menu {
+    left: 16px;
+    min-width: 200px;
+    padding: 6px;
+  }
+
+  .settings-menu-item {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+
   .chat-left-section {
     flex-direction: column;
     align-items: flex-start;
@@ -211,6 +312,24 @@
 
   .empty-state-text {
     font-size: 0.8rem;
+  }
+
+  .welcome-greeting {
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+  }
+
+  .welcome-logo {
+    width: 80px;
+    height: 80px;
+  }
+
+  .welcome-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .welcome-project {
+    font-size: 0.85rem;
   }
 
   .message-content {

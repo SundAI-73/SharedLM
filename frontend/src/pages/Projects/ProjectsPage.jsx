@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FolderOpen, Clock, MoreVertical, Search, Plus, Trash2, Edit3, Archive, Star } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 import { useNotification } from '../../contexts/NotificationContext';
@@ -26,11 +27,7 @@ function ProjectsPage() {
   const menuRef = useRef(null);
   const modalRef = useRef(null);
 
-  useEffect(() => {
-    loadProjects();
-  }, [userId]);
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await apiService.getProjects(userId);
@@ -50,7 +47,11 @@ function ProjectsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
@@ -221,16 +222,31 @@ function ProjectsPage() {
   };
 
   return (
-    <div className="page-container">
+    <motion.div 
+      className="page-container"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       <div className="page-content">
-        <div className="page-header">
+        <motion.div 
+          className="page-header"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
           <h1 className="page-title">PROJECTS</h1>
           <p className="page-subtitle">
             {isLoading ? 'Loading...' : `${projects.length} project${projects.length !== 1 ? 's' : ''}`}
           </p>
-        </div>
+        </motion.div>
 
-        <div className="controls-section">
+        <motion.div 
+          className="controls-section"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
           <div className="search-container">
             <Search size={18} className="search-icon" />
             <input
@@ -242,11 +258,16 @@ function ProjectsPage() {
             />
           </div>
 
-          <button onClick={handleNewProject} className="button-base button-primary action-button">
+          <motion.button 
+            onClick={handleNewProject} 
+            className="button-base button-primary action-button"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
             <Plus size={16} />
             NEW PROJECT
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
 
         {isLoading ? (
           <div className="empty-state">
@@ -265,13 +286,24 @@ function ProjectsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid-4 items-grid">
-            {filteredProjects.map(project => (
-              <div
-                key={project.id}
-                className={`card-base card-clickable item-card ${openMenuId === project.id ? 'menu-open' : ''}`}
-                onClick={() => handleProjectClick(project.id)}
-              >
+          <motion.div 
+            className="grid-4 items-grid"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <AnimatePresence>
+              {filteredProjects.map((project, index) => (
+                <motion.div
+                  key={project.id}
+                  className={`card-base card-clickable item-card ${openMenuId === project.id ? 'menu-open' : ''}`}
+                  onClick={() => handleProjectClick(project.id)}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  whileHover={{ y: -2 }}
+                >
                 <div className="card-header">
                   <FolderOpen size={22} className="card-icon" />
                   <div style={{ position: 'relative' }} ref={openMenuId === project.id ? menuRef : null}>
@@ -325,15 +357,31 @@ function ProjectsPage() {
                     {project.lastActive}
                   </span>
                 </div>
-              </div>
-            ))}
-          </div>
+              </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         )}
 
         {/* Create Project Modal */}
-        {showCreateModal && (
-          <div className="modal-overlay">
-            <div className="modal-content" ref={modalRef}>
+        <AnimatePresence>
+          {showCreateModal && (
+            <motion.div 
+              className="modal-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCreateModal(false)}
+            >
+              <motion.div 
+                className="modal-content" 
+                ref={modalRef}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                onClick={(e) => e.stopPropagation()}
+              >
               <h2 className="modal-title">CREATE NEW PROJECT</h2>
               
               <div className="modal-form">
@@ -376,14 +424,30 @@ function ProjectsPage() {
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Rename Project Modal */}
-        {showRenameModal && (
-          <div className="modal-overlay">
-            <div className="modal-content" ref={modalRef}>
+        <AnimatePresence>
+          {showRenameModal && (
+            <motion.div 
+              className="modal-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowRenameModal(false)}
+            >
+              <motion.div 
+                className="modal-content" 
+                ref={modalRef}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                onClick={(e) => e.stopPropagation()}
+              >
               <h2 className="modal-title">RENAME PROJECT</h2>
               
               <div className="modal-form">
@@ -415,11 +479,12 @@ function ProjectsPage() {
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

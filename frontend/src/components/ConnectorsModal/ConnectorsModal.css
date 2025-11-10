@@ -1,0 +1,489 @@
+.connectors-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 20px;
+}
+
+.connectors-modal {
+  background: #141414;
+  border: 1px solid #2A2A2A;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+}
+
+.connectors-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30px 30px 24px 30px;
+  border-bottom: 1px solid #1F1F1F;
+}
+
+.connectors-modal-title {
+  font-family: 'Courier New', monospace;
+  font-size: 2rem;
+  font-weight: 400;
+  color: #FFFFFF;
+  letter-spacing: 3px;
+  margin: 0;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.connectors-modal-close {
+  background: transparent;
+  border: none;
+  color: #888888;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.connectors-modal-close:hover {
+  background: #1A1A1A;
+  color: #FFFFFF;
+}
+
+.connectors-modal-description {
+  padding: 20px 30px;
+  color: #888888;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  border-bottom: 1px solid #1F1F1F;
+  letter-spacing: 0.3px;
+}
+
+.connectors-learn-more {
+  color: #B94539;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.connectors-learn-more:hover {
+  color: #C54A3E;
+}
+
+.connectors-modal-search-row {
+  display: flex;
+  gap: 12px;
+  padding: 20px 30px;
+  border-bottom: 1px solid #1F1F1F;
+}
+
+.connectors-search-container {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.connectors-search-icon {
+  position: absolute;
+  left: 16px;
+  color: #666666;
+  pointer-events: none;
+}
+
+.connectors-search-input {
+  width: 100%;
+  background: #141414;
+  border: 1px solid #1F1F1F;
+  border-radius: 12px;
+  padding: 12px 16px 12px 44px;
+  color: #E0E0E0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.connectors-search-input:focus {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #1A1A1A;
+}
+
+.connectors-search-input::placeholder {
+  color: #555555;
+}
+
+.connectors-manage-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #141414;
+  border: 1px solid #1F1F1F;
+  border-radius: 12px;
+  color: #E0E0E0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.connectors-manage-btn:hover {
+  background: #1A1A1A;
+  border-color: #2A2A2A;
+  color: #FFFFFF;
+}
+
+.connectors-modal-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 30px;
+  border-bottom: 1px solid #1F1F1F;
+}
+
+.connectors-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 16px 24px;
+  color: #666666;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  position: relative;
+  bottom: -1px;
+  font-weight: 400;
+}
+
+.connectors-tab:hover {
+  color: #888888;
+}
+
+.connectors-tab.active {
+  color: #E0E0E0;
+  border-bottom-color: #E0E0E0;
+  font-weight: 400;
+}
+
+.connectors-desktop-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 30px;
+  background: #141414;
+  border-bottom: 1px solid #1F1F1F;
+  gap: 20px;
+  border-top: 1px solid #1F1F1F;
+}
+
+.connectors-desktop-banner-text {
+  flex: 1;
+  color: #888888;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.connectors-desktop-btn {
+  padding: 12px 20px;
+  background: #141414;
+  border: 1px solid #1F1F1F;
+  border-radius: 12px;
+  color: #E0E0E0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.connectors-desktop-btn:hover {
+  background: #1A1A1A;
+  border-color: #2A2A2A;
+  color: #FFFFFF;
+}
+
+.connectors-modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30px;
+}
+
+.connectors-modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.connectors-modal-content::-webkit-scrollbar-track {
+  background: #1F1F1F;
+  border-radius: 3px;
+}
+
+.connectors-modal-content::-webkit-scrollbar-thumb {
+  background: #3A3A3A;
+  border-radius: 3px;
+}
+
+.connectors-modal-content::-webkit-scrollbar-thumb:hover {
+  background: #4A4A4A;
+}
+
+.connectors-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.connectors-empty-icon {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 24px;
+}
+
+.connector-shape {
+  position: absolute;
+  background: #2A2A2A;
+  border: 1px solid #3A3A3A;
+}
+
+.connector-shape-1 {
+  width: 40px;
+  height: 40px;
+  top: 0;
+  left: 0;
+  border-radius: 8px;
+  transform: rotate(45deg);
+}
+
+.connector-shape-1::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  width: 8px;
+  height: 8px;
+  background: #888888;
+  border-radius: 50%;
+}
+
+.connector-shape-2 {
+  width: 32px;
+  height: 32px;
+  bottom: 0;
+  right: 0;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.connector-shape-2::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -30%);
+  width: 6px;
+  height: 6px;
+  background: #888888;
+  border-radius: 50%;
+}
+
+.connectors-empty-text {
+  color: #666666;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.connectors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.connector-card {
+  background: #141414;
+  border: 1px solid #1F1F1F;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.connector-card:hover {
+  background: #1A1A1A;
+  border-color: #2A2A2A;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.connector-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.connector-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1F1F1F;
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+  color: #888888;
+  flex-shrink: 0;
+}
+
+.connector-usage {
+  color: #555555;
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  font-weight: 400;
+}
+
+.connector-name {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #E0E0E0;
+  margin: 0;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.connector-description {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #888888;
+  margin: 0;
+  line-height: 1.6;
+  flex: 1;
+  letter-spacing: 0.3px;
+}
+
+.connector-btn {
+  width: 100%;
+  padding: 12px 16px;
+  background: #141414;
+  border: 1px solid #1F1F1F;
+  border-radius: 12px;
+  color: #E0E0E0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: auto;
+  font-weight: 400;
+}
+
+.connector-btn:hover:not(:disabled) {
+  background: #1A1A1A;
+  border-color: #2A2A2A;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.connector-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.connector-btn-add {
+  background: #141414;
+  border-color: #1F1F1F;
+}
+
+.connector-btn-add:hover:not(:disabled) {
+  background: #1A1A1A;
+  border-color: #2A2A2A;
+}
+
+.connector-btn-remove {
+  background: rgba(185, 69, 57, 0.1);
+  border-color: rgba(185, 69, 57, 0.3);
+  color: #B94539;
+}
+
+.connector-btn-remove:hover:not(:disabled) {
+  background: rgba(185, 69, 57, 0.2);
+  border-color: rgba(185, 69, 57, 0.5);
+}
+
+@media (max-width: 768px) {
+  .connectors-modal {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .connectors-modal-header {
+    padding: 20px;
+  }
+
+  .connectors-modal-title {
+    font-size: 1.5rem;
+  }
+
+  .connectors-modal-description {
+    padding: 16px 20px;
+  }
+
+  .connectors-modal-search-row {
+    flex-direction: column;
+    padding: 16px 20px;
+  }
+
+  .connectors-modal-tabs {
+    padding: 0 20px;
+  }
+
+  .connectors-desktop-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px 20px;
+  }
+
+  .connectors-modal-content {
+    padding: 20px;
+  }
+
+  .connectors-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

@@ -10,9 +10,7 @@ from database.connection import get_db
 from database import crud
 from config.settings import settings
 
-# ============================================
 # DATABASE DEPENDENCY
-# ============================================
 
 def get_database_session():
     """
@@ -21,9 +19,7 @@ def get_database_session():
     """
     return get_db
 
-# ============================================
 # USER AUTHENTICATION DEPENDENCY
-# ============================================
 
 async def get_current_user(
     user_id: Optional[str] = Header(None, alias="X-User-ID"),
@@ -45,9 +41,7 @@ async def get_current_user(
     
     return user
 
-# ============================================
 # OPTIONAL: API KEY VALIDATION
-# ============================================
 
 async def verify_api_key(
     api_key: Optional[str] = Header(None, alias="X-API-Key")
@@ -56,13 +50,10 @@ async def verify_api_key(
     Verify API key if you want to add API authentication
     Usage: _ = Depends(verify_api_key)
     """
-    # TODO: Implement API key verification
     # For now, just pass through
     return True
 
-# ============================================
 # RATE LIMITING DEPENDENCY (Future)
-# ============================================
 
 async def rate_limit_check(
     user_id: Optional[str] = Header(None, alias="X-User-ID")
@@ -74,9 +65,7 @@ async def rate_limit_check(
     # Placeholder for future rate limiting
     return True
 
-# ============================================
 # PAGINATION DEPENDENCY
-# ============================================
 
 class PaginationParams:
     """
@@ -95,9 +84,7 @@ class PaginationParams:
         self.sort_by = sort_by
         self.sort_order = sort_order
 
-# ============================================
 # COMMON RESPONSE FORMATTERS
-# ============================================
 
 def format_timestamp(dt):
     """Format datetime to ISO string"""

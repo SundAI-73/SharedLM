@@ -1,6 +1,30 @@
-// Enhanced formatter matching Claude's style
+import DOMPurify from 'dompurify';
+import { logEvent, EventType, LogLevel } from './auditLogger';
+
+// Enhanced formatter matching Claude's style with XSS protection
 export const formatMessage = (text) => {
   if (!text) return '';
+  
+  // Check for potential XSS attempts before formatting
+  const xssPatterns = [
+    /<script[^>]*>/i,
+    /javascript:/i,
+    /onerror=/i,
+    /onload=/i,
+    /onclick=/i,
+    /onmouseover=/i,
+    /<iframe[^>]*>/i,
+    /<object[^>]*>/i,
+    /<embed[^>]*>/i
+  ];
+  
+  const hasXSSAttempt = xssPatterns.some(pattern => pattern.test(text));
+  if (hasXSSAttempt) {
+    // Log XSS attempt
+    logEvent(EventType.XSS_ATTEMPT, LogLevel.SECURITY, 'Potential XSS attempt detected in message', {
+      messagePreview: text.substring(0, 100)
+    });
+  }
   
   let formatted = text;
   
@@ -23,7 +47,12 @@ export const formatMessage = (text) => {
     return `<p>${content.replace(/\s+/g, ' ')}</p>`;
   });
   
-  return formatted;
+  // Sanitize HTML to prevent XSS attacks
+  return DOMPurify.sanitize(formatted, {
+    ALLOWED_TAGS: ['p', 'strong', 'em', 'code', 'br'],
+    ALLOWED_ATTR: [],
+    KEEP_CONTENT: true
+  });
 };
 
 // Parse emojis

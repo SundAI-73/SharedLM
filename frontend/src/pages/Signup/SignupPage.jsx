@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight } from 'lucide-react';
 import logo from '../../assets/images/logo main.svg';
 import apiService from '../../services/api';
+import { setAuth, validatePassword, isValidEmail } from '../../utils/auth';
+import { logEvent, EventType, LogLevel } from '../../utils/auditLogger';
 import '../Login/Login.css';
 
 function SignupPage() {
@@ -18,6 +20,7 @@ function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({ strength: 'weak', score: 0 });
 
   const handleChange = (e) => {
     setFormData({
@@ -25,6 +28,30 @@ function SignupPage() {
       [e.target.name]: e.target.value
     });
     setError('');
+    
+    // Update password strength when password changes
+    if (e.target.name === 'password' && e.target.value) {
+      const validation = validatePassword(e.target.value);
+      setPasswordStrength({ strength: validation.strength, score: validation.score });
+    } else if (e.target.name === 'password' && !e.target.value) {
+      setPasswordStrength({ strength: 'weak', score: 0 });
+    }
+  };
+  
+  const getPasswordStrengthColor = (strength) => {
+    switch (strength) {
+      case 'strong': return '#4caf50';
+      case 'medium': return '#ff9800';
+      default: return '#f44336';
+    }
+  };
+  
+  const getPasswordStrengthText = (strength) => {
+    switch (strength) {
+      case 'strong': return 'STRONG';
+      case 'medium': return 'MEDIUM';
+      default: return 'WEAK';
+    }
   };
 
   const handleSignup = async (e) => {
@@ -37,13 +64,21 @@ function SignupPage() {
       return;
     }
 
+    // Validate email format
+    if (!isValidEmail(formData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
+    // Enhanced password validation
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.errors[0]); // Show first error
       return;
     }
 
@@ -55,28 +90,37 @@ function SignupPage() {
     setLoading(true);
 
     try {
-      // REAL API CALL
       const response = await apiService.signup(
-        formData.email,
+        formData.email.trim(),
         formData.password,
-        formData.name
+        formData.name.trim()
       );
       
       if (response.success) {
-        // Store user session
-        localStorage.setItem('sharedlm_session', 'authenticated');
-        localStorage.setItem('sharedlm_user_id', response.user.id);
-        localStorage.setItem('sharedlm_user_email', response.user.email);
-        localStorage.setItem('sharedlm_user_name', response.user.display_name);
+        // Store user session using auth utility
+        setAuth(response.user);
+        
+        // Log successful signup
+        logEvent(EventType.SIGNUP, LogLevel.INFO, 'New user registered', {
+          userId: response.user.id,
+          email: response.user.email
+        });
         
         // Navigate to chat
         navigate('/chat');
       } else {
         setError('Signup failed. Please try again.');
+        logEvent(EventType.SIGNUP, LogLevel.WARNING, 'Signup failed', { email: formData.email });
       }
     } catch (err) {
-      console.error('Signup error:', err);
-      setError(err.message || 'Failed to create account');
+      // Log signup error
+      logEvent(EventType.SIGNUP, LogLevel.ERROR, 'Signup error', {
+        email: formData.email,
+        error: err.message
+      });
+      
+      // Don't reveal specific error details to prevent information disclosure
+      setError(err.message.includes('Rate limit') ? err.message : 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -166,6 +210,39 @@ function SignupPage() {
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                {/* Password Strength Indicator */}
+                {formData.password && (
+                  <div style={{ marginTop: '8px', fontSize: '12px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      color: getPasswordStrengthColor(passwordStrength.strength)
+                    }}>
+                      <div style={{
+                        width: '60px',
+                        height: '4px',
+                        backgroundColor: '#333',
+                        borderRadius: '2px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          width: `${Math.min((passwordStrength.score / 5) * 100, 100)}%`,
+                          height: '100%',
+                          backgroundColor: getPasswordStrengthColor(passwordStrength.strength),
+                          transition: 'width 0.3s ease'
+                        }} />
+                      </div>
+                      <span style={{ 
+                        fontFamily: 'Courier New, monospace',
+                        fontSize: '11px',
+                        letterSpacing: '1px'
+                      }}>
+                        {getPasswordStrengthText(passwordStrength.strength)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Confirm Password Input */}

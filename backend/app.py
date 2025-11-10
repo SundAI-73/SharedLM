@@ -1,6 +1,7 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from api.routes import custom_integrations
 
 from config.settings import settings
 from database.connection import engine
@@ -39,6 +40,7 @@ app.include_router(chat.router)
 app.include_router(projects.router)
 app.include_router(conversations.router)
 app.include_router(api_keys.router)
+app.include_router(custom_integrations.router)
 
 # Startup event
 @app.on_event("startup")

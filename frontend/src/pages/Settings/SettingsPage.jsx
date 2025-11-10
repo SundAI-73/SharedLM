@@ -1,73 +1,154 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, User, Shield, Zap, LogOut, Eye, EyeOff, Copy, Lock } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Settings, User, BarChart3, Brain, Link, RefreshCw, Zap, Eye, EyeOff, Trash2, Plus } from 'lucide-react';
+import { motion } from 'motion/react';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
+import ConnectorsModal from '../../components/ConnectorsModal/ConnectorsModal';
 import { useUser } from '../../contexts/UserContext';
 import { useNotification } from '../../contexts/NotificationContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import apiService from '../../services/api';
+import { clearAuth } from '../../utils/auth';
+import { logEvent, EventType, LogLevel } from '../../utils/auditLogger';
 import './Settings.css';
 
 function SettingsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const notify = useNotification();
-  const [activeTab, setActiveTab] = useState('general');
   const { analyticsEnabled, setAnalyticsEnabled, userId } = useUser();
   
-  // Get user data from localStorage
-  const [displayName, setDisplayName] = useState(localStorage.getItem('sharedlm_user_name') || '');
-  const [tempDisplayName, setTempDisplayName] = useState(displayName);
-  const userEmail = localStorage.getItem('sharedlm_user_email') || '';
-
-  // General Settings State
-  const [autoSave, setAutoSave] = useState(true);
-  const [streamResponses, setStreamResponses] = useState(true);
+  // Get tab from URL query parameter
+  const urlParams = new URLSearchParams(location.search);
+  const tabFromUrl = urlParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'general');
   
-  // Privacy Settings State
-  const [dataCollection, setDataCollection] = useState(false);
-  const [shareChatHistory, setShareChatHistory] = useState(false);
-  const [memoryStorage, setMemoryStorage] = useState(true);
-
-  // Change Password State
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+  // Update active tab when URL changes
+  useEffect(() => {
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+  
+  // Name fields - load from localStorage
+  const savedFullName = localStorage.getItem('sharedlm_full_name') || '';
+  const savedCallName = localStorage.getItem('sharedlm_user_name') || '';
+  const [fullName, setFullName] = useState(savedFullName);
+  const [claudeCallName, setClaudeCallName] = useState(savedCallName);
+  const [originalFullName, setOriginalFullName] = useState(savedFullName);
+  const [originalCallName, setOriginalCallName] = useState(savedCallName);
+  const [showNameSaveButtons, setShowNameSaveButtons] = useState(false);
+  
+  const [workDescription, setWorkDescription] = useState('other');
+  const [responseCompletions, setResponseCompletions] = useState(false);
+  
+  // Usage State
+  const [usageData] = useState({
+    currentSession: { percentage: 0, limit: 100 },
+    openai: { percentage: 0, limit: 100 },
+    anthropic: { percentage: 0, limit: 100 },
+    mistral: { percentage: 0, limit: 100 }
   });
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false
-  });
+  const [lastUpdated, setLastUpdated] = useState('just now');
 
-  // Two-Factor Authentication State
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(() => {
-    return localStorage.getItem('sharedlm_2fa_enabled') === 'true';
-  });
-  const [show2FASetup, setShow2FASetup] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [secretKey, setSecretKey] = useState('');
+  // Capabilities State
+  const [artifactsEnabled, setArtifactsEnabled] = useState(true);
+  const [codeExecutionEnabled, setCodeExecutionEnabled] = useState(false);
+  const [locationMetadataEnabled, setLocationMetadataEnabled] = useState(true);
+  const [searchReferenceChatsEnabled, setSearchReferenceChatsEnabled] = useState(true);
+  const [generateMemoryFromHistoryEnabled, setGenerateMemoryFromHistoryEnabled] = useState(true);
+  const [memoryText] = useState('Work context Gagan is a Software Engineering gradua student at Northeastern University working as a co-op student in data analytics at a');
+  const [memoryUpdated] = useState('22 hours ago');
 
-  // API Keys State - Now loaded from database
+  // API Keys State
   const [apiKeys, setApiKeys] = useState({
     openai: { value: '', visible: false, saved: false, preview: '' },
     anthropic: { value: '', visible: false, saved: false, preview: '' },
     mistral: { value: '', visible: false, saved: false, preview: '' }
   });
   const [loadingApiKeys, setLoadingApiKeys] = useState(false);
+  const [customIntegrations, setCustomIntegrations] = useState([]);
+  const [userConnectors, setUserConnectors] = useState([]);
+  const [loadingConnectors, setLoadingConnectors] = useState(false);
+  const [showConnectorsModal, setShowConnectorsModal] = useState(false);
 
   const settingsTabs = [
-    { id: 'general', label: 'GENERAL', icon: <Settings size={18} /> },
-    { id: 'account', label: 'ACCOUNT', icon: <User size={18} /> },
-    { id: 'privacy', label: 'PRIVACY', icon: <Shield size={18} /> },
-    { id: 'integrations', label: 'API KEYS', icon: <Zap size={18} /> }
+    { id: 'general', label: 'General', icon: <Settings size={18} /> },
+    { id: 'account', label: 'Account', icon: <User size={18} /> },
+    { id: 'usage', label: 'Usage', icon: <BarChart3 size={18} /> },
+    { id: 'capabilities', label: 'Capabilities', icon: <Brain size={18} /> },
+    { id: 'connectors', label: 'Connectors', icon: <Link size={18} /> },
+    { id: 'api-keys', label: 'API Keys', icon: <Zap size={18} /> }
   ];
 
+  // Load user connectors
+  const loadUserConnectors = useCallback(async () => {
+    try {
+      setLoadingConnectors(true);
+      // Load user's connectors - try API first, fallback to localStorage
+      let connectors = [];
+      
+      try {
+        if (apiService.getUserConnectors) {
+          connectors = await apiService.getUserConnectors(userId) || [];
+        }
+      } catch (apiError) {
+        console.log('API not available, using localStorage');
+      }
+      
+      // Fallback to localStorage if API doesn't return data
+      if (connectors.length === 0) {
+        const savedConnectors = localStorage.getItem(`sharedlm_connectors_${userId}`);
+        if (savedConnectors) {
+          connectors = JSON.parse(savedConnectors);
+        }
+      }
+      
+      setUserConnectors(connectors);
+    } catch (error) {
+      console.error('Failed to load connectors:', error);
+    } finally {
+      setLoadingConnectors(false);
+    }
+  }, [userId]);
+
+  // Listen for storage events to refresh when connectors are added from modal
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === `sharedlm_connectors_${userId}` && activeTab === 'connectors') {
+        loadUserConnectors();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    // Also listen for custom events (since storage events don't fire in same tab)
+    window.addEventListener('connectorUpdated', loadUserConnectors);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('connectorUpdated', loadUserConnectors);
+    };
+  }, [activeTab, userId, loadUserConnectors]);
+
+  // Update last updated time
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLastUpdated('just now');
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Load API keys from database
-  const loadApiKeys = async () => {
+  const loadApiKeys = useCallback(async () => {
     try {
       setLoadingApiKeys(true);
-      const keys = await apiService.getApiKeys(userId);
+      
+      const [keys, integrations] = await Promise.all([
+        apiService.getApiKeys(userId),
+        apiService.getCustomIntegrations(userId)
+      ]);
+      
+      setCustomIntegrations(integrations);
       
       const keyState = {
         openai: { value: '', visible: false, saved: false, preview: '' },
@@ -75,10 +156,14 @@ function SettingsPage() {
         mistral: { value: '', visible: false, saved: false, preview: '' }
       };
 
+      integrations.forEach(int => {
+        keyState[int.provider_id] = { value: '', visible: false, saved: false, preview: '' };
+      });
+
       keys.forEach(key => {
         if (keyState[key.provider]) {
           keyState[key.provider] = {
-            value: '', // Don't load actual key for security
+            value: '',
             visible: false,
             saved: true,
             preview: key.key_preview
@@ -92,180 +177,111 @@ function SettingsPage() {
     } finally {
       setLoadingApiKeys(false);
     }
-  };
-
-  // Load API keys on mount and when switching to integrations tab
-  useEffect(() => {
-    loadApiKeys();
   }, [userId]);
 
+  // Load API keys on mount and when switching to API keys tab
   useEffect(() => {
-    if (activeTab === 'integrations') {
+    if (activeTab === 'api-keys') {
       loadApiKeys();
     }
-  }, [activeTab]);
+  }, [activeTab, loadApiKeys]);
 
-  const handleLogout = async () => {
+  // Load connectors on mount and when switching to connectors tab
+  useEffect(() => {
+    if (activeTab === 'connectors') {
+      loadUserConnectors();
+    }
+  }, [activeTab, loadUserConnectors]);
+
+  const handleRemoveConnector = async (connectorId) => {
+    try {
+      // Try API first
+      try {
+        if (apiService.removeUserConnector) {
+          await apiService.removeUserConnector(userId, connectorId);
+        }
+      } catch (apiError) {
+        console.log('API not available, using localStorage');
+      }
+      
+      // Update localStorage
+      const savedConnectors = localStorage.getItem(`sharedlm_connectors_${userId}`);
+      if (savedConnectors) {
+        const connectors = JSON.parse(savedConnectors);
+        const updated = connectors.filter(c => (c.connector_id || c.id) !== connectorId);
+        localStorage.setItem(`sharedlm_connectors_${userId}`, JSON.stringify(updated));
+      }
+      
+      await loadUserConnectors();
+      notify.success('Connector removed');
+    } catch (error) {
+      console.error('Failed to remove connector:', error);
+      notify.error('Failed to remove connector');
+    }
+  };
+
+  const handleLogoutAllDevices = async () => {
     const confirmed = await notify.confirm({
-      title: 'Logout',
-      message: 'Are you sure you want to logout?',
-      confirmText: 'Logout',
+      title: 'Log out of all devices',
+      message: 'Are you sure you want to log out of all devices? You will need to log in again on all devices.',
+      confirmText: 'Log out',
       cancelText: 'Cancel'
     });
 
     if (confirmed) {
-      localStorage.removeItem('sharedlm_user_id');
-      localStorage.removeItem('sharedlm_user_email');
-      localStorage.removeItem('sharedlm_user_name');
-      localStorage.removeItem('sharedlm_session');
-      localStorage.removeItem('sharedlm_api_openai');
-      localStorage.removeItem('sharedlm_api_anthropic');
-      localStorage.removeItem('sharedlm_api_mistral');
-      notify.success('Logged out successfully');
+      // Log logout event
+      logEvent(EventType.LOGOUT, LogLevel.INFO, 'User logged out', { userId });
+      
+      // Use auth utility to clear all auth data
+      clearAuth();
+      
+      notify.success('Logged out of all devices successfully');
       navigate('/login');
     }
   };
 
-  const handleUpdateDisplayName = () => {
-    if (tempDisplayName.trim()) {
-      localStorage.setItem('sharedlm_user_name', tempDisplayName.trim());
-      setDisplayName(tempDisplayName.trim());
-      notify.success('Display name updated successfully');
-    } else {
-      notify.error('Display name cannot be empty');
-    }
+  // Check if name fields have changed
+  useEffect(() => {
+    const hasChanges = fullName !== originalFullName || claudeCallName !== originalCallName;
+    setShowNameSaveButtons(hasChanges);
+  }, [fullName, claudeCallName, originalFullName, originalCallName]);
+
+  // Handle save name changes
+  const handleSaveNameChanges = () => {
+    // Save full name
+    const trimmedFullName = fullName.trim();
+    localStorage.setItem('sharedlm_full_name', trimmedFullName);
+    
+    // Save call name and use it as the primary display name
+    const newCallName = claudeCallName.trim() || trimmedFullName;
+    localStorage.setItem('sharedlm_user_name', newCallName);
+    
+    // Update original values
+    setOriginalFullName(trimmedFullName);
+    setOriginalCallName(claudeCallName.trim());
+    
+    // Hide save buttons
+    setShowNameSaveButtons(false);
+    
+    notify.success('Name updated successfully');
+    
+    // Trigger a custom event to notify other components
+    window.dispatchEvent(new CustomEvent('userNameUpdated', { 
+      detail: { 
+        fullName: trimmedFullName, 
+        displayName: newCallName 
+      } 
+    }));
   };
 
-  const handleDeleteAccount = async () => {
-    const confirmed = await notify.confirm({
-      title: 'Delete Account',
-      message: 'This will permanently delete your account and all data. This action cannot be undone.',
-      confirmText: 'Delete Account',
-      cancelText: 'Cancel',
-      variant: 'danger'
-    });
-
-    if (confirmed) {
-      notify.error('Account deletion is not yet implemented');
-    }
+  // Handle cancel name changes
+  const handleCancelNameChanges = () => {
+    setFullName(originalFullName);
+    setClaudeCallName(originalCallName);
+    setShowNameSaveButtons(false);
   };
 
-  const handleExportData = () => {
-    notify.info('Data export feature coming soon');
-  };
-
-  const handleClearAllData = async () => {
-    const confirmed = await notify.confirm({
-      title: 'Clear All Data',
-      message: 'This will delete all your conversations, projects, and memory. This action cannot be undone.',
-      confirmText: 'Clear Data',
-      cancelText: 'Cancel',
-      variant: 'danger'
-    });
-
-    if (confirmed) {
-      notify.error('Data clearing is not yet implemented');
-    }
-  };
-
-  // Change Password Handlers
-  const handlePasswordChange = (field, value) => {
-    setPasswordData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const togglePasswordVisibility = (field) => {
-    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
-  };
-
-  const handleChangePassword = async () => {
-    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      notify.error('Please fill in all password fields');
-      return;
-    }
-
-    if (passwordData.newPassword.length < 8) {
-      notify.error('New password must be at least 8 characters');
-      return;
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      notify.error('New passwords do not match');
-      return;
-    }
-
-    try {
-      const response = await apiService.changePassword(
-        userId,
-        passwordData.currentPassword,
-        passwordData.newPassword
-      );
-
-      if (response.success) {
-        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        setShowChangePassword(false);
-        notify.success('Password changed successfully');
-      }
-    } catch (error) {
-      notify.error(error.message || 'Failed to change password');
-    }
-  };
-
-  // Two-Factor Authentication Handlers
-  const handleToggle2FA = () => {
-    if (twoFactorEnabled) {
-      handleDisable2FA();
-    } else {
-      const newSecretKey = generateSecretKey();
-      setSecretKey(newSecretKey);
-      setShow2FASetup(true);
-    }
-  };
-
-  const generateSecretKey = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    let result = '';
-    for (let i = 0; i < 32; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  };
-
-  const handleVerify2FA = () => {
-    if (verificationCode.length === 6) {
-      localStorage.setItem('sharedlm_2fa_enabled', 'true');
-      localStorage.setItem('sharedlm_2fa_secret', secretKey);
-      setTwoFactorEnabled(true);
-      setShow2FASetup(false);
-      setVerificationCode('');
-      notify.success('Two-factor authentication enabled successfully');
-    } else {
-      notify.error('Please enter a valid 6-digit code');
-    }
-  };
-
-  const handleDisable2FA = async () => {
-    const confirmed = await notify.confirm({
-      title: 'Disable Two-Factor Authentication',
-      message: 'This will make your account less secure. Are you sure?',
-      confirmText: 'Disable',
-      cancelText: 'Cancel',
-      variant: 'danger'
-    });
-
-    if (confirmed) {
-      localStorage.removeItem('sharedlm_2fa_enabled');
-      localStorage.removeItem('sharedlm_2fa_secret');
-      setTwoFactorEnabled(false);
-      notify.success('Two-factor authentication disabled');
-    }
-  };
-
-  const handleCopySecret = () => {
-    navigator.clipboard.writeText(secretKey);
-    notify.success('Secret key copied to clipboard');
-  };
-
-  // API Keys Handlers - Now using database
+  // API Keys Handlers
   const toggleApiKeyVisibility = (provider) => {
     setApiKeys(prev => ({
       ...prev,
@@ -308,8 +324,15 @@ function SettingsPage() {
       );
 
       if (result.success) {
-        // Also save to localStorage for quick access
-        localStorage.setItem(`sharedlm_api_${provider}`, key);
+        // DO NOT save API keys to localStorage - they should only be in the backend
+        // localStorage is vulnerable to XSS attacks
+        // API keys are stored securely in the backend database
+        
+        // Log API key save event
+        logEvent(EventType.API_KEY_SAVED, LogLevel.INFO, 'API key saved', {
+          userId,
+          provider
+        });
         
         // Reload keys to get updated state
         await loadApiKeys();
@@ -328,9 +351,12 @@ function SettingsPage() {
   };
 
   const handleRemoveApiKey = async (provider) => {
+    const customIntegration = customIntegrations.find(int => int.provider_id === provider);
+    const providerName = customIntegration ? customIntegration.name : provider.toUpperCase();
+
     const confirmed = await notify.confirm({
       title: 'Remove API Key',
-      message: `Remove ${provider.toUpperCase()} API key? You won't be able to use this model until you add a new key.`,
+      message: `Remove ${providerName} API key? You won't be able to use this model until you add a new key.`,
       confirmText: 'Remove',
       cancelText: 'Cancel',
       variant: 'danger'
@@ -340,13 +366,18 @@ function SettingsPage() {
       try {
         await apiService.deleteApiKey(userId, provider);
         
-        // Also remove from localStorage
+        // Log API key deletion event
+        logEvent(EventType.API_KEY_DELETED, LogLevel.INFO, 'API key deleted', {
+          userId,
+          provider
+        });
+        
+        // Remove from localStorage if it exists (cleanup)
         localStorage.removeItem(`sharedlm_api_${provider}`);
         
-        // Reload keys
         await loadApiKeys();
         
-        notify.success(`${provider.toUpperCase()} API key removed`);
+        notify.success(`${providerName} API key removed`);
       } catch (error) {
         notify.error(error.message || 'Failed to remove API key');
       }
@@ -359,83 +390,173 @@ function SettingsPage() {
       return;
     }
 
+    const customIntegration = customIntegrations.find(int => int.provider_id === provider);
+    const providerName = customIntegration ? customIntegration.name : provider.toUpperCase();
+
     try {
-      notify.info(`Testing ${provider.toUpperCase()} connection...`);
+      notify.info(`Testing ${providerName} connection...`);
       
       const result = await apiService.testApiKey(userId, provider);
       
       if (result.success) {
-        notify.success(`${provider.toUpperCase()} connection successful`);
+        notify.success(`${providerName} connection successful`);
       }
     } catch (error) {
-      notify.error(error.message || `${provider.toUpperCase()} connection failed`);
+      notify.error(error.message || `${providerName} connection failed`);
     }
   };
 
+
   return (
-    <div className="page-container">
+    <motion.div 
+      className="page-container"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       <div className="page-content">
-        <div className="page-header">
+        <motion.div 
+          className="page-header"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
           <h1 className="page-title">SETTINGS</h1>
           <p className="page-subtitle">Customize your SharedLM experience</p>
-        </div>
+        </motion.div>
 
         <div className="settings-layout">
-          <div className="settings-nav">
-            {settingsTabs.map(tab => (
-              <button
+          <motion.div 
+            className="settings-nav"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            {settingsTabs.map((tab, index) => (
+              <motion.button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`nav-tab ${activeTab === tab.id ? 'active' : ''}`}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: 0.3 + index * 0.1 }}
+                whileHover={{ x: 4 }}
+                whileTap={{ scale: 0.98 }}
               >
                 {tab.icon}
                 <span>{tab.label}</span>
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
 
-          <div className="settings-content-wrapper">
+          <motion.div 
+            className="settings-content-wrapper"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            key={activeTab}
+          >
             <div className="settings-content">
               {activeTab === 'general' && (
-                <div className="settings-section">
-                  <h3 className="section-title">GENERAL SETTINGS</h3>
-                  
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <label className="setting-label">Auto-save Conversations</label>
-                      <p className="setting-description">Automatically save chat history</p>
-                    </div>
-                    <label className="toggle-switch">
+                <motion.div 
+                  className="settings-section"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  {/* Full Name and SharedLM Call Name in single row */}
+                  <div className="setting-item setting-item-row">
+                    <div className="setting-field-group">
+                      <div className="setting-info">
+                        <label className="setting-label">Full name</label>
+                      </div>
                       <input 
-                        type="checkbox" 
-                        checked={autoSave}
-                        onChange={(e) => {
-                          setAutoSave(e.target.checked);
-                          notify.success(e.target.checked ? 'Auto-save enabled' : 'Auto-save disabled');
-                        }}
+                        type="text" 
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="setting-input"
+                        placeholder="Enter full name"
                       />
-                      <span className="toggle-slider"></span>
-                    </label>
+                    </div>
+                    <div className="setting-field-group">
+                      <div className="setting-info">
+                        <label className="setting-label">What should we call you?</label>
+                      </div>
+                      <input 
+                        type="text" 
+                        value={claudeCallName}
+                        onChange={(e) => setClaudeCallName(e.target.value)}
+                        className="setting-input"
+                        placeholder="Enter name"
+                      />
+                    </div>
                   </div>
 
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <label className="setting-label">Stream Responses</label>
-                      <p className="setting-description">Show AI responses as they generate</p>
+                  {/* Save/Cancel buttons for name changes */}
+                  {showNameSaveButtons && (
+                    <div className="name-actions">
+                      <button 
+                        className="button-base button-secondary"
+                        onClick={handleCancelNameChanges}
+                      >
+                        CANCEL
+                      </button>
+                      <button 
+                        className="button-base button-primary"
+                        onClick={handleSaveNameChanges}
+                        disabled={!claudeCallName.trim() && !fullName.trim()}
+                      >
+                        SAVE CHANGES
+                      </button>
                     </div>
-                    <label className="toggle-switch">
-                      <input 
-                        type="checkbox" 
-                        checked={streamResponses}
-                        onChange={(e) => {
-                          setStreamResponses(e.target.checked);
-                          notify.success(e.target.checked ? 'Streaming enabled' : 'Streaming disabled');
-                        }}
-                      />
-                      <span className="toggle-slider"></span>
-                    </label>
+                  )}
+
+                  {/* What best describes your work? */}
+                  <div className="setting-item no-divider">
+                    <div className="setting-info">
+                      <label className="setting-label">What best describes your work?</label>
+                    </div>
+                    <CustomDropdown
+                      value={workDescription}
+                      onChange={setWorkDescription}
+                      options={[
+                        { value: 'software', label: 'Software Development' },
+                        { value: 'design', label: 'Design' },
+                        { value: 'writing', label: 'Writing' },
+                        { value: 'research', label: 'Research' },
+                        { value: 'education', label: 'Education' },
+                        { value: 'business', label: 'Business' },
+                        { value: 'other', label: 'Other' }
+                      ]}
+                    />
                   </div>
 
+                  {/* Notifications Section */}
+                  <div className="settings-subsection">
+                    <h4 className="subsection-title">NOTIFICATIONS</h4>
+                    
+                    <div className="setting-item">
+                      <div className="setting-info">
+                        <label className="setting-label">Response completions</label>
+                        <p className="setting-description">
+                          Get notified when SharedLM has finished a response. Most useful for long-running tasks like tool calls and Research.
+                        </p>
+                      </div>
+                      <label className="toggle-switch">
+                        <input 
+                          type="checkbox" 
+                          checked={responseCompletions}
+                          onChange={(e) => {
+                            setResponseCompletions(e.target.checked);
+                            notify.success(e.target.checked ? 'Response completions enabled' : 'Response completions disabled');
+                          }}
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Analytics Page Toggle */}
                   <div className="setting-item no-divider">
                     <div className="setting-info">
                       <label className="setting-label">Analytics Page</label>
@@ -453,268 +574,135 @@ function SettingsPage() {
                       <span className="toggle-slider"></span>
                     </label>
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {activeTab === 'account' && (
-                <div className="settings-section">
-                  <h3 className="section-title">ACCOUNT SETTINGS</h3>
+                <motion.div 
+                  className="settings-section"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <h3 className="section-title">Account</h3>
                   
                   <div className="setting-item">
                     <div className="setting-info">
-                      <label className="setting-label">Email Address</label>
-                      <p className="setting-description">Your account email</p>
-                    </div>
-                    <input 
-                      type="email" 
-                      value={userEmail}
-                      className="setting-input" 
-                      readOnly
-                      style={{ opacity: 0.7, cursor: 'not-allowed' }}
-                    />
-                  </div>
-
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <label className="setting-label">Display Name</label>
-                      <p className="setting-description">How your name appears in the app</p>
-                    </div>
-                    <input 
-                      type="text" 
-                      value={tempDisplayName}
-                      onChange={(e) => setTempDisplayName(e.target.value)}
-                      className="setting-input"
-                      placeholder="Enter display name"
-                    />
-                  </div>
-
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <label className="setting-label">User ID</label>
-                      <p className="setting-description">Your unique identifier</p>
-                    </div>
-                    <input 
-                      type="text" 
-                      value={userId}
-                      className="setting-input" 
-                      disabled 
-                      style={{ opacity: 0.7, cursor: 'not-allowed' }}
-                    />
-                  </div>
-
-                  {/* Change Password Section */}
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <label className="setting-label">Change Password</label>
-                      <p className="setting-description">Update your account password</p>
+                      <label className="setting-label">Log out of all devices</label>
                     </div>
                     <button 
-                      className="button-base button-secondary"
-                      onClick={() => setShowChangePassword(!showChangePassword)}
+                      className="button-base button-secondary account-action-btn"
+                      onClick={handleLogoutAllDevices}
                     >
-                      {showChangePassword ? 'CANCEL' : 'CHANGE PASSWORD'}
+                      Log out
                     </button>
                   </div>
 
-                  {showChangePassword && (
-                    <div className="password-change-section">
-                      <div className="password-input-group">
-                        <label className="password-label">CURRENT PASSWORD</label>
-                        <div className="password-input-wrapper">
-                          <Lock size={16} className="password-input-icon" />
-                          <input
-                            type={showPasswords.current ? "text" : "password"}
-                            value={passwordData.currentPassword}
-                            onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                            placeholder="Enter current password"
-                            className="password-input"
-                          />
-                          <button
-                            className="password-toggle-btn"
-                            onClick={() => togglePasswordVisibility('current')}
-                          >
-                            {showPasswords.current ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="password-input-group">
-                        <label className="password-label">NEW PASSWORD</label>
-                        <div className="password-input-wrapper">
-                          <Lock size={16} className="password-input-icon" />
-                          <input
-                            type={showPasswords.new ? "text" : "password"}
-                            value={passwordData.newPassword}
-                            onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                            placeholder="Minimum 8 characters"
-                            className="password-input"
-                          />
-                          <button
-                            className="password-toggle-btn"
-                            onClick={() => togglePasswordVisibility('new')}
-                          >
-                            {showPasswords.new ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="password-input-group">
-                        <label className="password-label">CONFIRM NEW PASSWORD</label>
-                        <div className="password-input-wrapper">
-                          <Lock size={16} className="password-input-icon" />
-                          <input
-                            type={showPasswords.confirm ? "text" : "password"}
-                            value={passwordData.confirmPassword}
-                            onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                            placeholder="Re-enter new password"
-                            className="password-input"
-                          />
-                          <button
-                            className="password-toggle-btn"
-                            onClick={() => togglePasswordVisibility('confirm')}
-                          >
-                            {showPasswords.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <button 
-                        className="button-base button-primary"
-                        onClick={handleChangePassword}
-                        style={{ marginTop: '15px' }}
-                        disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
-                      >
-                        UPDATE PASSWORD
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="setting-item no-divider">
+                  <div className="setting-item">
                     <div className="setting-info">
-                      <label className="setting-label">Two-Factor Authentication</label>
-                      <p className="setting-description">
-                        {twoFactorEnabled ? 'Extra security is enabled' : 'Add an extra layer of security'}
+                      <label className="setting-label">Delete account</label>
+                      <p className="setting-description">Please contact your administrator to deprovision your account.</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'usage' && (
+                <motion.div 
+                  className="settings-section"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <h3 className="section-title">YOUR USAGE LIMITS</h3>
+                  
+                  <div className="usage-section">
+                    <div className="usage-item">
+                      <div className="usage-header">
+                        <label className="usage-label">Current session</label>
+                        <span className="usage-percentage">{usageData.currentSession.percentage}% used</span>
+                      </div>
+                      <p className="usage-description">Starts when a message is sent</p>
+                      <div className="usage-progress-bar">
+                        <div 
+                          className="usage-progress-fill" 
+                          style={{ width: `${usageData.currentSession.percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="usage-item">
+                      <div className="usage-header">
+                        <label className="usage-label">OpenAI</label>
+                        <span className="usage-percentage">{usageData.openai.percentage}% used</span>
+                      </div>
+                      <p className="usage-description">OpenAI API usage</p>
+                      <div className="usage-progress-bar">
+                        <div 
+                          className="usage-progress-fill" 
+                          style={{ width: `${usageData.openai.percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="usage-item">
+                      <div className="usage-header">
+                        <label className="usage-label">Anthropic</label>
+                        <span className="usage-percentage">{usageData.anthropic.percentage}% used</span>
+                      </div>
+                      <p className="usage-description">Anthropic API usage</p>
+                      <div className="usage-progress-bar">
+                        <div 
+                          className="usage-progress-fill" 
+                          style={{ width: `${usageData.anthropic.percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="usage-item">
+                      <div className="usage-header">
+                        <label className="usage-label">Mistral</label>
+                        <span className="usage-percentage">{usageData.mistral.percentage}% used</span>
+                      </div>
+                      <p className="usage-description">Mistral API usage</p>
+                      <div className="usage-progress-bar">
+                        <div 
+                          className="usage-progress-fill" 
+                          style={{ width: `${usageData.mistral.percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="usage-updated">
+                      <RefreshCw size={14} />
+                      <span>Last updated: {lastUpdated}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'capabilities' && (
+                <motion.div 
+                  className="settings-section"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <h3 className="section-title">Capabilities</h3>
+                  <p className="section-description">Control which capabilities SharedLM uses in your conversations.</p>
+                  
+                  <div className="setting-item">
+                    <div className="setting-info">
+                      <label className="setting-label">Artifacts</label>
+                        <p className="setting-description">
+                        Ask SharedLM to generate content like code snippets, text documents, or website designs, and SharedLM will create an Artifact that appears in a dedicated window alongside your conversation.
                       </p>
                     </div>
                     <label className="toggle-switch">
                       <input 
                         type="checkbox"
-                        checked={twoFactorEnabled}
-                        onChange={handleToggle2FA}
-                      />
-                      <span className="toggle-slider"></span>
-                    </label>
-                  </div>
-
-                  {show2FASetup && (
-                    <div className="twofa-setup-section">
-                      <h4 className="twofa-title">Setup Two-Factor Authentication</h4>
-                      
-                      <div className="twofa-step">
-                        <p className="twofa-instruction">
-                          1. Install an authenticator app (Google Authenticator, Authy, etc.)
-                        </p>
-                      </div>
-
-                      <div className="twofa-step">
-                        <p className="twofa-instruction">
-                          2. Scan this QR code or enter the secret key manually:
-                        </p>
-                        <div className="secret-key-container">
-                          <code className="secret-key">{secretKey}</code>
-                          <button 
-                            className="copy-secret-btn"
-                            onClick={handleCopySecret}
-                            title="Copy secret key"
-                          >
-                            <Copy size={14} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="twofa-step">
-                        <p className="twofa-instruction">
-                          3. Enter the 6-digit code from your authenticator app:
-                        </p>
-                        <input
-                          type="text"
-                          className="verification-input"
-                          placeholder="000000"
-                          maxLength="6"
-                          value={verificationCode}
-                          onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                        />
-                      </div>
-
-                      <div className="twofa-actions">
-                        <button 
-                          className="button-base button-secondary"
-                          onClick={() => {
-                            setShow2FASetup(false);
-                            setVerificationCode('');
-                          }}
-                        >
-                          CANCEL
-                        </button>
-                        <button 
-                          className="button-base button-primary"
-                          onClick={handleVerify2FA}
-                          disabled={verificationCode.length !== 6}
-                        >
-                          VERIFY & ENABLE
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="action-buttons">
-                    <button 
-                      className="button-base button-primary"
-                      onClick={handleUpdateDisplayName}
-                      disabled={tempDisplayName === displayName || !tempDisplayName.trim()}
-                    >
-                      SAVE CHANGES
-                    </button>
-                  </div>
-
-                  <div className="danger-zone">
-                    <h4 className="danger-title">DANGER ZONE</h4>
-                    <div className="action-buttons">
-                      <button 
-                        className="button-base button-danger" 
-                        onClick={handleLogout}
-                      >
-                        <LogOut size={14} style={{ marginRight: '8px' }} />
-                        LOGOUT
-                      </button>
-                      <button 
-                        className="button-base button-danger"
-                        onClick={handleDeleteAccount}
-                      >
-                        DELETE ACCOUNT
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'privacy' && (
-                <div className="settings-section">
-                  <h3 className="section-title">PRIVACY & SECURITY</h3>
-                  
-                  <div className="setting-item">
-                    <div className="setting-info">
-                      <label className="setting-label">Data Collection</label>
-                      <p className="setting-description">Allow anonymous usage statistics</p>
-                    </div>
-                    <label className="toggle-switch">
-                      <input 
-                        type="checkbox"
-                        checked={dataCollection}
-                        onChange={(e) => {
-                          setDataCollection(e.target.checked);
-                          notify.success(e.target.checked ? 'Data collection enabled' : 'Data collection disabled');
-                        }}
+                        checked={artifactsEnabled}
+                        onChange={(e) => setArtifactsEnabled(e.target.checked)}
                       />
                       <span className="toggle-slider"></span>
                     </label>
@@ -722,17 +710,16 @@ function SettingsPage() {
 
                   <div className="setting-item">
                     <div className="setting-info">
-                      <label className="setting-label">Share Chat History</label>
-                      <p className="setting-description">Allow SharedLM to use your chats for improvement</p>
+                      <label className="setting-label">Code execution and file creation</label>
+                        <p className="setting-description">
+                        SharedLM can execute code and create and edit docs, spreadsheets, presentations, PDFs, and data reports.
+                      </p>
                     </div>
                     <label className="toggle-switch">
                       <input 
                         type="checkbox"
-                        checked={shareChatHistory}
-                        onChange={(e) => {
-                          setShareChatHistory(e.target.checked);
-                          notify.success(e.target.checked ? 'Chat sharing enabled' : 'Chat sharing disabled');
-                        }}
+                        checked={codeExecutionEnabled}
+                        onChange={(e) => setCodeExecutionEnabled(e.target.checked)}
                       />
                       <span className="toggle-slider"></span>
                     </label>
@@ -740,41 +727,130 @@ function SettingsPage() {
 
                   <div className="setting-item no-divider">
                     <div className="setting-info">
-                      <label className="setting-label">Memory Storage</label>
-                      <p className="setting-description">Store conversation context across sessions</p>
+                      <label className="setting-label">Location metadata</label>
+                        <p className="setting-description">
+                        Allow SharedLM to use coarse location metadata (city/region) to improve product experiences. <button type="button" onClick={(e) => { e.preventDefault(); }} className="link-text" style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}>Learn more</button>.
+                      </p>
                     </div>
                     <label className="toggle-switch">
                       <input 
-                        type="checkbox" 
-                        checked={memoryStorage}
-                        onChange={(e) => {
-                          setMemoryStorage(e.target.checked);
-                          notify.success(e.target.checked ? 'Memory storage enabled' : 'Memory storage disabled');
-                        }}
+                        type="checkbox"
+                        checked={locationMetadataEnabled}
+                        onChange={(e) => setLocationMetadataEnabled(e.target.checked)}
                       />
                       <span className="toggle-slider"></span>
                     </label>
                   </div>
 
-                  <div className="action-buttons">
-                    <button 
-                      className="button-base button-secondary"
-                      onClick={handleExportData}
-                    >
-                      EXPORT DATA
-                    </button>
-                    <button 
-                      className="button-base button-danger"
-                      onClick={handleClearAllData}
-                    >
-                      CLEAR ALL DATA
-                    </button>
+                  <div className="settings-subsection">
+                    <h4 className="subsection-title">Memory</h4>
+                    
+                    <div className="setting-item">
+                      <div className="setting-info">
+                        <label className="setting-label">Search and reference chats</label>
+                        <p className="setting-description">
+                          Allow SharedLM to search for relevant details in past chats. <button type="button" onClick={(e) => { e.preventDefault(); }} className="link-text" style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}>Learn more</button>.
+                        </p>
+                      </div>
+                      <label className="toggle-switch">
+                        <input 
+                          type="checkbox"
+                          checked={searchReferenceChatsEnabled}
+                          onChange={(e) => setSearchReferenceChatsEnabled(e.target.checked)}
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                    </div>
+
+                    <div className="setting-item no-divider">
+                      <div className="setting-info">
+                        <label className="setting-label">Generate memory from chat history</label>
+                        <p className="setting-description">
+                          Allow SharedLM to remember relevant context from your chats. This setting controls memory for both chats and projects. <button type="button" onClick={(e) => { e.preventDefault(); }} className="link-text" style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}>Learn more</button>.
+                        </p>
+                      </div>
+                      <label className="toggle-switch">
+                        <input 
+                          type="checkbox"
+                          checked={generateMemoryFromHistoryEnabled}
+                          onChange={(e) => setGenerateMemoryFromHistoryEnabled(e.target.checked)}
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                    </div>
+
+                    <div className="memory-card">
+                      <div className="memory-text">{memoryText}</div>
+                      <div className="memory-info">
+                        <div className="memory-label">Memory from your chats</div>
+                        <div className="memory-updated">Updated {memoryUpdated} from your chats</div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               )}
 
-              {activeTab === 'integrations' && (
-                <div className="settings-section">
+              {activeTab === 'connectors' && (
+                <motion.div 
+                  className="settings-section"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <div className="connectors-section-header">
+                    <div>
+                      <h3 className="section-title">Connectors</h3>
+                      <p className="section-description">Allow SharedLM to reference other apps and services for more context.</p>
+                    </div>
+                    <button
+                      className="connectors-add-btn"
+                      onClick={() => setShowConnectorsModal(true)}
+                    >
+                      <Plus size={16} />
+                      Add connectors
+                    </button>
+                  </div>
+                  
+                  {loadingConnectors ? (
+                    <div className="connectors-loading">
+                      <p>Loading connectors...</p>
+                    </div>
+                  ) : userConnectors.length === 0 ? (
+                    <div className="connectors-empty">
+                      <p>No connectors added yet</p>
+                      <p className="connectors-empty-hint">Click "Add connectors" above to add connectors</p>
+                    </div>
+                  ) : (
+                    <div className="connectors-list">
+                      {userConnectors.map((connector) => (
+                        <div key={connector.id || connector.connector_id} className="connector-item">
+                          <div className="connector-item-info">
+                            <h4 className="connector-item-name">{connector.name || connector.connector_id}</h4>
+                            <p className="connector-item-description">
+                              {connector.description || `Connector: ${connector.connector_id}`}
+                            </p>
+                          </div>
+                          <button
+                            className="connector-remove-btn"
+                            onClick={() => handleRemoveConnector(connector.id || connector.connector_id)}
+                          >
+                            <Trash2 size={16} />
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {activeTab === 'api-keys' && (
+                <motion.div 
+                  className="settings-section"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
                   <h3 className="section-title">API INTEGRATIONS</h3>
                   
                   {loadingApiKeys ? (
@@ -969,6 +1045,79 @@ function SettingsPage() {
                         </div>
                       </div>
 
+                      {Object.keys(apiKeys)
+                        .filter(key => key.startsWith('custom_'))
+                        .map(customKey => {
+                          const customIntegration = customIntegrations.find(
+                            int => int.provider_id === customKey
+                          );
+                          
+                          if (!customIntegration) return null;
+
+                          return (
+                            <div key={customKey} className="api-key-section">
+                              <div className="api-key-header">
+                                <div className="api-key-info">
+                                  <label className="setting-label">{customIntegration.name} API Key</label>
+                                  <p className="setting-description">
+                                    {apiKeys[customKey].saved 
+                                      ? `Saved key: ${apiKeys[customKey].preview}`
+                                      : `Your ${customIntegration.name} API credentials`}
+                                  </p>
+                                </div>
+                                {apiKeys[customKey].saved && (
+                                  <span className="api-key-badge">SAVED</span>
+                                )}
+                              </div>
+                              
+                              {!apiKeys[customKey].saved && (
+                                <div className="api-key-input-group">
+                                  <input 
+                                    type={apiKeys[customKey].visible ? "text" : "password"}
+                                    value={apiKeys[customKey].value}
+                                    onChange={(e) => handleApiKeyChange(customKey, e.target.value)}
+                                    placeholder="Enter API key..."
+                                    className="setting-input api-key-input"
+                                  />
+                                  <button 
+                                    className="api-key-toggle-btn"
+                                    onClick={() => toggleApiKeyVisibility(customKey)}
+                                  >
+                                    {apiKeys[customKey].visible ? <EyeOff size={16} /> : <Eye size={16} />}
+                                  </button>
+                                </div>
+                              )}
+
+                              <div className="api-key-actions">
+                                {!apiKeys[customKey].saved ? (
+                                  <button 
+                                    className="button-base button-primary"
+                                    onClick={() => handleSaveApiKey(customKey)}
+                                    disabled={!apiKeys[customKey].value.trim()}
+                                  >
+                                    SAVE KEY
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button 
+                                      className="button-base button-secondary"
+                                      onClick={() => handleTestConnection(customKey)}
+                                    >
+                                      TEST
+                                    </button>
+                                    <button 
+                                      className="button-base button-danger"
+                                      onClick={() => handleRemoveApiKey(customKey)}
+                                    >
+                                      REMOVE
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+
                       <div className="api-hint-section">
                         <p className="api-hint">
                           <strong>Note:</strong> Your API keys are encrypted and stored securely in the database. They are never shared with third parties. Get your API keys from the respective provider dashboards.
@@ -976,13 +1125,22 @@ function SettingsPage() {
                       </div>
                     </>
                   )}
-                </div>
+                </motion.div>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
-    </div>
+
+      <ConnectorsModal
+        isOpen={showConnectorsModal}
+        onClose={() => setShowConnectorsModal(false)}
+        onConnectorAdded={(connector) => {
+          // Reload connectors when one is added
+          loadUserConnectors();
+        }}
+      />
+    </motion.div>
   );
 }
 

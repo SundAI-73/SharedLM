@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Send, Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, X, Plus, SlidersHorizontal, Clock, ArrowUp, Search, Globe, Settings } from 'lucide-react';
+import { motion } from 'motion/react';
+import DOMPurify from 'dompurify';
 import { useUser } from '../../contexts/UserContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
+import ConnectorsModal from '../../components/ConnectorsModal/ConnectorsModal';
 import apiService from '../../services/api/index';
+import { logEvent, EventType, LogLevel } from '../../utils/auditLogger';
 import logo from '../../assets/images/logo main.svg';
 import './styles/chat-base.css';
 import './styles/chat-header.css';
@@ -28,7 +32,12 @@ const formatMessage = (text) => {
     formatted = `<p>${formatted}</p>`;
   }
   
-  return formatted;
+  // Sanitize HTML to prevent XSS attacks
+  return DOMPurify.sanitize(formatted, {
+    ALLOWED_TAGS: ['p', 'strong', 'em', 'code', 'br'],
+    ALLOWED_ATTR: [],
+    KEEP_CONTENT: true
+  });
 };
 
 const generateChatTitle = (userMessage) => {
@@ -78,15 +87,7 @@ const Message = React.memo(({ msg }) => {
 
 Message.displayName = 'Message';
 
-// Model Providers
-const modelProviders = [
-  { value: 'mistral', label: 'MISTRAL AI' },
-  { value: 'openai', label: 'OPENAI' },
-  { value: 'anthropic', label: 'ANTHROPIC' }
-];
-
-// Model Variants for each provider
-const modelVariants = {
+const defaultModelVariants = {
   mistral: [
     { value: 'mistral-small-latest', label: 'SMALL' },
     { value: 'mistral-medium-latest', label: 'MEDIUM' },
@@ -112,6 +113,21 @@ const modelVariants = {
   ]
 };
 
+// Get time-based greeting
+const getTimeBasedGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Morning';
+  if (hour >= 12 && hour < 17) return 'Afternoon';
+  if (hour >= 17 && hour < 22) return 'Evening';
+  return 'Night';
+};
+
+// Get user's display name
+const getUserDisplayName = () => {
+  const name = localStorage.getItem('sharedlm_user_name') || localStorage.getItem('sharedlm_user_email')?.split('@')[0] || 'there';
+  return name.split(' ')[0]; // Get first name only
+};
+
 function ChatPage({ backendStatus }) {
   const { userId, currentModel, setCurrentModel } = useUser();
   const navigate = useNavigate();
@@ -127,35 +143,72 @@ function ChatPage({ backendStatus }) {
   const [selectedProject, setSelectedProject] = useState(null);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [attachedFiles, setAttachedFiles] = useState([]);
-  
-  // NEW: Model variant state
   const [selectedModelVariant, setSelectedModelVariant] = useState('mistral-small-latest');
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showHistoryMenu, setShowHistoryMenu] = useState(false);
+  const [showConnectorsModal, setShowConnectorsModal] = useState(false);
+  
+  const [modelProviders, setModelProviders] = useState([
+    { value: 'mistral', label: 'MISTRAL AI' },
+    { value: 'openai', label: 'OPENAI' },
+    { value: 'anthropic', label: 'ANTHROPIC' }
+  ]);
+  const [modelVariants, setModelVariants] = useState(defaultModelVariants);
   
   const messagesEndRef = useRef(null);
   const optionsRef = useRef(null);
   const titleInputRef = useRef(null);
   const initialMessageSent = useRef(false);
   const fileInputRef = useRef(null);
+  const settingsMenuRef = useRef(null);
+  const historyMenuRef = useRef(null);
 
-  // NEW: Update variant when provider changes
+  useEffect(() => {
+    const loadCustomIntegrations = async () => {
+      if (!userId) return;
+
+      try {
+        const integrations = await apiService.getCustomIntegrations(userId);
+
+        const customProviders = integrations.map(int => ({
+          value: int.provider_id,
+          label: int.name.toUpperCase(),
+          isCustom: true
+        }));
+
+        setModelProviders(prev => [
+          ...prev.filter(p => !p.isCustom),
+          ...customProviders
+        ]);
+
+        const customVariants = {};
+        integrations.forEach(int => {
+          customVariants[int.provider_id] = [];
+        });
+
+        setModelVariants(prev => ({
+          ...defaultModelVariants,
+          ...customVariants
+        }));
+
+      } catch (error) {
+        console.error('Failed to load custom integrations:', error);
+      }
+    };
+
+    loadCustomIntegrations();
+  }, [userId]);
+
   useEffect(() => {
     const variants = modelVariants[currentModel] || [];
     if (variants.length > 0 && !variants.find(v => v.value === selectedModelVariant)) {
       setSelectedModelVariant(variants[0].value);
+    } else if (variants.length === 0) {
+      setSelectedModelVariant('');
     }
-  }, [currentModel, selectedModelVariant]);
+  }, [currentModel, selectedModelVariant, modelVariants]);
 
-  // Load conversation from URL query parameter
-  useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const conversationId = urlParams.get('conversation');
-    
-    if (conversationId) {
-      loadConversation(conversationId);
-    }
-  }, [location.search]);
-
-  const loadConversation = async (conversationId) => {
+  const loadConversation = useCallback(async (conversationId) => {
     try {
       setLoading(true);
       
@@ -198,36 +251,16 @@ function ChatPage({ backendStatus }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
-  // Handle navigation state and clear when needed
   useEffect(() => {
-    const { projectId, projectName, initialMessage } = location.state || {};
     const urlParams = new URLSearchParams(location.search);
     const conversationId = urlParams.get('conversation');
     
-    if (projectId && projectName) {
-      setSelectedProject({ id: projectId, name: projectName });
+    if (conversationId) {
+      loadConversation(conversationId);
     }
-
-    if (initialMessage && initialMessage.trim() && !initialMessageSent.current) {
-      initialMessageSent.current = true;
-      setTimeout(() => {
-        handleSendWithMessage(initialMessage);
-      }, 200);
-      
-      window.history.replaceState({ projectId, projectName }, '');
-    }
-
-    if (!projectId && !projectName && !initialMessage && !conversationId) {
-      setMessages([]);
-      setChatTitle('');
-      setCurrentConversationId(null);
-      setSelectedProject(null);
-      setAttachedFiles([]);
-      initialMessageSent.current = false;
-    }
-  }, [location]);
+  }, [location.search, loadConversation]);
 
   useEffect(() => {
     if (!currentModel) setCurrentModel('mistral');
@@ -265,6 +298,12 @@ function ChatPage({ backendStatus }) {
       if (optionsRef.current && !optionsRef.current.contains(e.target)) {
         setShowOptions(false);
       }
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(e.target)) {
+        setShowSettingsMenu(false);
+      }
+      if (historyMenuRef.current && !historyMenuRef.current.contains(e.target)) {
+        setShowHistoryMenu(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -285,8 +324,38 @@ function ChatPage({ backendStatus }) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Validate file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
       alert('File size must be less than 10MB');
+      return;
+    }
+
+    // Validate file type - check extension and MIME type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'image/png',
+      'image/jpeg',
+      'image/jpg',
+      'text/csv',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.png', '.jpg', '.jpeg', '.csv', '.xlsx'];
+    const fileName = file.name.toLowerCase();
+    const fileExtension = fileName.substring(fileName.lastIndexOf('.'));
+
+    if (!allowedExtensions.includes(fileExtension) || !allowedTypes.includes(file.type)) {
+      // Log invalid file upload attempt
+      logEvent(EventType.INVALID_INPUT, LogLevel.WARNING, 'Invalid file type upload attempt', {
+        fileName: file.name,
+        fileType: file.type,
+        fileExtension
+      });
+      
+      alert('Invalid file type. Please upload PDF, DOC, DOCX, TXT, PNG, JPG, CSV, or XLSX files only.');
       return;
     }
 
@@ -308,11 +377,29 @@ function ChatPage({ backendStatus }) {
       const result = await apiService.uploadFile(file, userId, convId);
       
       if (result.success) {
+        // Log successful file upload
+        logEvent(EventType.FILE_UPLOAD, LogLevel.INFO, 'File uploaded successfully', {
+          userId,
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          conversationId: convId
+        });
+        
         setAttachedFiles(prev => [...prev, result.file]);
       }
     } catch (error) {
-      console.error('File upload failed:', error);
-      alert('Failed to upload file. Please try again.');
+      // Log file upload error
+      logEvent(EventType.FILE_UPLOAD, LogLevel.ERROR, 'File upload failed', {
+        userId,
+        fileName: file.name,
+        error: error.message
+      });
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('File upload failed:', error);
+      }
+      alert(error.message.includes('Rate limit') ? error.message : 'Failed to upload file. Please try again.');
     } finally {
       setLoading(false);
       if (fileInputRef.current) {
@@ -328,9 +415,22 @@ function ChatPage({ backendStatus }) {
   const handleSendWithMessage = useCallback(async (messageText) => {
     if (!messageText.trim()) return;
 
+    // Sanitize user input before sending
+    const sanitizedMessage = messageText.trim();
+    
+    // Check for potential XSS in user input
+    const xssPatterns = [/<script[^>]*>/i, /javascript:/i, /onerror=/i, /onload=/i];
+    if (xssPatterns.some(pattern => pattern.test(sanitizedMessage))) {
+      logEvent(EventType.XSS_ATTEMPT, LogLevel.SECURITY, 'Potential XSS attempt in chat message', {
+        userId,
+        messagePreview: sanitizedMessage.substring(0, 50)
+      });
+      // Still allow the message but it will be sanitized on display
+    }
+
     const userMessage = {
       role: 'user',
-      content: messageText,
+      content: sanitizedMessage,
       timestamp: new Date().toISOString()
     };
 
@@ -340,7 +440,6 @@ function ChatPage({ backendStatus }) {
     try {
       const modelToUse = currentModel || 'mistral';
       
-      // UPDATED: Pass selectedModelVariant to API
       const response = await apiService.sendMessage(
         userId, 
         messageText, 
@@ -366,10 +465,26 @@ function ChatPage({ backendStatus }) {
         setAttachedFiles([]);
       }
     } catch (error) {
-      console.error('Chat error:', error);
+      // Log chat error
+      logEvent(EventType.ERROR, LogLevel.ERROR, 'Chat message error', {
+        userId,
+        error: error.message,
+        model: selectedModelVariant
+      });
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Chat error:', error);
+      }
+      
+      const errorMessage = error.message.includes('Rate limit') 
+        ? error.message 
+        : error.message.includes('Session expired')
+        ? 'Your session has expired. Please refresh the page.'
+        : 'Connection issue. Please check settings or try again.';
+        
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Connection issue. Please check settings or try again.',
+        content: errorMessage,
         model: 'mistral',
         timestamp: new Date().toISOString()
       }]);
@@ -377,6 +492,34 @@ function ChatPage({ backendStatus }) {
       setLoading(false);
     }
   }, [currentModel, selectedModelVariant, userId, currentConversationId, selectedProject]);
+
+  useEffect(() => {
+    const { projectId, projectName, initialMessage } = location.state || {};
+    const urlParams = new URLSearchParams(location.search);
+    const conversationId = urlParams.get('conversation');
+    
+    if (projectId && projectName) {
+      setSelectedProject({ id: projectId, name: projectName });
+    }
+
+    if (initialMessage && initialMessage.trim() && !initialMessageSent.current) {
+      initialMessageSent.current = true;
+      setTimeout(() => {
+        handleSendWithMessage(initialMessage);
+      }, 200);
+      
+      window.history.replaceState({ projectId, projectName }, '');
+    }
+
+    if (!projectId && !projectName && !initialMessage && !conversationId) {
+      setMessages([]);
+      setChatTitle('');
+      setCurrentConversationId(null);
+      setSelectedProject(null);
+      setAttachedFiles([]);
+      initialMessageSent.current = false;
+    }
+  }, [location, handleSendWithMessage]);
 
   const handleSend = useCallback(() => {
     handleSendWithMessage(input);
@@ -493,61 +636,55 @@ function ChatPage({ backendStatus }) {
             </div>
 
             <img src={logo} alt="SharedLM" className="chat-top-bar-logo" />
-
-            {/* UPDATED: Two Dropdowns */}
-            <div className="chat-right-section">
-              <CustomDropdown
-                value={currentModel}
-                onChange={setCurrentModel}
-                options={modelProviders.filter(opt =>
-                  availableModels.includes(opt.value) || opt.value === 'mistral'
-                )}
-                className="chat-model-dropdown-custom"
-              />
-              
-              <CustomDropdown
-                value={selectedModelVariant}
-                onChange={setSelectedModelVariant}
-                options={modelVariants[currentModel] || []}
-                className="chat-model-dropdown-custom"
-              />
-            </div>
           </div>
-        ) : (
-          <div className="chat-top-bar">
-            {/* UPDATED: Two Dropdowns for empty state */}
-            <div className="chat-right-section">
-              <CustomDropdown
-                value={currentModel}
-                onChange={setCurrentModel}
-                options={modelProviders.filter(opt =>
-                  availableModels.includes(opt.value) || opt.value === 'mistral'
-                )}
-                className="chat-model-dropdown-custom"
-              />
-              
-              <CustomDropdown
-                value={selectedModelVariant}
-                onChange={setSelectedModelVariant}
-                options={modelVariants[currentModel] || []}
-                className="chat-model-dropdown-custom"
-              />
-            </div>
-          </div>
-        )}
+        ) : null}
 
         <div className={`chat-messages-wrapper ${messages.length === 0 ? 'full-height' : ''}`}>
           {messages.length === 0 ? (
-            <div className="chat-empty-state">
-              <div className="empty-state-logo-container">
-                <img src={logo} alt="SharedLM Logo" className="empty-state-logo" />
-              </div>
-              <h2 className="empty-state-title">START A CONVERSATION</h2>
-              {selectedProject && (
-                <p className="empty-state-project">in {selectedProject.name}</p>
-              )}
-              <p className="empty-state-text">Type your message below to begin</p>
-            </div>
+            <motion.div 
+              className="chat-empty-state"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            >
+              <motion.div 
+                className="welcome-message"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <motion.div 
+                  className="welcome-logo-container"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 0.95, scale: 1 }}
+                  transition={{ 
+                    duration: 0.8, 
+                    ease: "easeOut",
+                    delay: 0.3
+                  }}
+                >
+                  <img src={logo} alt="SharedLM Logo" className="welcome-logo" />
+                </motion.div>
+                <motion.h2 
+                  className="welcome-greeting"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 }}
+                >
+                  {getTimeBasedGreeting()}, {getUserDisplayName()}
+                </motion.h2>
+                {selectedProject && (
+                  <motion.p 
+                    className="welcome-project"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.5 }}
+                  >
+                    in {selectedProject.name}
+                  </motion.p>
+                )}
+              </motion.div>
+            </motion.div>
           ) : (
             <div className="chat-messages-list">
               {messages.map((msg, idx) => (
@@ -573,36 +710,14 @@ function ChatPage({ backendStatus }) {
 
         <div className="chat-input-wrapper">
           {attachedFiles.length > 0 && (
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              padding: '8px 16px',
-              flexWrap: 'wrap'
-            }}>
+            <div className="attached-files-container">
               {attachedFiles.map((file, idx) => (
-                <div key={idx} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: '#1F1F1F',
-                  border: '1px solid #2A2A2A',
-                  borderRadius: '8px',
-                  padding: '6px 10px',
-                  fontSize: '0.75rem',
-                  color: '#888888'
-                }}>
+                <div key={idx} className="attached-file-item">
                   <Paperclip size={12} />
                   <span>{file.filename}</span>
                   <button
                     onClick={() => handleRemoveFile(file.filename)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#666666',
-                      cursor: 'pointer',
-                      padding: '2px',
-                      display: 'flex'
-                    }}
+                    className="remove-file-btn"
                   >
                     <X size={14} />
                   </button>
@@ -611,45 +726,173 @@ function ChatPage({ backendStatus }) {
             </div>
           )}
 
-          <div className="chat-input-container">
-            <button 
-              className="chat-attach-btn"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading}
-            >
-              <Paperclip size={18} />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              onChange={handleFileSelect}
-              style={{ display: 'none' }}
-              accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.csv,.xlsx"
-            />
+          {/* Controls Row - Above Input */}
+          <div className="chat-input-controls">
+            <div className="chat-controls-left">
+              <motion.button 
+                className="chat-control-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Attach file"
+              >
+                <Plus size={18} />
+              </motion.button>
+              
+              <motion.button 
+                className="chat-control-btn"
+                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Settings"
+              >
+                <SlidersHorizontal size={18} />
+              </motion.button>
+              
+              <motion.button 
+                className="chat-control-btn"
+                onClick={() => {
+                  setShowHistoryMenu(!showHistoryMenu);
+                  navigate('/history');
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="History"
+              >
+                <Clock size={18} />
+              </motion.button>
+            </div>
 
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !loading) handleSend();
-              }}
-              placeholder="Type your message here..."
-              className="chat-input-field"
-              disabled={loading}
-              autoFocus
-            />
-
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-              className={`chat-send-btn ${input.trim() ? 'active' : ''}`}
-            >
-              <Send size={20} />
-            </button>
+            {/* Right Side - Model Dropdowns */}
+            <div className="chat-controls-right">
+              <CustomDropdown
+                value={currentModel}
+                onChange={setCurrentModel}
+                options={modelProviders.filter(opt =>
+                  availableModels.includes(opt.value) || opt.value === 'mistral' || opt.isCustom
+                )}
+                className="chat-model-dropdown-inline"
+              />
+              
+              {modelVariants[currentModel]?.length > 0 && (
+                <CustomDropdown
+                  value={selectedModelVariant}
+                  onChange={setSelectedModelVariant}
+                  options={modelVariants[currentModel]}
+                  className="chat-model-dropdown-inline"
+                />
+              )}
+            </div>
           </div>
+
+          {/* Main Input Field with Send Button Inside */}
+          <div className="chat-input-main">
+            <div className="chat-input-container-main">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !loading && input.trim()) handleSend();
+                }}
+                placeholder="How can I help you today?"
+                className="chat-input-field-main"
+                disabled={loading}
+                autoFocus
+              />
+              <motion.button
+                onClick={handleSend}
+                disabled={!input.trim() || loading}
+                className={`chat-send-btn-inside ${input.trim() ? 'active' : ''}`}
+                whileHover={input.trim() ? { scale: 1.05 } : {}}
+                whileTap={input.trim() ? { scale: 0.95 } : {}}
+              >
+                <ArrowUp size={18} />
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Hidden File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
+            accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.csv,.xlsx"
+          />
+
+          {/* Settings Menu */}
+          {showSettingsMenu && (
+            <div className="chat-settings-menu" ref={settingsMenuRef}>
+              <div className="settings-menu-item">
+                <div className="settings-menu-item-left">
+                  <Clock size={16} className="settings-menu-icon" />
+                  <span>Extended thinking</span>
+                </div>
+                <label className="toggle-switch-small">
+                  <input type="checkbox" defaultChecked />
+                  <span className="toggle-slider-small"></span>
+                </label>
+              </div>
+              <div className="settings-menu-item">
+                <div className="settings-menu-item-left">
+                  <Search size={16} className="settings-menu-icon" />
+                  <span>Research</span>
+                </div>
+                <label className="toggle-switch-small">
+                  <input type="checkbox" defaultChecked />
+                  <span className="toggle-slider-small"></span>
+                </label>
+              </div>
+              <div className="settings-menu-item">
+                <div className="settings-menu-item-left">
+                  <Globe size={16} className="settings-menu-icon" />
+                  <span>Web search</span>
+                </div>
+                <label className="toggle-switch-small">
+                  <input type="checkbox" defaultChecked />
+                  <span className="toggle-slider-small"></span>
+                </label>
+              </div>
+              <div className="settings-menu-divider"></div>
+              <div 
+                className="settings-menu-item settings-menu-action"
+                onClick={() => {
+                  setShowSettingsMenu(false);
+                  setShowConnectorsModal(true);
+                }}
+              >
+                <div className="settings-menu-item-left">
+                  <Plus size={16} className="settings-menu-icon" />
+                  <span>Add connectors</span>
+                </div>
+              </div>
+              <div 
+                className="settings-menu-item settings-menu-action"
+                onClick={() => {
+                  setShowSettingsMenu(false);
+                  navigate('/settings?tab=connectors');
+                }}
+              >
+                <div className="settings-menu-item-left">
+                  <Settings size={16} className="settings-menu-icon" />
+                  <span>Manage connectors</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      <ConnectorsModal
+        isOpen={showConnectorsModal}
+        onClose={() => setShowConnectorsModal(false)}
+        onConnectorAdded={(connector) => {
+          // Reload custom integrations if needed
+          console.log('Connector added:', connector);
+        }}
+      />
     </div>
   );
 }

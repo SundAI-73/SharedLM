@@ -27,7 +27,7 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
                 db,
                 user_id=request.user_id,
                 model_used=request.model_choice,
-                project_id=request.project_id  # FIXED: Pass project_id
+                project_id=request.project_id  
             )
         
         # 2. Save user message to database
@@ -115,8 +115,6 @@ async def upload_file(
         
         logger.info(f"File uploaded: {file.filename} -> {unique_filename}")
         
-        # TODO: Store file metadata in database if needed
-        # TODO: Extract text from file for context (PDFs, docs, etc.)
         
         return {
             "success": True,

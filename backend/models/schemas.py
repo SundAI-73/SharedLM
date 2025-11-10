@@ -1,9 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional, Literal
 
-# ============================================
 # CHAT SCHEMAS
-# ============================================
 
 class ChatRequest(BaseModel):
     user_id: str
@@ -11,17 +9,15 @@ class ChatRequest(BaseModel):
     model_provider: Literal["openai", "anthropic", "mistral"]
     model_choice: str
     session_id: Optional[str] = None
-    project_id: Optional[int] = None  # FIXED: Added project_id
+    project_id: Optional[int] = None  
 
 class ChatResponse(BaseModel):
     reply: str
     used_model: str
     memories: List[str]
-    conversation_id: Optional[int] = None  # FIXED: Return conversation_id
+    conversation_id: Optional[int] = None  
 
-# ============================================
 # HEALTH & INFO SCHEMAS
-# ============================================
 
 class HealthResponse(BaseModel):
     status: str
@@ -29,9 +25,7 @@ class HealthResponse(BaseModel):
 class ModelsResponse(BaseModel):
     available_models: List[str]
 
-# ============================================
 # MEMORY SCHEMAS
-# ============================================
 
 class MemorySearchRequest(BaseModel):
     user_id: str
@@ -42,9 +36,7 @@ class MemorySearchResponse(BaseModel):
     memories: List[str]
     count: int
 
-# ============================================
 # USER/AUTH SCHEMAS
-# ============================================
 
 class UserCreate(BaseModel):
     email: str
@@ -61,9 +53,7 @@ class UserResponse(BaseModel):
     display_name: str
     created_at: str
 
-# ============================================
 # PROJECT SCHEMAS
-# ============================================
 
 class ProjectCreate(BaseModel):
     name: str
@@ -81,9 +71,7 @@ class ProjectResponse(BaseModel):
     created_at: str
     updated_at: str
 
-# ============================================
 # CONVERSATION SCHEMAS
-# ============================================
 
 class ConversationResponse(BaseModel):
     id: int
@@ -99,9 +87,7 @@ class ConversationUpdate(BaseModel):
     project_id: Optional[int] = None
     is_starred: Optional[bool] = None
 
-# ============================================
 # MESSAGE SCHEMAS
-# ============================================
 
 class MessageResponse(BaseModel):
     id: int
@@ -110,17 +96,13 @@ class MessageResponse(BaseModel):
     model: Optional[str]
     created_at: str
 
-# ============================================
 # FILE UPLOAD SCHEMAS
-# ============================================
 
 class FileUploadResponse(BaseModel):
     success: bool
     file: dict
 
-# ============================================
 # API KEY SCHEMAS
-# ============================================
 
 class APIKeyCreate(BaseModel):
     provider: str

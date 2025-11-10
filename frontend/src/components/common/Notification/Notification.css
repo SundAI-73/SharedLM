@@ -24,17 +24,6 @@
   gap: 12px;
 }
 
-.notification.success {
-  border-left: 3px solid #00ff88;
-}
-
-.notification.error {
-  border-left: 3px solid #ff3b30;
-}
-
-.notification.info {
-  border-left: 3px solid #007aff;
-}
 
 .notification-content {
   flex: 1;
@@ -62,22 +51,22 @@
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateX(100px);
+    transform: translateY(-20px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
   }
 }
 
 @keyframes slideOut {
   from {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
   }
   to {
     opacity: 0;
-    transform: translateX(100px);
+    transform: translateY(-20px);
   }
 }
 

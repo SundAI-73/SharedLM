@@ -11,6 +11,8 @@
   padding: 20px;
   gap: 16px;
   transition: transform 0.3s ease, width 0.3s ease;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .nothing-sidebar.collapsed {
@@ -452,13 +454,8 @@
   display: none;
 }
 
-.nothing-main {
-  margin-left: 280px;
-  transition: margin-left 0.3s ease;
-  background: transparent;
-  min-height: 100vh;
-}
-
+/* .nothing-main styles are defined in reset.css */
+/* This rule is kept for sidebar-specific collapsed state */
 .nothing-sidebar.collapsed ~ .nothing-main {
   margin-left: 76px;
 }

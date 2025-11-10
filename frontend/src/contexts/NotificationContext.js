@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { AnimatePresence } from 'motion/react';
 import Notification from '../components/common/Notification/Notification';
 import ConfirmModal from '../components/common/ConfirmModal/ConfirmModal';
 
@@ -16,6 +17,10 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
+  const removeNotification = useCallback((id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
   const addNotification = useCallback((message, type = 'info', duration = 3000) => {
     const id = Date.now();
     setNotifications(prev => [...prev, { id, message, type }]);
@@ -23,11 +28,7 @@ export const NotificationProvider = ({ children }) => {
     setTimeout(() => {
       removeNotification(id);
     }, duration);
-  }, []);
-
-  const removeNotification = useCallback((id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
+  }, [removeNotification]);
 
   const showConfirm = useCallback((options) => {
     return new Promise((resolve) => {
@@ -61,14 +62,16 @@ export const NotificationProvider = ({ children }) => {
     <NotificationContext.Provider value={notify}>
       {children}
       <div className="notification-container">
-        {notifications.map(notification => (
-          <Notification
-            key={notification.id}
-            message={notification.message}
-            type={notification.type}
-            onClose={() => removeNotification(notification.id)}
-          />
-        ))}
+        <AnimatePresence>
+          {notifications.map(notification => (
+            <Notification
+              key={notification.id}
+              message={notification.message}
+              type={notification.type}
+              onClose={() => removeNotification(notification.id)}
+            />
+          ))}
+        </AnimatePresence>
       </div>
       <ConfirmModal {...confirmModal} />
     </NotificationContext.Provider>
