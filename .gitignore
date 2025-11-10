@@ -16,30 +16,30 @@
 *$py.class
 *.so
 .Python
-backend/.pytest_cache/
-backend/venv/
-backend/env/
+apps/server/.pytest_cache/
+apps/server/venv/
+apps/server/env/
 *.egg-info/
 dist/
 build/
 
 # Node
-frontend/node_modules/
-frontend/build/
-frontend/.pnp
-frontend/.pnp.js
+apps/web/node_modules/
+apps/web/build/
+apps/web/.pnp
+apps/web/.pnp.js
 
 # Electron Desktop Build
-frontend/dist/
-frontend/dist-electron/
-frontend/out/
-frontend/*.exe
-frontend/*.dmg
-frontend/*.AppImage
-frontend/*.deb
-frontend/*.rpm
-frontend/*.snap
-frontend/.cache
+apps/web/dist/
+apps/web/dist-electron/
+apps/web/out/
+apps/web/*.exe
+apps/web/*.dmg
+apps/web/*.AppImage
+apps/web/*.deb
+apps/web/*.rpm
+apps/web/*.snap
+apps/web/.cache
 
 # IDE
 .vscode/
@@ -60,6 +60,7 @@ yarn-error.log*
 # Testing
 /coverage
 .pytest_cache/
-backend/sharedlm.db-shm
-backend/sharedlm.db
-backend/sharedlm.db-wal
+apps/server/sharedlm.db-shm
+apps/server/sharedlm.db
+apps/server/sharedlm.db-wal
+apps/desktop/
