@@ -3,7 +3,7 @@
  * Handles authentication state and token management
  */
 
-import { isSessionValid, createSession, clearSession, extendSession } from './sessionManager';
+import { isSessionValid, createSession, clearSession } from './sessionManager';
 
 /**
  * Check if user is authenticated

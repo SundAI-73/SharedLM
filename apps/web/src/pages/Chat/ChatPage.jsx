@@ -631,15 +631,11 @@ function ChatPage({ backendStatus }) {
       }
       
       // Format error message for display
-      if (errorMessage.includes('Rate limit')) {
-        errorMessage = errorMessage;
-      } else if (errorMessage.includes('Session expired')) {
+      if (errorMessage.includes('Session expired')) {
         errorMessage = 'Your session has expired. Please refresh the page.';
-      } else if (errorMessage.includes('API key')) {
-        // Keep the full API key error message
-        errorMessage = errorMessage;
-      } else {
+      } else if (!errorMessage.includes('Rate limit') && !errorMessage.includes('API key')) {
         // For other errors, show generic message but preserve model info in errorModel
+        // Rate limit and API key errors are kept as-is
         errorMessage = 'Connection issue. Please check settings or try again.';
       }
         
@@ -658,7 +654,7 @@ function ChatPage({ backendStatus }) {
       // Check if model changed during loading - if so, handle it now
       // This is handled by the useEffect that watches currentModel and loading state
     }
-  }, [currentModel, selectedModelVariant, userId, currentConversationId, selectedProject, modelVariants, modelProviders]);
+  }, [currentModel, selectedModelVariant, userId, currentConversationId, selectedProject, modelVariants, modelProviders, navigate]);
 
   useEffect(() => {
     const { projectId, projectName, initialMessage, newChat } = location.state || {};
@@ -745,7 +741,7 @@ function ChatPage({ backendStatus }) {
       setAttachedFiles([]);
       initialMessageSent.current = false;
     }
-  }, [location.pathname, location.search, location.state, handleSendWithMessage, currentConversationId, messages.length]);
+  }, [location.pathname, location.search, location.state, handleSendWithMessage, currentConversationId, messages.length, navigate]);
 
   const handleSend = useCallback(() => {
     handleSendWithMessage(input);
