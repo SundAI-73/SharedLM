@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, X } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -78,15 +78,7 @@ const Message = React.memo(({ msg }) => {
 
 Message.displayName = 'Message';
 
-// Model Providers
-const modelProviders = [
-  { value: 'mistral', label: 'MISTRAL AI' },
-  { value: 'openai', label: 'OPENAI' },
-  { value: 'anthropic', label: 'ANTHROPIC' }
-];
-
-// Model Variants for each provider
-const modelVariants = {
+const defaultModelVariants = {
   mistral: [
     { value: 'mistral-small-latest', label: 'SMALL' },
     { value: 'mistral-medium-latest', label: 'MEDIUM' },
@@ -127,9 +119,14 @@ function ChatPage({ backendStatus }) {
   const [selectedProject, setSelectedProject] = useState(null);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [attachedFiles, setAttachedFiles] = useState([]);
-  
-  // NEW: Model variant state
   const [selectedModelVariant, setSelectedModelVariant] = useState('mistral-small-latest');
+  
+  const [modelProviders, setModelProviders] = useState([
+    { value: 'mistral', label: 'MISTRAL AI' },
+    { value: 'openai', label: 'OPENAI' },
+    { value: 'anthropic', label: 'ANTHROPIC' }
+  ]);
+  const [modelVariants, setModelVariants] = useState(defaultModelVariants);
   
   const messagesEndRef = useRef(null);
   const optionsRef = useRef(null);
@@ -137,15 +134,51 @@ function ChatPage({ backendStatus }) {
   const initialMessageSent = useRef(false);
   const fileInputRef = useRef(null);
 
-  // NEW: Update variant when provider changes
+  useEffect(() => {
+    const loadCustomIntegrations = async () => {
+      if (!userId) return;
+
+      try {
+        const integrations = await apiService.getCustomIntegrations(userId);
+
+        const customProviders = integrations.map(int => ({
+          value: int.provider_id,
+          label: int.name.toUpperCase(),
+          isCustom: true
+        }));
+
+        setModelProviders(prev => [
+          ...prev.filter(p => !p.isCustom),
+          ...customProviders
+        ]);
+
+        const customVariants = {};
+        integrations.forEach(int => {
+          customVariants[int.provider_id] = [];
+        });
+
+        setModelVariants(prev => ({
+          ...defaultModelVariants,
+          ...customVariants
+        }));
+
+      } catch (error) {
+        console.error('Failed to load custom integrations:', error);
+      }
+    };
+
+    loadCustomIntegrations();
+  }, [userId]);
+
   useEffect(() => {
     const variants = modelVariants[currentModel] || [];
     if (variants.length > 0 && !variants.find(v => v.value === selectedModelVariant)) {
       setSelectedModelVariant(variants[0].value);
+    } else if (variants.length === 0) {
+      setSelectedModelVariant('');
     }
-  }, [currentModel, selectedModelVariant]);
+  }, [currentModel, selectedModelVariant, modelVariants]);
 
-  // Load conversation from URL query parameter
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const conversationId = urlParams.get('conversation');
@@ -200,7 +233,6 @@ function ChatPage({ backendStatus }) {
     }
   };
 
-  // Handle navigation state and clear when needed
   useEffect(() => {
     const { projectId, projectName, initialMessage } = location.state || {};
     const urlParams = new URLSearchParams(location.search);
@@ -340,7 +372,6 @@ function ChatPage({ backendStatus }) {
     try {
       const modelToUse = currentModel || 'mistral';
       
-      // UPDATED: Pass selectedModelVariant to API
       const response = await apiService.sendMessage(
         userId, 
         messageText, 
@@ -494,44 +525,46 @@ function ChatPage({ backendStatus }) {
 
             <img src={logo} alt="SharedLM" className="chat-top-bar-logo" />
 
-            {/* UPDATED: Two Dropdowns */}
             <div className="chat-right-section">
               <CustomDropdown
                 value={currentModel}
                 onChange={setCurrentModel}
                 options={modelProviders.filter(opt =>
-                  availableModels.includes(opt.value) || opt.value === 'mistral'
+                  availableModels.includes(opt.value) || opt.value === 'mistral' || opt.isCustom
                 )}
                 className="chat-model-dropdown-custom"
               />
               
-              <CustomDropdown
-                value={selectedModelVariant}
-                onChange={setSelectedModelVariant}
-                options={modelVariants[currentModel] || []}
-                className="chat-model-dropdown-custom"
-              />
+              {modelVariants[currentModel]?.length > 0 && (
+                <CustomDropdown
+                  value={selectedModelVariant}
+                  onChange={setSelectedModelVariant}
+                  options={modelVariants[currentModel]}
+                  className="chat-model-dropdown-custom"
+                />
+              )}
             </div>
           </div>
         ) : (
           <div className="chat-top-bar">
-            {/* UPDATED: Two Dropdowns for empty state */}
             <div className="chat-right-section">
               <CustomDropdown
                 value={currentModel}
                 onChange={setCurrentModel}
                 options={modelProviders.filter(opt =>
-                  availableModels.includes(opt.value) || opt.value === 'mistral'
+                  availableModels.includes(opt.value) || opt.value === 'mistral' || opt.isCustom
                 )}
                 className="chat-model-dropdown-custom"
               />
               
-              <CustomDropdown
-                value={selectedModelVariant}
-                onChange={setSelectedModelVariant}
-                options={modelVariants[currentModel] || []}
-                className="chat-model-dropdown-custom"
-              />
+              {modelVariants[currentModel]?.length > 0 && (
+                <CustomDropdown
+                  value={selectedModelVariant}
+                  onChange={setSelectedModelVariant}
+                  options={modelVariants[currentModel]}
+                  className="chat-model-dropdown-custom"
+                />
+              )}
             </div>
           </div>
         )}

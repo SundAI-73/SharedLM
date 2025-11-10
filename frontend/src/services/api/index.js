@@ -1,9 +1,6 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 class APIService {
-  // ============================================
-  // AUTHENTICATION
-  // ============================================
   
   async signup(email, password, displayName) {
     try {
@@ -73,10 +70,6 @@ class APIService {
     }
   }
 
-  // ============================================
-  // HEALTH & MODELS
-  // ============================================
-  
   async checkHealth() {
     try {
       const response = await fetch(`${API_BASE_URL}/health`);
@@ -99,10 +92,6 @@ class APIService {
     }
   }
 
-  // ============================================
-  // CHAT
-  // ============================================
-  
   async sendMessage(userId, message, modelChoice, sessionId = null, projectId = null, specificModel = null) {
     try {
       const modelProvider = modelChoice === 'openai' ? 'openai' : 
@@ -135,10 +124,6 @@ class APIService {
     }
   }
 
-  // ============================================
-  // FILE UPLOAD
-  // ============================================
-  
   async uploadFile(file, userId, conversationId = null) {
     try {
       const formData = new FormData();
@@ -179,10 +164,6 @@ class APIService {
     }
   }
 
-  // ============================================
-  // PROJECTS
-  // ============================================
-  
   async getProjects(userId) {
     try {
       const response = await fetch(`${API_BASE_URL}/projects/${userId}`);
@@ -272,10 +253,6 @@ class APIService {
     }
   }
 
-  // ============================================
-  // CONVERSATIONS
-  // ============================================
-  
   async getConversations(userId) {
     try {
       const response = await fetch(`${API_BASE_URL}/conversations/${userId}`);
@@ -363,10 +340,6 @@ class APIService {
     }
   }
 
-  // ============================================
-  // API KEYS MANAGEMENT
-  // ============================================
-
   async getApiKeys(userId) {
     try {
       const response = await fetch(`${API_BASE_URL}/api-keys/${userId}`);
@@ -450,10 +423,51 @@ class APIService {
     }
   }
 
-  // ============================================
-  // MEMORY (Mem0)
-  // ============================================
-  
+  async getCustomIntegrations(userId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/custom-integrations/${userId}`);
+      if (!response.ok) throw new Error('Failed to fetch custom integrations');
+      return await response.json();
+    } catch (error) {
+      console.error('Get custom integrations failed:', error);
+      return [];
+    }
+  }
+
+  async createCustomIntegration(userId, integrationData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/custom-integrations/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(integrationData)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to create custom integration');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Create custom integration failed:', error);
+      throw error;
+    }
+  }
+
+  async deleteCustomIntegration(integrationId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/custom-integrations/${integrationId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) throw new Error('Failed to delete custom integration');
+      return await response.json();
+    } catch (error) {
+      console.error('Delete custom integration failed:', error);
+      throw error;
+    }
+  }
+
   async searchMemories(userId, query, limit = 5) {
     try {
       const response = await fetch(`${API_BASE_URL}/memory/search`, {

@@ -8,6 +8,7 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
+  position: relative;
 }
 
 .integration-card:disabled {
@@ -38,11 +39,36 @@
   justify-content: center;
   position: relative;
   border: 1px solid #252525;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  padding: 4px;
 }
 
 .integration-card:hover .integration-icon-placeholder {
   background: #252525;
   border-color: #2A2A2A;
+}
+
+.integration-card.connected .integration-icon-placeholder {
+  background: rgba(185, 69, 57, 0.1);
+  border-color: rgba(185, 69, 57, 0.3);
+}
+
+.integration-icon-placeholder svg {
+  width: 28px;
+  height: 28px;
+}
+
+.integration-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.integration-card:hover .integration-logo {
+  transform: scale(1.05);
 }
 
 .integration-text {
@@ -99,6 +125,28 @@
   font-weight: 500;
 }
 
+.connected-indicator {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  background: #B94539;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
+}
+
 .custom-section {
   text-align: center;
   margin-top: 45px;
@@ -117,29 +165,159 @@
   font-weight: 300;
 }
 
+.custom-integrations-grid {
+  margin-bottom: 25px;
+}
+
+.custom-integration-item {
+  position: relative;
+}
+
+.custom-integration-delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  border-radius: 6px;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.custom-integration-delete:hover {
+  background: rgba(255, 59, 48, 0.2);
+  border-color: rgba(255, 59, 48, 0.5);
+}
+
+.custom-integration-delete svg {
+  color: #ff3b30;
+  width: 16px;
+  height: 16px;
+}
+
 .custom-integration-btn {
   position: relative;
   width: auto;
   max-width: 100%;
 }
 
-.custom-integration-btn.coming-soon {
-  opacity: 0.5;
-  cursor: not-allowed;
+.form-hint {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #666666;
+  margin-top: 5px;
+  letter-spacing: 0.5px;
 }
 
-.custom-integration-btn .coming-soon-badge {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background: #B94539;
-  color: #ffffff;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 0.6rem;
-  letter-spacing: 0.8px;
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+  padding: 20px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: #141414;
+  border: 1px solid #2A2A2A;
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 500px;
+  width: 100%;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-title {
+  font-family: 'Courier New', monospace;
+  font-size: 1.5rem;
+  color: #FFFFFF;
+  letter-spacing: 3px;
   text-transform: uppercase;
-  font-weight: 500;
+  margin: 0 0 30px 0;
+  text-align: center;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-label {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: #888888;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.form-input {
+  background: #1F1F1F;
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+  padding: 15px 20px;
+  color: #FFFFFF;
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: #2A2A2A;
+}
+
+.form-input::placeholder {
+  color: #555555;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.modal-actions button {
+  flex: 1;
 }
 
 @media (max-width: 1024px) {
@@ -164,9 +342,13 @@
 }
 
 @media (max-width: 768px) {
-  .integrations-grid {
+  .integrations-grid,
+  .custom-integrations-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
+  }
+
+  .integrations-grid {
     margin-bottom: 40px;
   }
 
@@ -211,9 +393,13 @@
 }
 
 @media (max-width: 480px) {
-  .integrations-grid {
+  .integrations-grid,
+  .custom-integrations-grid {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .integrations-grid {
     margin-bottom: 30px;
   }
 
@@ -265,11 +451,6 @@
     font-size: 11px;
     letter-spacing: 1.2px;
   }
-
-  .custom-integration-btn .coming-soon-badge {
-    top: -6px;
-    right: -6px;
-  }
 }
 
 @media (max-width: 375px) {
@@ -291,89 +472,5 @@
     font-size: 10px;
     letter-spacing: 1px;
     padding: 10px 16px;
-  }
-}
-
-.integration-logo {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  transition: all 0.2s ease;
-  border-radius: 8px;
-}
-
-.integration-card:hover .integration-logo {
-  transform: scale(1.05);
-}
-
-.integration-icon-placeholder {
-  width: 36px;
-  height: 36px;
-  background: #1F1F1F;
-  border-radius: 10px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  border: 1px solid #252525;
-  transition: all 0.2s ease;
-  overflow: hidden;
-  padding: 4px;
-}
-
-.integration-card:hover .integration-icon-placeholder {
-  background: #252525;
-  border-color: #2A2A2A;
-}
-
-.integration-card.connected .integration-icon-placeholder {
-  background: rgba(185, 69, 57, 0.1);
-  border-color: rgba(185, 69, 57, 0.3);
-}
-
-/* SVG logos should inherit color */
-.integration-icon-placeholder svg {
-  width: 28px;
-  height: 28px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .integration-logo {
-    width: 24px;
-    height: 24px;
-    border-radius: 7px;
-  }
-  
-  .integration-icon-placeholder {
-    width: 32px;
-    height: 32px;
-    padding: 3px;
-  }
-
-  .integration-icon-placeholder svg {
-    width: 24px;
-    height: 24px;
-  }
-}
-
-@media (max-width: 480px) {
-  .integration-logo {
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-  }
-  
-  .integration-icon-placeholder {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    padding: 3px;
-  }
-
-  .integration-icon-placeholder svg {
-    width: 22px;
-    height: 22px;
   }
 }

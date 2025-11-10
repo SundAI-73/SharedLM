@@ -55,6 +55,7 @@ function SettingsPage() {
     mistral: { value: '', visible: false, saved: false, preview: '' }
   });
   const [loadingApiKeys, setLoadingApiKeys] = useState(false);
+  const [customIntegrations, setCustomIntegrations] = useState([]);
 
   const settingsTabs = [
     { id: 'general', label: 'GENERAL', icon: <Settings size={18} /> },
@@ -67,7 +68,13 @@ function SettingsPage() {
   const loadApiKeys = async () => {
     try {
       setLoadingApiKeys(true);
-      const keys = await apiService.getApiKeys(userId);
+      
+      const [keys, integrations] = await Promise.all([
+        apiService.getApiKeys(userId),
+        apiService.getCustomIntegrations(userId)
+      ]);
+      
+      setCustomIntegrations(integrations);
       
       const keyState = {
         openai: { value: '', visible: false, saved: false, preview: '' },
@@ -75,10 +82,14 @@ function SettingsPage() {
         mistral: { value: '', visible: false, saved: false, preview: '' }
       };
 
+      integrations.forEach(int => {
+        keyState[int.provider_id] = { value: '', visible: false, saved: false, preview: '' };
+      });
+
       keys.forEach(key => {
         if (keyState[key.provider]) {
           keyState[key.provider] = {
-            value: '', // Don't load actual key for security
+            value: '',
             visible: false,
             saved: true,
             preview: key.key_preview
@@ -328,9 +339,12 @@ function SettingsPage() {
   };
 
   const handleRemoveApiKey = async (provider) => {
+    const customIntegration = customIntegrations.find(int => int.provider_id === provider);
+    const providerName = customIntegration ? customIntegration.name : provider.toUpperCase();
+
     const confirmed = await notify.confirm({
       title: 'Remove API Key',
-      message: `Remove ${provider.toUpperCase()} API key? You won't be able to use this model until you add a new key.`,
+      message: `Remove ${providerName} API key? You won't be able to use this model until you add a new key.`,
       confirmText: 'Remove',
       cancelText: 'Cancel',
       variant: 'danger'
@@ -340,13 +354,11 @@ function SettingsPage() {
       try {
         await apiService.deleteApiKey(userId, provider);
         
-        // Also remove from localStorage
         localStorage.removeItem(`sharedlm_api_${provider}`);
         
-        // Reload keys
         await loadApiKeys();
         
-        notify.success(`${provider.toUpperCase()} API key removed`);
+        notify.success(`${providerName} API key removed`);
       } catch (error) {
         notify.error(error.message || 'Failed to remove API key');
       }
@@ -359,16 +371,19 @@ function SettingsPage() {
       return;
     }
 
+    const customIntegration = customIntegrations.find(int => int.provider_id === provider);
+    const providerName = customIntegration ? customIntegration.name : provider.toUpperCase();
+
     try {
-      notify.info(`Testing ${provider.toUpperCase()} connection...`);
+      notify.info(`Testing ${providerName} connection...`);
       
       const result = await apiService.testApiKey(userId, provider);
       
       if (result.success) {
-        notify.success(`${provider.toUpperCase()} connection successful`);
+        notify.success(`${providerName} connection successful`);
       }
     } catch (error) {
-      notify.error(error.message || `${provider.toUpperCase()} connection failed`);
+      notify.error(error.message || `${providerName} connection failed`);
     }
   };
 
@@ -968,6 +983,79 @@ function SettingsPage() {
                           )}
                         </div>
                       </div>
+
+                      {Object.keys(apiKeys)
+                        .filter(key => key.startsWith('custom_'))
+                        .map(customKey => {
+                          const customIntegration = customIntegrations.find(
+                            int => int.provider_id === customKey
+                          );
+                          
+                          if (!customIntegration) return null;
+
+                          return (
+                            <div key={customKey} className="api-key-section">
+                              <div className="api-key-header">
+                                <div className="api-key-info">
+                                  <label className="setting-label">{customIntegration.name} API Key</label>
+                                  <p className="setting-description">
+                                    {apiKeys[customKey].saved 
+                                      ? `Saved key: ${apiKeys[customKey].preview}`
+                                      : `Your ${customIntegration.name} API credentials`}
+                                  </p>
+                                </div>
+                                {apiKeys[customKey].saved && (
+                                  <span className="api-key-badge">SAVED</span>
+                                )}
+                              </div>
+                              
+                              {!apiKeys[customKey].saved && (
+                                <div className="api-key-input-group">
+                                  <input 
+                                    type={apiKeys[customKey].visible ? "text" : "password"}
+                                    value={apiKeys[customKey].value}
+                                    onChange={(e) => handleApiKeyChange(customKey, e.target.value)}
+                                    placeholder="Enter API key..."
+                                    className="setting-input api-key-input"
+                                  />
+                                  <button 
+                                    className="api-key-toggle-btn"
+                                    onClick={() => toggleApiKeyVisibility(customKey)}
+                                  >
+                                    {apiKeys[customKey].visible ? <EyeOff size={16} /> : <Eye size={16} />}
+                                  </button>
+                                </div>
+                              )}
+
+                              <div className="api-key-actions">
+                                {!apiKeys[customKey].saved ? (
+                                  <button 
+                                    className="button-base button-primary"
+                                    onClick={() => handleSaveApiKey(customKey)}
+                                    disabled={!apiKeys[customKey].value.trim()}
+                                  >
+                                    SAVE KEY
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button 
+                                      className="button-base button-secondary"
+                                      onClick={() => handleTestConnection(customKey)}
+                                    >
+                                      TEST
+                                    </button>
+                                    <button 
+                                      className="button-base button-danger"
+                                      onClick={() => handleRemoveApiKey(customKey)}
+                                    >
+                                      REMOVE
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
 
                       <div className="api-hint-section">
                         <p className="api-hint">

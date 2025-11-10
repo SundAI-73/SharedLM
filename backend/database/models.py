@@ -1,6 +1,5 @@
-from sqlalchemy import Column, String, Integer, Text, Boolean, TIMESTAMP, ForeignKey, BigInteger
+from sqlalchemy import Column, String, Integer, Text, Boolean, TIMESTAMP, ForeignKey, func
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from database.connection import Base
 
 class User(Base):
@@ -13,8 +12,8 @@ class User(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     
-    # Relationships
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
+    custom_integrations = relationship("CustomIntegration", back_populates="user", cascade="all, delete-orphan")
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
 
@@ -32,8 +31,24 @@ class APIKey(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     
-    # Relationships
     user = relationship("User", back_populates="api_keys")
+
+
+class CustomIntegration(Base):
+    __tablename__ = "custom_integrations"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(255), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(255), nullable=False)
+    provider_id = Column(String(100), nullable=False)
+    base_url = Column(String(500))
+    api_type = Column(String(50), default="openai")
+    logo_url = Column(String(500))
+    is_active = Column(Boolean, default=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    
+    user = relationship("User", back_populates="custom_integrations")
 
 
 class Project(Base):
@@ -47,7 +62,6 @@ class Project(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     
-    # Relationships
     user = relationship("User", back_populates="projects")
     conversations = relationship("Conversation", back_populates="project")
     files = relationship("ProjectFile", back_populates="project", cascade="all, delete-orphan")
@@ -62,10 +76,10 @@ class Conversation(Base):
     title = Column(String(500))
     model_used = Column(String(100))
     message_count = Column(Integer, default=0)
+    is_starred = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     
-    # Relationships
     user = relationship("User", back_populates="conversations")
     project = relationship("Project", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
@@ -76,12 +90,11 @@ class Message(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
-    role = Column(String(20), nullable=False)
+    role = Column(String(50), nullable=False)
     content = Column(Text, nullable=False)
     model = Column(String(100))
     created_at = Column(TIMESTAMP, server_default=func.now())
     
-    # Relationships
     conversation = relationship("Conversation", back_populates="messages")
 
 
@@ -90,10 +103,10 @@ class ProjectFile(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
-    filename = Column(String(500), nullable=False)
-    file_size = Column(BigInteger, nullable=False)
-    storage_url = Column(Text, nullable=False)
+    filename = Column(String(255), nullable=False)
+    file_type = Column(String(50))
+    file_size = Column(Integer)
+    storage_path = Column(String(500))
     uploaded_at = Column(TIMESTAMP, server_default=func.now())
     
-    # Relationships
     project = relationship("Project", back_populates="files")
