@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X } from 'lucide-react';
 import { useNotification } from '../../contexts/NotificationContext';
@@ -41,7 +41,7 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
     },
     { 
       id: 'anthropic', 
-      name: 'CLAUDE', 
+      name: 'SHAREDLM', 
       provider: 'Anthropic', 
       status: 'available', 
       logo: anthropicLogo 
@@ -85,9 +85,30 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
     if (connected.length > 0 && setConnectedLLMs) {
       setConnectedLLMs(connected);
     }
+  }, [setConnectedLLMs]);
 
+  const loadCustomIntegrations = useCallback(async () => {
+    if (!userId) return;
+
+    try {
+      const integrations = await apiService.getCustomIntegrations(userId);
+      setCustomIntegrations(integrations);
+      
+      const connected = integrations
+        .filter(int => int.is_active)
+        .map(int => int.provider_id);
+      
+      if (connected.length > 0 && setConnectedLLMs) {
+        setConnectedLLMs(connected);
+      }
+    } catch (error) {
+      console.error('Failed to load custom integrations:', error);
+    }
+  }, [userId, setConnectedLLMs]);
+
+  useEffect(() => {
     loadCustomIntegrations();
-  }, [setConnectedLLMs, userId]);
+  }, [loadCustomIntegrations]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -104,17 +125,6 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showCustomModal]);
-
-  const loadCustomIntegrations = async () => {
-    if (!userId) return;
-
-    try {
-      const integrations = await apiService.getCustomIntegrations(userId);
-      setCustomIntegrations(integrations);
-    } catch (error) {
-      console.error('Failed to load custom integrations:', error);
-    }
-  };
 
   const handleLLMClick = (llm) => {
     if (llm.status === 'available' && !connectedLLMs.includes(llm.id)) {

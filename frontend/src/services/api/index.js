@@ -502,4 +502,5 @@ class APIService {
 
 console.log('API Base URL:', API_BASE_URL);
 
-export default new APIService();
+const apiService = new APIService();
+export default apiService;

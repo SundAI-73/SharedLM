@@ -1,21 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   MessageSquare, 
-  Send,
   ChevronRight,
-  Paperclip,
   Plus,
-  FileText,
   Trash2,
   MoreVertical,
   Star,
   Edit3,
   Archive,
-  Clock
+  Clock,
+  SlidersHorizontal,
+  ArrowUp,
+  Search,
+  Globe,
+  Settings
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
+import ConnectorsModal from '../../components/ConnectorsModal/ConnectorsModal';
 import { useUser } from '../../contexts/UserContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import apiService from '../../services/api';
@@ -61,8 +65,12 @@ function ProjectLanding() {
   const [selectedModel, setSelectedModel] = useState('mistral');
   const [selectedModelVariant, setSelectedModelVariant] = useState('mistral-small-latest');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showConnectorsModal, setShowConnectorsModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const moreMenuRef = useRef(null);
+  const settingsMenuRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [project, setProject] = useState(null);
   const [projectConversations, setProjectConversations] = useState([]);
 
@@ -81,18 +89,16 @@ function ProjectLanding() {
       if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
         setShowMoreMenu(false);
       }
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target)) {
+        setShowSettingsMenu(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    loadProjectData();
-    loadProjectActivity();
-  }, [projectId, userId]);
-
-  const loadProjectData = async () => {
+  const loadProjectData = useCallback(async () => {
     try {
       setLoading(true);
       const projects = await apiService.getProjects(userId);
@@ -135,10 +141,10 @@ function ProjectLanding() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId, userId]);
 
   // FIXED: Enhanced debug logging and proper filtering
-  const loadProjectActivity = async () => {
+  const loadProjectActivity = useCallback(async () => {
     try {
       console.log('Loading activity for project ID:', projectId);
       const allConversations = await apiService.getConversations(userId);
@@ -175,7 +181,12 @@ function ProjectLanding() {
     } catch (error) {
       console.error('❌ Failed to load project conversations:', error);
     }
-  };
+  }, [projectId, userId]);
+
+  useEffect(() => {
+    loadProjectData();
+    loadProjectActivity();
+  }, [loadProjectData, loadProjectActivity]);
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
@@ -227,34 +238,35 @@ function ProjectLanding() {
   };
 
   const handleAddFile = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.csv,.xlsx';
-    input.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    fileInputRef.current?.click();
+  };
 
-      if (file.size > 10 * 1024 * 1024) {
-        notify.error('File size must be less than 10MB');
-        return;
-      }
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-      try {
-        setLoading(true);
-        const result = await apiService.uploadProjectFile(file, project.id, userId);
-        
-        if (result.success) {
-          notify.success(`File uploaded: ${file.name}`);
-          await loadProjectData();
-        }
-      } catch (error) {
-        console.error('File upload failed:', error);
-        notify.error('Failed to upload file');
-      } finally {
-        setLoading(false);
+    if (file.size > 10 * 1024 * 1024) {
+      notify.error('File size must be less than 10MB');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await apiService.uploadProjectFile(file, project.id, userId);
+      
+      if (result.success) {
+        notify.success(`File uploaded: ${file.name}`);
+        await loadProjectData();
       }
-    };
-    input.click();
+    } catch (error) {
+      console.error('File upload failed:', error);
+      notify.error('Failed to upload file');
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleAddInstructions = () => {
@@ -378,49 +390,170 @@ function ProjectLanding() {
         </div>
 
         <div className="project-chat-section">
-          <div className="chat-bar-container">
-            <button className="chat-bar-attach-btn">
-              <Paperclip size={18} />
-            </button>
+          <div className="project-chat-input-wrapper">
+            {/* Controls Row - Above Input */}
+            <div className="chat-input-controls">
+              <div className="chat-controls-left">
+                <motion.button 
+                  className="chat-control-btn"
+                  onClick={handleAddFile}
+                  disabled={loading}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Attach file"
+                >
+                  <Plus size={18} />
+                </motion.button>
+                
+                <motion.button 
+                  className="chat-control-btn"
+                  onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Settings"
+                >
+                  <SlidersHorizontal size={18} />
+                </motion.button>
+                
+                <motion.button 
+                  className="chat-control-btn"
+                  onClick={() => navigate('/history')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="History"
+                >
+                  <Clock size={18} />
+                </motion.button>
+              </div>
 
+              {/* Right Side - Model Dropdowns */}
+              <div className="chat-controls-right">
+                <CustomDropdown
+                  value={selectedModel}
+                  onChange={setSelectedModel}
+                  options={modelProviders}
+                  className="chat-model-dropdown-inline"
+                />
+                
+                {modelVariants[selectedModel]?.length > 0 && (
+                  <CustomDropdown
+                    value={selectedModelVariant}
+                    onChange={setSelectedModelVariant}
+                    options={modelVariants[selectedModel]}
+                    className="chat-model-dropdown-inline"
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Main Input Field with Send Button Inside */}
+            <div className="chat-input-main">
+              <div className="chat-input-container-main">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !loading && chatInput.trim()) {
+                      handleStartChat();
+                    }
+                  }}
+                  placeholder="Start a conversation in this project..."
+                  className="chat-input-field-main"
+                  disabled={loading}
+                  autoFocus
+                />
+                <motion.button
+                  onClick={handleStartChat}
+                  disabled={!chatInput.trim() || loading}
+                  className={`chat-send-btn-inside ${chatInput.trim() ? 'active' : ''}`}
+                  whileHover={chatInput.trim() ? { scale: 1.05 } : {}}
+                  whileTap={chatInput.trim() ? { scale: 0.95 } : {}}
+                >
+                  <ArrowUp size={18} />
+                </motion.button>
+              </div>
+            </div>
+
+            {/* Hidden File Input */}
             <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && chatInput.trim()) {
-                  handleStartChat();
-                }
-              }}
-              placeholder="Start a conversation in this project..."
-              className="chat-bar-input"
-              autoFocus
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+              accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.csv,.xlsx"
             />
 
-            <button
-              onClick={handleStartChat}
-              disabled={!chatInput.trim() || loading}
-              className={`chat-bar-send-btn ${chatInput.trim() ? 'active' : ''}`}
-            >
-              <Send size={20} />
-            </button>
-          </div>
-
-          <div className="project-model-selector">
-            <CustomDropdown
-              value={selectedModel}
-              onChange={setSelectedModel}
-              options={modelProviders}
-              className="project-model-dropdown"
-            />
-            <CustomDropdown
-              value={selectedModelVariant}
-              onChange={setSelectedModelVariant}
-              options={modelVariants[selectedModel] || []}
-              className="project-model-dropdown"
-            />
+            {/* Settings Menu */}
+            {showSettingsMenu && (
+              <div className="chat-settings-menu" ref={settingsMenuRef}>
+                <div className="settings-menu-item">
+                  <div className="settings-menu-item-left">
+                    <Clock size={16} className="settings-menu-icon" />
+                    <span>Extended thinking</span>
+                  </div>
+                  <label className="toggle-switch-small">
+                    <input type="checkbox" defaultChecked />
+                    <span className="toggle-slider-small"></span>
+                  </label>
+                </div>
+                <div className="settings-menu-item">
+                  <div className="settings-menu-item-left">
+                    <Search size={16} className="settings-menu-icon" />
+                    <span>Research</span>
+                  </div>
+                  <label className="toggle-switch-small">
+                    <input type="checkbox" defaultChecked />
+                    <span className="toggle-slider-small"></span>
+                  </label>
+                </div>
+                <div className="settings-menu-item">
+                  <div className="settings-menu-item-left">
+                    <Globe size={16} className="settings-menu-icon" />
+                    <span>Web search</span>
+                  </div>
+                  <label className="toggle-switch-small">
+                    <input type="checkbox" defaultChecked />
+                    <span className="toggle-slider-small"></span>
+                  </label>
+                </div>
+                <div className="settings-menu-divider"></div>
+                <div 
+                  className="settings-menu-item settings-menu-action"
+                  onClick={() => {
+                    setShowSettingsMenu(false);
+                    setShowConnectorsModal(true);
+                  }}
+                >
+                  <div className="settings-menu-item-left">
+                    <Plus size={16} className="settings-menu-icon" />
+                    <span>Add connectors</span>
+                  </div>
+                </div>
+                <div 
+                  className="settings-menu-item settings-menu-action"
+                  onClick={() => {
+                    setShowSettingsMenu(false);
+                    navigate('/settings?tab=connectors');
+                  }}
+                >
+                  <div className="settings-menu-item-left">
+                    <Settings size={16} className="settings-menu-icon" />
+                    <span>Manage connectors</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        <ConnectorsModal
+          isOpen={showConnectorsModal}
+          onClose={() => setShowConnectorsModal(false)}
+          onConnectorAdded={(connector) => {
+            console.log('Connector added:', connector);
+          }}
+        />
 
         <div className="project-content-layout">
           <div className="project-left-column">

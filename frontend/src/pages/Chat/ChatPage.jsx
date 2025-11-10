@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, X } from 'lucide-react';
+import { Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, X, Plus, SlidersHorizontal, Clock, ArrowUp, Search, Globe, Settings } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useUser } from '../../contexts/UserContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
+import ConnectorsModal from '../../components/ConnectorsModal/ConnectorsModal';
 import apiService from '../../services/api/index';
 import logo from '../../assets/images/logo main.svg';
 import './styles/chat-base.css';
@@ -104,6 +106,21 @@ const defaultModelVariants = {
   ]
 };
 
+// Get time-based greeting
+const getTimeBasedGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Morning';
+  if (hour >= 12 && hour < 17) return 'Afternoon';
+  if (hour >= 17 && hour < 22) return 'Evening';
+  return 'Night';
+};
+
+// Get user's display name
+const getUserDisplayName = () => {
+  const name = localStorage.getItem('sharedlm_user_name') || localStorage.getItem('sharedlm_user_email')?.split('@')[0] || 'there';
+  return name.split(' ')[0]; // Get first name only
+};
+
 function ChatPage({ backendStatus }) {
   const { userId, currentModel, setCurrentModel } = useUser();
   const navigate = useNavigate();
@@ -120,6 +137,9 @@ function ChatPage({ backendStatus }) {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [selectedModelVariant, setSelectedModelVariant] = useState('mistral-small-latest');
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showHistoryMenu, setShowHistoryMenu] = useState(false);
+  const [showConnectorsModal, setShowConnectorsModal] = useState(false);
   
   const [modelProviders, setModelProviders] = useState([
     { value: 'mistral', label: 'MISTRAL AI' },
@@ -133,6 +153,8 @@ function ChatPage({ backendStatus }) {
   const titleInputRef = useRef(null);
   const initialMessageSent = useRef(false);
   const fileInputRef = useRef(null);
+  const settingsMenuRef = useRef(null);
+  const historyMenuRef = useRef(null);
 
   useEffect(() => {
     const loadCustomIntegrations = async () => {
@@ -179,16 +201,7 @@ function ChatPage({ backendStatus }) {
     }
   }, [currentModel, selectedModelVariant, modelVariants]);
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const conversationId = urlParams.get('conversation');
-    
-    if (conversationId) {
-      loadConversation(conversationId);
-    }
-  }, [location.search]);
-
-  const loadConversation = async (conversationId) => {
+  const loadConversation = useCallback(async (conversationId) => {
     try {
       setLoading(true);
       
@@ -231,35 +244,16 @@ function ChatPage({ backendStatus }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
-    const { projectId, projectName, initialMessage } = location.state || {};
     const urlParams = new URLSearchParams(location.search);
     const conversationId = urlParams.get('conversation');
     
-    if (projectId && projectName) {
-      setSelectedProject({ id: projectId, name: projectName });
+    if (conversationId) {
+      loadConversation(conversationId);
     }
-
-    if (initialMessage && initialMessage.trim() && !initialMessageSent.current) {
-      initialMessageSent.current = true;
-      setTimeout(() => {
-        handleSendWithMessage(initialMessage);
-      }, 200);
-      
-      window.history.replaceState({ projectId, projectName }, '');
-    }
-
-    if (!projectId && !projectName && !initialMessage && !conversationId) {
-      setMessages([]);
-      setChatTitle('');
-      setCurrentConversationId(null);
-      setSelectedProject(null);
-      setAttachedFiles([]);
-      initialMessageSent.current = false;
-    }
-  }, [location]);
+  }, [location.search, loadConversation]);
 
   useEffect(() => {
     if (!currentModel) setCurrentModel('mistral');
@@ -296,6 +290,12 @@ function ChatPage({ backendStatus }) {
     const handleClickOutside = (e) => {
       if (optionsRef.current && !optionsRef.current.contains(e.target)) {
         setShowOptions(false);
+      }
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(e.target)) {
+        setShowSettingsMenu(false);
+      }
+      if (historyMenuRef.current && !historyMenuRef.current.contains(e.target)) {
+        setShowHistoryMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -408,6 +408,34 @@ function ChatPage({ backendStatus }) {
       setLoading(false);
     }
   }, [currentModel, selectedModelVariant, userId, currentConversationId, selectedProject]);
+
+  useEffect(() => {
+    const { projectId, projectName, initialMessage } = location.state || {};
+    const urlParams = new URLSearchParams(location.search);
+    const conversationId = urlParams.get('conversation');
+    
+    if (projectId && projectName) {
+      setSelectedProject({ id: projectId, name: projectName });
+    }
+
+    if (initialMessage && initialMessage.trim() && !initialMessageSent.current) {
+      initialMessageSent.current = true;
+      setTimeout(() => {
+        handleSendWithMessage(initialMessage);
+      }, 200);
+      
+      window.history.replaceState({ projectId, projectName }, '');
+    }
+
+    if (!projectId && !projectName && !initialMessage && !conversationId) {
+      setMessages([]);
+      setChatTitle('');
+      setCurrentConversationId(null);
+      setSelectedProject(null);
+      setAttachedFiles([]);
+      initialMessageSent.current = false;
+    }
+  }, [location, handleSendWithMessage]);
 
   const handleSend = useCallback(() => {
     handleSendWithMessage(input);
@@ -524,63 +552,55 @@ function ChatPage({ backendStatus }) {
             </div>
 
             <img src={logo} alt="SharedLM" className="chat-top-bar-logo" />
-
-            <div className="chat-right-section">
-              <CustomDropdown
-                value={currentModel}
-                onChange={setCurrentModel}
-                options={modelProviders.filter(opt =>
-                  availableModels.includes(opt.value) || opt.value === 'mistral' || opt.isCustom
-                )}
-                className="chat-model-dropdown-custom"
-              />
-              
-              {modelVariants[currentModel]?.length > 0 && (
-                <CustomDropdown
-                  value={selectedModelVariant}
-                  onChange={setSelectedModelVariant}
-                  options={modelVariants[currentModel]}
-                  className="chat-model-dropdown-custom"
-                />
-              )}
-            </div>
           </div>
-        ) : (
-          <div className="chat-top-bar">
-            <div className="chat-right-section">
-              <CustomDropdown
-                value={currentModel}
-                onChange={setCurrentModel}
-                options={modelProviders.filter(opt =>
-                  availableModels.includes(opt.value) || opt.value === 'mistral' || opt.isCustom
-                )}
-                className="chat-model-dropdown-custom"
-              />
-              
-              {modelVariants[currentModel]?.length > 0 && (
-                <CustomDropdown
-                  value={selectedModelVariant}
-                  onChange={setSelectedModelVariant}
-                  options={modelVariants[currentModel]}
-                  className="chat-model-dropdown-custom"
-                />
-              )}
-            </div>
-          </div>
-        )}
+        ) : null}
 
         <div className={`chat-messages-wrapper ${messages.length === 0 ? 'full-height' : ''}`}>
           {messages.length === 0 ? (
-            <div className="chat-empty-state">
-              <div className="empty-state-logo-container">
-                <img src={logo} alt="SharedLM Logo" className="empty-state-logo" />
-              </div>
-              <h2 className="empty-state-title">START A CONVERSATION</h2>
-              {selectedProject && (
-                <p className="empty-state-project">in {selectedProject.name}</p>
-              )}
-              <p className="empty-state-text">Type your message below to begin</p>
-            </div>
+            <motion.div 
+              className="chat-empty-state"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            >
+              <motion.div 
+                className="welcome-message"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <motion.div 
+                  className="welcome-logo-container"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 0.95, scale: 1 }}
+                  transition={{ 
+                    duration: 0.8, 
+                    ease: "easeOut",
+                    delay: 0.3
+                  }}
+                >
+                  <img src={logo} alt="SharedLM Logo" className="welcome-logo" />
+                </motion.div>
+                <motion.h2 
+                  className="welcome-greeting"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 }}
+                >
+                  {getTimeBasedGreeting()}, {getUserDisplayName()}
+                </motion.h2>
+                {selectedProject && (
+                  <motion.p 
+                    className="welcome-project"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.5 }}
+                  >
+                    in {selectedProject.name}
+                  </motion.p>
+                )}
+              </motion.div>
+            </motion.div>
           ) : (
             <div className="chat-messages-list">
               {messages.map((msg, idx) => (
@@ -606,36 +626,14 @@ function ChatPage({ backendStatus }) {
 
         <div className="chat-input-wrapper">
           {attachedFiles.length > 0 && (
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              padding: '8px 16px',
-              flexWrap: 'wrap'
-            }}>
+            <div className="attached-files-container">
               {attachedFiles.map((file, idx) => (
-                <div key={idx} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: '#1F1F1F',
-                  border: '1px solid #2A2A2A',
-                  borderRadius: '8px',
-                  padding: '6px 10px',
-                  fontSize: '0.75rem',
-                  color: '#888888'
-                }}>
+                <div key={idx} className="attached-file-item">
                   <Paperclip size={12} />
                   <span>{file.filename}</span>
                   <button
                     onClick={() => handleRemoveFile(file.filename)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#666666',
-                      cursor: 'pointer',
-                      padding: '2px',
-                      display: 'flex'
-                    }}
+                    className="remove-file-btn"
                   >
                     <X size={14} />
                   </button>
@@ -644,45 +642,173 @@ function ChatPage({ backendStatus }) {
             </div>
           )}
 
-          <div className="chat-input-container">
-            <button 
-              className="chat-attach-btn"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading}
-            >
-              <Paperclip size={18} />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              onChange={handleFileSelect}
-              style={{ display: 'none' }}
-              accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.csv,.xlsx"
-            />
+          {/* Controls Row - Above Input */}
+          <div className="chat-input-controls">
+            <div className="chat-controls-left">
+              <motion.button 
+                className="chat-control-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Attach file"
+              >
+                <Plus size={18} />
+              </motion.button>
+              
+              <motion.button 
+                className="chat-control-btn"
+                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Settings"
+              >
+                <SlidersHorizontal size={18} />
+              </motion.button>
+              
+              <motion.button 
+                className="chat-control-btn"
+                onClick={() => {
+                  setShowHistoryMenu(!showHistoryMenu);
+                  navigate('/history');
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="History"
+              >
+                <Clock size={18} />
+              </motion.button>
+            </div>
 
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !loading) handleSend();
-              }}
-              placeholder="Type your message here..."
-              className="chat-input-field"
-              disabled={loading}
-              autoFocus
-            />
-
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-              className={`chat-send-btn ${input.trim() ? 'active' : ''}`}
-            >
-              <Send size={20} />
-            </button>
+            {/* Right Side - Model Dropdowns */}
+            <div className="chat-controls-right">
+              <CustomDropdown
+                value={currentModel}
+                onChange={setCurrentModel}
+                options={modelProviders.filter(opt =>
+                  availableModels.includes(opt.value) || opt.value === 'mistral' || opt.isCustom
+                )}
+                className="chat-model-dropdown-inline"
+              />
+              
+              {modelVariants[currentModel]?.length > 0 && (
+                <CustomDropdown
+                  value={selectedModelVariant}
+                  onChange={setSelectedModelVariant}
+                  options={modelVariants[currentModel]}
+                  className="chat-model-dropdown-inline"
+                />
+              )}
+            </div>
           </div>
+
+          {/* Main Input Field with Send Button Inside */}
+          <div className="chat-input-main">
+            <div className="chat-input-container-main">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !loading && input.trim()) handleSend();
+                }}
+                placeholder="How can I help you today?"
+                className="chat-input-field-main"
+                disabled={loading}
+                autoFocus
+              />
+              <motion.button
+                onClick={handleSend}
+                disabled={!input.trim() || loading}
+                className={`chat-send-btn-inside ${input.trim() ? 'active' : ''}`}
+                whileHover={input.trim() ? { scale: 1.05 } : {}}
+                whileTap={input.trim() ? { scale: 0.95 } : {}}
+              >
+                <ArrowUp size={18} />
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Hidden File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
+            accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.csv,.xlsx"
+          />
+
+          {/* Settings Menu */}
+          {showSettingsMenu && (
+            <div className="chat-settings-menu" ref={settingsMenuRef}>
+              <div className="settings-menu-item">
+                <div className="settings-menu-item-left">
+                  <Clock size={16} className="settings-menu-icon" />
+                  <span>Extended thinking</span>
+                </div>
+                <label className="toggle-switch-small">
+                  <input type="checkbox" defaultChecked />
+                  <span className="toggle-slider-small"></span>
+                </label>
+              </div>
+              <div className="settings-menu-item">
+                <div className="settings-menu-item-left">
+                  <Search size={16} className="settings-menu-icon" />
+                  <span>Research</span>
+                </div>
+                <label className="toggle-switch-small">
+                  <input type="checkbox" defaultChecked />
+                  <span className="toggle-slider-small"></span>
+                </label>
+              </div>
+              <div className="settings-menu-item">
+                <div className="settings-menu-item-left">
+                  <Globe size={16} className="settings-menu-icon" />
+                  <span>Web search</span>
+                </div>
+                <label className="toggle-switch-small">
+                  <input type="checkbox" defaultChecked />
+                  <span className="toggle-slider-small"></span>
+                </label>
+              </div>
+              <div className="settings-menu-divider"></div>
+              <div 
+                className="settings-menu-item settings-menu-action"
+                onClick={() => {
+                  setShowSettingsMenu(false);
+                  setShowConnectorsModal(true);
+                }}
+              >
+                <div className="settings-menu-item-left">
+                  <Plus size={16} className="settings-menu-icon" />
+                  <span>Add connectors</span>
+                </div>
+              </div>
+              <div 
+                className="settings-menu-item settings-menu-action"
+                onClick={() => {
+                  setShowSettingsMenu(false);
+                  navigate('/settings?tab=connectors');
+                }}
+              >
+                <div className="settings-menu-item-left">
+                  <Settings size={16} className="settings-menu-icon" />
+                  <span>Manage connectors</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      <ConnectorsModal
+        isOpen={showConnectorsModal}
+        onClose={() => setShowConnectorsModal(false)}
+        onConnectorAdded={(connector) => {
+          // Reload custom integrations if needed
+          console.log('Connector added:', connector);
+        }}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 .dropdown {
   position: relative;
-  min-width: 120px;
+  min-width: 200px;
 }
 
 .trigger {
@@ -76,6 +76,4 @@
   background: #1A1A1A;
   color: #FFFFFF;
   font-weight: 500;
-  border-left: 3px solid #B94539;
-  padding-left: 17px;
 }

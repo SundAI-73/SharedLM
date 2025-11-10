@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { MessageSquare, Search, ChevronRight, Clock, Filter, Trash2, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 import apiService from '../../services/api';
@@ -18,13 +19,7 @@ function HistoryPage() {
   const [availableProjects, setAvailableProjects] = useState([]);
   const notify = useNotification();
 
-  // Load conversations on mount
-  useEffect(() => {
-    loadConversations();
-    loadProjectsForFilter();
-  }, [userId]);
-
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       setIsLoading(true);
       
@@ -69,7 +64,7 @@ function HistoryPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId]);
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
@@ -89,7 +84,7 @@ function HistoryPage() {
     return date.toLocaleDateString();
   };
 
-  const loadProjectsForFilter = async () => {
+  const loadProjectsForFilter = useCallback(async () => {
     try {
       const data = await apiService.getProjects(userId);
       console.log('Projects for filter:', data);
@@ -97,7 +92,12 @@ function HistoryPage() {
     } catch (error) {
       console.error('Failed to load projects for filter:', error);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    loadConversations();
+    loadProjectsForFilter();
+  }, [loadConversations, loadProjectsForFilter]);
 
   const projectOptions = useMemo(() => {
     const options = [
@@ -176,16 +176,31 @@ function HistoryPage() {
   };
 
   return (
-    <div className="page-container">
+    <motion.div 
+      className="page-container"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       <div className="page-content">
-        <div className="page-header">
+        <motion.div 
+          className="page-header"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
           <h1 className="page-title">CHAT HISTORY</h1>
           <p className="page-subtitle">
             {isLoading ? 'Loading...' : `${chats.length} conversation${chats.length !== 1 ? 's' : ''}`}
           </p>
-        </div>
+        </motion.div>
 
-        <div className="controls-section">
+        <motion.div 
+          className="controls-section"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
           <div className="search-container">
             <Search size={18} className="search-icon" />
             <input
@@ -206,9 +221,17 @@ function HistoryPage() {
               className="history-filter-dropdown"
             />
           </div>
-        </div>
+        </motion.div>
 
-        <div className={`action-bar ${selectedChats.length === 0 ? 'hidden' : ''}`}>
+        <AnimatePresence>
+          {selectedChats.length > 0 && (
+            <motion.div 
+              className="action-bar"
+              initial={{ opacity: 0, height: 0, y: -10 }}
+              animate={{ opacity: 1, height: "auto", y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+            >
           <div className="selection-info">
             <span className="selection-count">
               {selectedChats.length} SELECTED
@@ -224,7 +247,9 @@ function HistoryPage() {
               <span>Delete</span>
             </button>
           </div>
-        </div>
+          </motion.div>
+          )}
+        </AnimatePresence>
 
         {isLoading ? (
           <div className="empty-state">
@@ -243,12 +268,23 @@ function HistoryPage() {
             </p>
           </div>
         ) : (
-          <div className="list-layout chat-list">
-            {filteredChats.map(chat => (
-              <div
-                key={chat.id}
-                className={`list-item list-item-clickable chat-item ${selectedChats.includes(chat.id) ? 'selected' : ''}`}
-              >
+          <motion.div 
+            className="list-layout chat-list"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <AnimatePresence>
+              {filteredChats.map((chat, index) => (
+                <motion.div
+                  key={chat.id}
+                  className={`list-item list-item-clickable chat-item ${selectedChats.includes(chat.id) ? 'selected' : ''}`}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.3, delay: index * 0.03 }}
+                  whileHover={{ x: 4 }}
+                >
                 <div 
                   className="chat-checkbox-container"
                   onClick={(e) => handleCheckboxClick(e, chat.id)}
@@ -286,12 +322,13 @@ function HistoryPage() {
                   className="chevron-icon" 
                   onClick={() => handleChatClick(chat.id)}
                 />
-              </div>
-            ))}
-          </div>
+              </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
