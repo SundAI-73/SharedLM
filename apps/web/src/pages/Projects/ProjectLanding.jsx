@@ -140,7 +140,7 @@ function ProjectLanding() {
     } finally {
       setLoading(false);
     }
-  }, [projectId, userId]);
+  }, [projectId, userId, notify]);
 
   // FIXED: Enhanced debug logging and proper filtering
   const loadProjectActivity = useCallback(async () => {

@@ -1,4 +1,4 @@
-import { getAuthHeaders, getUserId } from '../../utils/auth';
+import { getAuthHeaders } from '../../utils/auth';
 import { extendSession, checkSession } from '../../utils/sessionManager';
 import rateLimiter from '../../utils/rateLimiter';
 import { logEvent, EventType, LogLevel } from '../../utils/auditLogger';

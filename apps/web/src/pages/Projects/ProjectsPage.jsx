@@ -47,7 +47,7 @@ function ProjectsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [userId, notify]);
 
   useEffect(() => {
     loadProjects();
