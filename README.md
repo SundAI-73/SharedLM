@@ -121,7 +121,7 @@
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/sharedlm.git
-cd sharedlm/frontend
+cd sharedlm/apps/web
 
 # Install dependencies
 npm install
@@ -143,7 +143,7 @@ npm start
 
 ```bash
 # Navigate to backend directory
-cd sharedlm/backend
+cd sharedlm/apps/server
 
 # Create virtual environment
 python -m venv venv
@@ -192,6 +192,7 @@ vercel
 1. Create a new Web Service on [Render](https://render.com)
 2. Connect your GitHub repository
 3. Configure build settings:
+   - **Root Directory**: `apps/server`
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `python3 -m uvicorn app:app --host 0.0.0.0 --port $PORT`
 4. Add environment variables
