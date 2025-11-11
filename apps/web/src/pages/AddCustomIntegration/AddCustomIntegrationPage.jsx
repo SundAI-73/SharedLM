@@ -30,9 +30,46 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
     }));
   };
 
+  const validateUrl = (url) => {
+    if (!url || !url.trim()) return null;
+    try {
+      const urlObj = new URL(url.trim());
+      // Only allow http and https
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        return 'URL must use http or https protocol';
+      }
+      return null;
+    } catch (e) {
+      return 'Invalid URL format';
+    }
+  };
+
   const handleAddIntegration = async () => {
     if (!formData.name.trim()) {
       notify.error('Please enter an integration name');
+      return;
+    }
+
+    // Validate URLs if provided
+    if (formData.baseUrl.trim()) {
+      const baseUrlError = validateUrl(formData.baseUrl);
+      if (baseUrlError) {
+        notify.error(`Base URL: ${baseUrlError}`);
+        return;
+      }
+    }
+
+    if (formData.logoUrl.trim()) {
+      const logoUrlError = validateUrl(formData.logoUrl);
+      if (logoUrlError) {
+        notify.error(`Logo URL: ${logoUrlError}`);
+        return;
+      }
+    }
+
+    // Validate name length
+    if (formData.name.trim().length > 255) {
+      notify.error('Integration name is too long (max 255 characters)');
       return;
     }
 
@@ -110,6 +147,29 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
 
     if (!integrationId) {
       notify.error('Integration ID not found');
+      return;
+    }
+
+    // Validate URLs if provided
+    if (formData.baseUrl.trim()) {
+      const baseUrlError = validateUrl(formData.baseUrl);
+      if (baseUrlError) {
+        notify.error(`Base URL: ${baseUrlError}`);
+        return;
+      }
+    }
+
+    if (formData.logoUrl.trim()) {
+      const logoUrlError = validateUrl(formData.logoUrl);
+      if (logoUrlError) {
+        notify.error(`Logo URL: ${logoUrlError}`);
+        return;
+      }
+    }
+
+    // Validate name length
+    if (formData.name.trim().length > 255) {
+      notify.error('Integration name is too long (max 255 characters)');
       return;
     }
 

@@ -5,11 +5,14 @@ from fastapi import APIRouter, HTTPException, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 from database.connection import get_db
 from database import crud
+from database.models import User
+from api.dependencies import get_current_user, verify_user_ownership
 from models.schemas import ChatRequest, ChatResponse
 from services.mem0_client import mem0_client
 from services.llm_router import route_chat
 from utils.prompt import compose_prompt
 from utils.encryption import decrypt_key
+from utils.security import validate_file_upload, sanitize_error_message, validate_message
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["chat"])
@@ -23,10 +26,20 @@ VALID_MISTRAL_MODELS = [
 ]
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest, db: Session = Depends(get_db)):
+async def chat(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Main chat endpoint with database integration"""
     try:
-        # Log incoming request for debugging
+        # Verify user ownership
+        verify_user_ownership(current_user, request.user_id, "chat")
+        
+        # Validate message
+        validated_message = validate_message(request.message)
+        
+        # Log incoming request for debugging (without sensitive data)
         logger.info(f"Chat request received: user_id={request.user_id}, provider={request.model_provider}, model={request.model_choice}, session_id={request.session_id}, project_id={request.project_id}")
         
         # Validate model_choice is not empty
@@ -41,6 +54,9 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         conversation = None
         if request.session_id:
             conversation = crud.get_conversation(db, int(request.session_id))
+            # Verify conversation ownership if it exists
+            if conversation and conversation.user_id != request.user_id:
+                raise HTTPException(status_code=403, detail="You don't have permission to access this conversation")
         
         if not conversation:
             conversation = crud.create_conversation(
@@ -49,13 +65,17 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
                 model_used=request.model_choice,
                 project_id=request.project_id  
             )
+        else:
+            # Verify conversation belongs to user
+            if conversation.user_id != request.user_id:
+                raise HTTPException(status_code=403, detail="You don't have permission to access this conversation")
         
         # 2. Save user message to database
         crud.create_message(
             db,
             conversation_id=conversation.id,
             role="user",
-            content=request.message
+            content=validated_message
         )
         
         # 3. Check if it's a custom integration
@@ -96,11 +116,11 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         # 5. Search memories (Mem0)
         memories = mem0_client.search_memories(
             user_id=request.user_id,
-            query=request.message,
+            query=validated_message,
         )
         
         # 6. Compose prompt with memories
-        prompt = compose_prompt(memories, request.message)
+        prompt = compose_prompt(memories, validated_message)
         
         # 7. Validate model choice for Mistral (skip for custom integrations)
         if request.model_provider == "mistral" and not custom_integration:
@@ -160,14 +180,14 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         
         # 9. Update conversation title if first message
         if conversation.message_count == 2:
-            title = request.message[:50] + "..." if len(request.message) > 50 else request.message
+            title = validated_message[:50] + "..." if len(validated_message) > 50 else validated_message
             crud.update_conversation_title(db, conversation.id, title)
         
         # 10. Store in Mem0
         mem0_client.add_memory(
             user_id=request.user_id,
             messages=[
-                {"role": "user", "content": request.message},
+                {"role": "user", "content": validated_message},
                 {"role": "assistant", "content": reply}
             ]
         )
@@ -184,7 +204,7 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"Chat error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Connection issue. Please check settings or try again. Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Connection issue. Please check settings or try again."))
 
 
 @router.post("/upload")
@@ -192,10 +212,26 @@ async def upload_file(
     file: UploadFile = File(...),
     user_id: str = None,
     conversation_id: int = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Upload file for chat context"""
     try:
+        # Verify user ownership if user_id provided
+        if user_id:
+            verify_user_ownership(current_user, user_id, "files")
+        
+        # Validate file
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="Filename is required")
+        
+        # Read file content to get size
+        content = await file.read()
+        file_size = len(content)
+        
+        # Validate file upload
+        validate_file_upload(file.filename, file_size, file.content_type)
+        
         # Create uploads directory
         upload_dir = "uploads"
         os.makedirs(upload_dir, exist_ok=True)
@@ -206,23 +242,23 @@ async def upload_file(
         file_path = os.path.join(upload_dir, unique_filename)
         
         # Save file
-        content = await file.read()
         with open(file_path, "wb") as buffer:
             buffer.write(content)
         
         logger.info(f"File uploaded: {file.filename} -> {unique_filename}")
-        
         
         return {
             "success": True,
             "file": {
                 "filename": file.filename,
                 "stored_name": unique_filename,
-                "size": len(content),
+                "size": file_size,
                 "content_type": file.content_type,
                 "path": file_path
             }
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Upload error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to upload file"))
