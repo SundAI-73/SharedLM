@@ -176,12 +176,7 @@ function HistoryPage() {
   };
 
   return (
-    <motion.div 
-      className="page-container"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
+    <div className="page-container">
       <div className="page-content">
         <motion.div 
           className="page-header"
@@ -284,7 +279,8 @@ function HistoryPage() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ duration: 0.3, delay: index * 0.03 }}
-                    whileHover={{ x: 4 }}
+                    whileHover={{ x: 6, scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
                   >
                   <div 
                     className="chat-checkbox-container"
@@ -330,7 +326,7 @@ function HistoryPage() {
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

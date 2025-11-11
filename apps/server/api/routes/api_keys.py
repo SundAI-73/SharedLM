@@ -9,6 +9,7 @@ from database import crud
 from database.models import APIKey, User
 from models.schemas import APIKeyCreate, APIKeyResponse
 from utils.encryption import encrypt_key, decrypt_key
+from utils.cache import clear_api_key_cache
 from api.dependencies import get_current_user, verify_user_ownership, verify_api_key_ownership
 from utils.security import validate_provider, sanitize_error_message, sanitize_request_body
 
@@ -95,6 +96,9 @@ async def create_api_key(
             db.commit()
             db.refresh(existing_key)
             
+            # Clear cache when API key is updated
+            clear_api_key_cache(user_id, validated_provider)
+            
             logger.info(f"Updated API key for {user_id} - {validated_provider}")
             
             return {
@@ -116,6 +120,9 @@ async def create_api_key(
                 key_name=api_key_data.key_name or f"{validated_provider} API Key",
                 key_preview=key_preview
             )
+            
+            # Clear cache when new API key is created (in case old cached key exists)
+            clear_api_key_cache(user_id, validated_provider)
             
             logger.info(f"Created API key for {user_id} - {validated_provider}")
             
@@ -178,6 +185,9 @@ async def delete_api_key(
         
         db.delete(api_key)
         db.commit()
+        
+        # Clear cache when API key is deleted
+        clear_api_key_cache(user_id, provider)
         
         logger.info(f"Deleted API key for {user_id} - {provider}")
         

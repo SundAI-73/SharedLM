@@ -222,12 +222,7 @@ function ProjectsPage() {
   };
 
   return (
-    <motion.div 
-      className="page-container"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
+    <div className="page-container">
       <div className="page-content">
         <motion.div 
           className="page-header"
@@ -262,7 +257,7 @@ function ProjectsPage() {
             <motion.button 
               onClick={handleNewProject} 
               className="button-base button-primary action-button"
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
             >
               <Plus size={16} />
@@ -303,7 +298,8 @@ function ProjectsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ duration: 0.4, delay: index * 0.05 }}
-                    whileHover={{ y: -2 }}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                   <div className="card-header">
                     <FolderOpen size={22} className="card-icon" />
@@ -486,7 +482,7 @@ function ProjectsPage() {
           )}
         </AnimatePresence>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

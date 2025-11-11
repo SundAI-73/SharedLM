@@ -72,18 +72,25 @@ function AppLayout({ children }) {
       
       {/* Main content area */}
       <main className={shouldShowSidebar ? 'nothing-main' : 'nothing-main-fullwidth'}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            style={{ width: '100%', height: '100%' }}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        <Suspense fallback={<PageLoader />}>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12, ease: [0.4, 0, 0.2, 1] }}
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                position: 'relative',
+                contain: 'layout style paint'
+              }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        </Suspense>
       </main>
     </div>
   );
@@ -137,86 +144,85 @@ function AppContent() {
   return (
     <BrowserRouter>
       <AppLayout>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            {/* Root redirect */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            
-            {/* Authentication routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/auth/github/callback" element={<GitHubCallback />} />
-            
-            {/* Main app routes - Protected */}
-            <Route path="/chat" element={
-              <ProtectedRoute>
-                <ChatPage backendStatus={backendStatus} />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/integrations" element={
-              <ProtectedRoute>
-                <IntegrationsPage 
-                  connectedLLMs={connectedLLMs}
-                  setSelectedLLM={setSelectedLLM}
-                />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/auth" element={
-              <ProtectedRoute>
-                <AuthPage
-                  selectedLLM={selectedLLM}
-                  setSelectedLLM={setSelectedLLM}
-                  setConnectedLLMs={setConnectedLLMs}
-                  connectedLLMs={connectedLLMs}
-                />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/add-custom-integration" element={
-              <ProtectedRoute>
-                <AddCustomIntegrationPage
-                  setSelectedLLM={setSelectedLLM}
-                  setConnectedLLMs={setConnectedLLMs}
-                  connectedLLMs={connectedLLMs}
-                />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/projects" element={
-              <ProtectedRoute>
-                <ProjectsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/projects/:projectId" element={
-              <ProtectedRoute>
-                <ProjectLanding />
-              </ProtectedRoute>
-            } />
-            <Route path="/history" element={
-              <ProtectedRoute>
-                <HistoryPage />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/analytics" element={
-              <ProtectedRoute>
-                {analyticsEnabled ? <AnalyticsPage /> : <Navigate to="/chat" replace />}
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <SettingsPage />
-              </ProtectedRoute>
-            } />
-            
-            {/* Catch all - redirect to login if not authenticated, chat if authenticated */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </Suspense>
+        <Routes>
+          {/* Root redirect */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          
+          {/* Authentication routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/auth/github/callback" element={<GitHubCallback />} />
+          
+          {/* Main app routes - Protected */}
+          <Route path="/chat" element={
+            <ProtectedRoute>
+              <ChatPage backendStatus={backendStatus} />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/integrations" element={
+            <ProtectedRoute>
+              <IntegrationsPage 
+                connectedLLMs={connectedLLMs}
+                setConnectedLLMs={setConnectedLLMs}
+                setSelectedLLM={setSelectedLLM}
+              />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/auth" element={
+            <ProtectedRoute>
+              <AuthPage
+                selectedLLM={selectedLLM}
+                setSelectedLLM={setSelectedLLM}
+                setConnectedLLMs={setConnectedLLMs}
+                connectedLLMs={connectedLLMs}
+              />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/add-custom-integration" element={
+            <ProtectedRoute>
+              <AddCustomIntegrationPage
+                setSelectedLLM={setSelectedLLM}
+                setConnectedLLMs={setConnectedLLMs}
+                connectedLLMs={connectedLLMs}
+              />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/projects" element={
+            <ProtectedRoute>
+              <ProjectsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/projects/:projectId" element={
+            <ProtectedRoute>
+              <ProjectLanding />
+            </ProtectedRoute>
+          } />
+          <Route path="/history" element={
+            <ProtectedRoute>
+              <HistoryPage />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/analytics" element={
+            <ProtectedRoute>
+              {analyticsEnabled ? <AnalyticsPage /> : <Navigate to="/chat" replace />}
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Catch all - redirect to login if not authenticated, chat if authenticated */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
       </AppLayout>
     </BrowserRouter>
   );

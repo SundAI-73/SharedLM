@@ -28,6 +28,7 @@ export const formatMessage = (text) => {
   
   let formatted = text;
   
+  // IMPORTANT: Extract code blocks FIRST to preserve # and other markdown inside code
   // Store code blocks temporarily to preserve them
   const codeBlocks = [];
   let codeBlockIndex = 0;
@@ -45,6 +46,7 @@ export const formatMessage = (text) => {
       cleanedCode = cleanedCode.substring(1);
     }
     // Remove trailing newlines but keep the code content intact
+    // DO NOT process headers inside code - keep it exactly as is
     cleanedCode = cleanedCode.replace(/\n+$/, '');
     
     codeBlocks.push({
@@ -54,6 +56,15 @@ export const formatMessage = (text) => {
     });
     codeBlockIndex++;
     return placeholder;
+  });
+  
+  // NOW process headers ONLY in the non-code parts
+  // Convert markdown headers (lines starting with #, ##, ###, etc.) to bold text
+  // Preserves the header content but formats it as bold
+  formatted = formatted.replace(/^#{1,6}\s+(.+)$/gm, (match, headerText) => {
+    // Convert header to bold text, preserving the content
+    // Use a special marker so we can identify headers during paragraph processing
+    return `__HEADER__${headerText.trim()}__END_HEADER__`;
   });
   
   // Convert bold markdown: **text** or **number** -> <strong>text</strong>
@@ -90,18 +101,64 @@ export const formatMessage = (text) => {
     } else {
       // This is regular text, process as paragraphs
       if (part.trim()) {
-        // Split by double line breaks for paragraphs
-        const paragraphs = part.split(/\n\n+/).filter(p => p.trim());
-        if (paragraphs.length > 0) {
-          paragraphs.forEach(para => {
-            // Convert single line breaks to <br> within paragraphs
-            const paraWithBreaks = para.trim().replace(/\n/g, '<br>');
+        // Split by lines first to identify headers on their own lines
+        const lines = part.split('\n');
+        let currentParagraph = [];
+        
+        lines.forEach((line) => {
+          const trimmedLine = line.trim();
+          
+          // Check if this line is a header
+          if (trimmedLine.match(/^__HEADER__.+?__END_HEADER__$/)) {
+            // If we have accumulated paragraph text, output it first
+            if (currentParagraph.length > 0) {
+              const paraText = currentParagraph.join('\n').trim();
+              if (paraText) {
+                // Process any remaining header markers in the paragraph as bold
+                const processedPara = paraText.replace(/__HEADER__(.+?)__END_HEADER__/g, '<strong>$1</strong>');
+                // Convert line breaks to <br> within the paragraph
+                const paraWithBreaks = processedPara.replace(/\n/g, '<br>');
+                result += `<p>${paraWithBreaks}</p>`;
+              }
+              currentParagraph = [];
+            }
+            
+            // Extract and format the header
+            const headerMatch = trimmedLine.match(/__HEADER__(.+?)__END_HEADER__/);
+            if (headerMatch) {
+              const headerText = headerMatch[1];
+              // Format header as bold paragraph with extra spacing
+              result += `<p style="font-weight: bold; margin-top: 1.2em; margin-bottom: 0.6em;"><strong>${headerText}</strong></p>`;
+            }
+          } else if (trimmedLine === '') {
+            // Empty line - if we have a paragraph, output it and start a new one
+            if (currentParagraph.length > 0) {
+              const paraText = currentParagraph.join('\n').trim();
+              if (paraText) {
+                // Process any header markers in the paragraph as bold
+                const processedPara = paraText.replace(/__HEADER__(.+?)__END_HEADER__/g, '<strong>$1</strong>');
+                // Convert line breaks to <br> within the paragraph
+                const paraWithBreaks = processedPara.replace(/\n/g, '<br>');
+                result += `<p>${paraWithBreaks}</p>`;
+              }
+              currentParagraph = [];
+            }
+          } else {
+            // Regular line - add to current paragraph (preserve original line for line breaks)
+            currentParagraph.push(line);
+          }
+        });
+        
+        // Output any remaining paragraph
+        if (currentParagraph.length > 0) {
+          const paraText = currentParagraph.join('\n').trim();
+          if (paraText) {
+            // Process any header markers in the paragraph as bold
+            const processedPara = paraText.replace(/__HEADER__(.+?)__END_HEADER__/g, '<strong>$1</strong>');
+            // Convert line breaks to <br> within the paragraph
+            const paraWithBreaks = processedPara.replace(/\n/g, '<br>');
             result += `<p>${paraWithBreaks}</p>`;
-          });
-        } else {
-          // Single paragraph with line breaks
-          const paraWithBreaks = part.trim().replace(/\n/g, '<br>');
-          result += `<p>${paraWithBreaks}</p>`;
+          }
         }
       }
     }
@@ -118,9 +175,10 @@ export const formatMessage = (text) => {
   formatted = formatted.replace(/<p>\s*<\/p>/g, '');
   
   // Sanitize HTML to prevent XSS attacks, but allow pre and code tags
+  // Allow style attribute for header formatting
   return DOMPurify.sanitize(formatted, {
     ALLOWED_TAGS: ['p', 'strong', 'em', 'code', 'pre', 'br'],
-    ALLOWED_ATTR: ['class'],
+    ALLOWED_ATTR: ['class', 'style'],
     KEEP_CONTENT: true
   });
 };

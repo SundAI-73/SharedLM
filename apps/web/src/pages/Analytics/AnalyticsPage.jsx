@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Activity, PieChart } from 'lucide-react';
+import { motion } from 'motion/react';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
 import './Analytics.css';
 
@@ -29,73 +30,124 @@ function AnalyticsPage() {
   return (
     <div className="page-container">
       <div className="page-content">
-        <div className="page-header">
+        <motion.div 
+          className="page-header"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
           <h1 className="page-title">ANALYTICS</h1>
           <p className="page-subtitle">Track your AI usage and performance</p>
-        </div>
+        </motion.div>
 
         <div className="page-main-content">
-          <div className="analytics-controls">
+          <motion.div 
+            className="analytics-controls"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
             <CustomDropdown
               value={timeRange}
               onChange={setTimeRange}
               options={timeRangeOptions}
               className="analytics-time-dropdown"
             />
-          </div>
+          </motion.div>
 
-          <div className="grid-4 stats-grid">
+          <motion.div 
+            className="grid-4 stats-grid"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
             {stats.map((stat, idx) => (
-              <div key={idx} className="card-base stat-card">
+              <motion.div 
+                key={idx} 
+                className="card-base stat-card"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.4 + idx * 0.05 }}
+                whileHover={{ y: -4, scale: 1.02 }}
+              >
                 <div className="stat-label">{stat.label}</div>
                 <div className="stat-value">{stat.value}</div>
                 <div className={`stat-change ${stat.change.startsWith('+') ? 'positive' : stat.change.startsWith('-') ? 'negative' : 'neutral'}`}>
                   {stat.change}
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
 
-          <div className="grid-2 charts-section">
-            <div className="card-base chart-card">
+          <motion.div 
+            className="grid-2 charts-section"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+          >
+            <motion.div 
+              className="card-base chart-card"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.7 }}
+              whileHover={{ y: -4, scale: 1.01 }}
+            >
               <div className="chart-header">
                 <h3 className="chart-title">USAGE OVER TIME</h3>
                 <Activity size={18} className="chart-icon" />
               </div>
               <div className="bar-chart">
                 {[65, 45, 80, 55, 72, 88, 60].map((height, idx) => (
-                  <div
+                  <motion.div
                     key={idx}
                     className="bar"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: `${height}%`, opacity: 1 }}
+                    transition={{ duration: 0.6, delay: 0.8 + idx * 0.05, ease: "easeOut" }}
                     style={{ height: `${height}%` }}
                   />
                 ))}
               </div>
-            </div>
+            </motion.div>
 
-            <div className="card-base chart-card">
+            <motion.div 
+              className="card-base chart-card"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.7 }}
+              whileHover={{ y: -4, scale: 1.01 }}
+            >
               <div className="chart-header">
                 <h3 className="chart-title">MODEL DISTRIBUTION</h3>
                 <PieChart size={18} className="chart-icon" />
               </div>
               <div className="distribution-list">
                 {modelDistribution.map((model, idx) => (
-                  <div key={idx} className="distribution-item">
+                  <motion.div 
+                    key={idx} 
+                    className="distribution-item"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.4, delay: 0.8 + idx * 0.1 }}
+                  >
                     <div className="distribution-bar">
-                      <div
+                      <motion.div
                         className="distribution-fill"
-                        style={{ width: `${model.value}%`, background: model.color }}
+                        initial={{ width: 0, opacity: 0 }}
+                        animate={{ width: `${model.value}%`, opacity: 1 }}
+                        transition={{ duration: 0.6, delay: 0.9 + idx * 0.1, ease: "easeOut" }}
+                        style={{ background: model.color }}
                       />
                     </div>
                     <div className="distribution-info">
                       <span className="distribution-name">{model.name}</span>
                       <span className="distribution-percent">{model.percent}</span>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
     </div>

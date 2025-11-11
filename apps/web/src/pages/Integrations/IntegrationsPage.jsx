@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useUser } from '../../contexts/UserContext';
 import apiService from '../../services/api/index';
@@ -10,12 +11,13 @@ import anthropicLogo from '../../assets/images/claude-color.svg';
 import inceptionLogo from '../../assets/images/inception-labs.png';
 import './Integrations.css';
 
-function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
+function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM }) {
   const navigate = useNavigate();
   const notify = useNotification();
   const { userId } = useUser();
 
   const [customIntegrations, setCustomIntegrations] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const defaultLLMs = [
     { 
@@ -70,31 +72,52 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
   ];
 
   const loadConnectedModels = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
     
     try {
+      setIsLoading(true);
       // Fetch API keys from database
+      // Backend already filters for is_active == True, so all returned keys are active
       const apiKeys = await apiService.getApiKeys(userId);
-      const connectedFromKeys = apiKeys
-        .filter(key => key.is_active)
-        .map(key => key.provider);
+      console.log('[IntegrationsPage] Loaded API keys:', apiKeys);
+      
+      // Backend returns only active keys, so we can use all of them
+      const connectedFromKeys = (apiKeys || []).map(key => key.provider);
+      
+      console.log('[IntegrationsPage] Connected from keys:', connectedFromKeys);
       
       // Fetch custom integrations
       const integrations = await apiService.getCustomIntegrations(userId);
-      setCustomIntegrations(integrations);
+      console.log('[IntegrationsPage] Loaded custom integrations:', integrations);
+      setCustomIntegrations(integrations || []);
       
-      const connectedFromIntegrations = integrations
-        .filter(int => int.is_active)
+      // Filter for active custom integrations (backend might return all, so filter here)
+      const connectedFromIntegrations = (integrations || [])
+        .filter(int => int.is_active === true)
         .map(int => int.provider_id);
+      
+      console.log('[IntegrationsPage] Connected from integrations:', connectedFromIntegrations);
       
       // Merge both lists and remove duplicates
       const allConnected = [...new Set([...connectedFromKeys, ...connectedFromIntegrations])];
       
-      if (allConnected.length > 0 && setConnectedLLMs) {
+      console.log('[IntegrationsPage] All connected models:', allConnected);
+      console.log('[IntegrationsPage] Current connectedLLMs prop:', connectedLLMs);
+      
+      // Always update the connected LLMs state, even if empty
+      if (setConnectedLLMs) {
         setConnectedLLMs(allConnected);
+        console.log('[IntegrationsPage] Updated connectedLLMs state to:', allConnected);
+      } else {
+        console.warn('[IntegrationsPage] setConnectedLLMs is not provided');
       }
     } catch (error) {
-      console.error('Failed to load connected models:', error);
+      console.error('[IntegrationsPage] Failed to load connected models:', error);
+    } finally {
+      setIsLoading(false);
     }
   }, [userId, setConnectedLLMs]);
 
@@ -102,12 +125,36 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
     loadConnectedModels();
   }, [loadConnectedModels]);
 
+  // Listen for API key updates to refresh the connected models list
+  useEffect(() => {
+    const handleApiKeysUpdated = () => {
+      loadConnectedModels();
+    };
+
+    window.addEventListener('apiKeysUpdated', handleApiKeysUpdated);
+    
+    // Also refresh when page becomes visible (user might have added keys in another tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadConnectedModels();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('apiKeysUpdated', handleApiKeysUpdated);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadConnectedModels]);
+
 
   const handleLLMClick = (llm) => {
-    if (llm.status === 'available' && !connectedLLMs.includes(llm.id)) {
+    const isConnected = Array.isArray(connectedLLMs) && connectedLLMs.includes(llm.id);
+    if (llm.status === 'available' && !isConnected) {
       setSelectedLLM(llm);
       navigate('/auth');
-    } else if (connectedLLMs.includes(llm.id)) {
+    } else if (isConnected) {
       notify.info(`${llm.name} is already connected. Manage your API key in Settings.`);
     }
   };
@@ -140,23 +187,39 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
   return (
     <div className="page-container">
       <div className="page-content">
-        <div className="page-header">
+        <motion.div 
+          className="page-header"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
           <h1 className="page-title">MULTI LM</h1>
           <p className="page-subtitle">Connect and manage your AI models</p>
-        </div>
+        </motion.div>
 
         <div className="page-main-content">
-          <div className="grid-4 integrations-grid">
-            {defaultLLMs.map(llm => (
-              <button
+          <motion.div 
+            className="grid-4 integrations-grid"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            {defaultLLMs.map((llm, index) => {
+              const isConnected = Array.isArray(connectedLLMs) && connectedLLMs.includes(llm.id);
+              return (
+              <motion.button
                 key={llm.id}
-                className={`card-base integration-card ${connectedLLMs.includes(llm.id) ? 'connected' : ''}`}
+                className={`card-base integration-card ${isConnected ? 'connected' : ''}`}
                 onClick={() => handleLLMClick(llm)}
                 disabled={llm.status === 'coming'}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: llm.status === 'coming' ? 0.5 : 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 + index * 0.05 }}
+                whileHover={llm.status !== 'coming' ? { y: -4, scale: 1.02 } : {}}
+                whileTap={llm.status !== 'coming' ? { scale: 0.98 } : {}}
                 style={{
-                  opacity: llm.status === 'coming' ? 0.5 : 1,
                   cursor: llm.status === 'coming' ? 'not-allowed' : 
-                          connectedLLMs.includes(llm.id) ? 'default' : 'pointer'
+                          isConnected ? 'default' : 'pointer'
                 }}
               >
                 {llm.status === 'coming' && (
@@ -170,7 +233,7 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
                         alt={`${llm.name} logo`} 
                         className="integration-logo"
                       />
-                    ) : connectedLLMs.includes(llm.id) ? (
+                    ) : isConnected ? (
                       <Check size={20} color="#00ff88" />
                     ) : null}
                   </div>
@@ -179,58 +242,100 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
                     <p className="integration-provider">{llm.provider}</p>
                   </div>
                 </div>
-                {connectedLLMs.includes(llm.id) && (
+                {isConnected && (
                   <div className="connected-indicator"></div>
                 )}
-              </button>
-            ))}
-          </div>
+              </motion.button>
+              );
+            })}
+          </motion.div>
 
-          <div className="custom-section">
-            <p className="custom-label">CUSTOM INTEGRATIONS</p>
+          <motion.div 
+            className="custom-section"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          >
+            <motion.p 
+              className="custom-label"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.6 }}
+            >
+              CUSTOM INTEGRATIONS
+            </motion.p>
             
-            {customIntegrations.length > 0 && (
-              <div className="grid-4 custom-integrations-grid">
-                {customIntegrations.map(integration => (
-                  <div key={integration.id} className="card-base integration-card custom-integration-item">
-                    <button
-                      className="custom-integration-delete"
-                      onClick={() => handleDeleteCustomIntegration(integration.id, integration.name)}
-                      title="Delete integration"
+            <AnimatePresence>
+              {customIntegrations.length > 0 && (
+                <motion.div 
+                  className="grid-4 custom-integrations-grid"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  {customIntegrations.map((integration, index) => {
+                    const isCustomConnected = Array.isArray(connectedLLMs) && connectedLLMs.includes(integration.provider_id);
+                    return (
+                    <motion.div 
+                      key={integration.id} 
+                      className={`card-base integration-card custom-integration-item ${isCustomConnected ? 'connected' : ''}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.4, delay: index * 0.05 }}
+                      whileHover={{ y: -4, scale: 1.02 }}
                     >
-                      <X size={16} />
-                    </button>
-                    
-                    <div className="integration-content">
-                      <div className="integration-icon-placeholder">
-                        {integration.logo_url ? (
-                          <img 
-                            src={integration.logo_url} 
-                            alt={`${integration.name} logo`}
-                            className="integration-logo"
-                            onError={(e) => { e.target.style.display = 'none'; }}
-                          />
-                        ) : (
-                          <Check size={20} color="#B94539" />
-                        )}
+                      <motion.button
+                        className="custom-integration-delete"
+                        onClick={() => handleDeleteCustomIntegration(integration.id, integration.name)}
+                        title="Delete integration"
+                        whileHover={{ scale: 1.1, rotate: 90 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <X size={16} />
+                      </motion.button>
+                      
+                      <div className="integration-content">
+                        <div className="integration-icon-placeholder">
+                          {integration.logo_url ? (
+                            <img 
+                              src={integration.logo_url} 
+                              alt={`${integration.name} logo`}
+                              className="integration-logo"
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <Check size={20} color="#B94539" />
+                          )}
+                        </div>
+                        <div className="integration-text">
+                          <h3 className="integration-name">{integration.name}</h3>
+                          <p className="integration-provider">Custom</p>
+                        </div>
                       </div>
-                      <div className="integration-text">
-                        <h3 className="integration-name">{integration.name}</h3>
-                        <p className="integration-provider">Custom</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                      {isCustomConnected && (
+                        <div className="connected-indicator"></div>
+                      )}
+                    </motion.div>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
             
-            <button
+            <motion.button
               className="button-base button-primary custom-integration-btn"
               onClick={handleCustomIntegrationClick}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.7 }}
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
             >
               ADD CUSTOM INTEGRATION
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         </div>
       </div>
     </div>

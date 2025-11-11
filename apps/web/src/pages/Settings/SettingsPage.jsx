@@ -618,12 +618,7 @@ function SettingsPage() {
 
 
   return (
-    <motion.div 
-      className="page-container"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
+    <div className="page-container">
       <div className="page-content">
         <motion.div 
           className="page-header"
@@ -1274,7 +1269,7 @@ function SettingsPage() {
           loadApiKeys();
         }}
       />
-    </motion.div>
+    </div>
   );
 }
 
