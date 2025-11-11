@@ -21,10 +21,10 @@ config = load_dotenv()
 async def call_openai(prompt: str, model: str = None, api_key: str = None) -> str:
     """Call OpenAI API"""
     try:
-        # Use provided API key or fall back to environment variable
-        key = api_key or os.environ.get('OPENAI_API_KEY')
-        if not key:
-            raise ValueError("OpenAI API key not provided and OPENAI_API_KEY environment variable not set")
+        # Require API key - do not fall back to environment variable
+        if not api_key:
+            raise ValueError("OpenAI API key is required. Please add your API key in Settings.")
+        key = api_key
         
         client = openai.OpenAI(api_key=key)
         response = await asyncio.to_thread(
@@ -47,10 +47,10 @@ async def call_openai(prompt: str, model: str = None, api_key: str = None) -> st
 async def call_anthropic(prompt: str, model: str = None, api_key: str = None) -> str:
     """Call Anthropic API"""    
     try:
-        # Use provided API key or fall back to environment variable
-        key = api_key or os.environ.get('ANTHROPIC_API_KEY')
-        if not key:
-            raise ValueError("Anthropic API key not provided and ANTHROPIC_API_KEY environment variable not set")
+        # Require API key - do not fall back to environment variable
+        if not api_key:
+            raise ValueError("Anthropic API key is required. Please add your API key in Settings.")
+        key = api_key
         
         client = Anthropic(api_key=key)
         # New Anthropic API uses messages.create
@@ -74,10 +74,10 @@ async def call_anthropic(prompt: str, model: str = None, api_key: str = None) ->
 async def call_mistral(prompt: str, model: str = None, api_key: str = None) -> str:
     """Call Mistral API"""
     try:
-        # Use provided API key or fall back to environment variable
-        key = api_key or os.environ.get('MISTRAL_API_KEY')
-        if not key:
-            raise ValueError("Mistral API key not provided and MISTRAL_API_KEY environment variable not set")
+        # Require API key - do not fall back to environment variable
+        if not api_key:
+            raise ValueError("Mistral API key is required. Please add your API key in Settings.")
+        key = api_key
         
         client = MistralClient(api_key=key)
         response = await asyncio.to_thread(
@@ -98,10 +98,10 @@ async def call_mistral(prompt: str, model: str = None, api_key: str = None) -> s
 async def call_inception(prompt: str, model: str = None, api_key: str = None) -> str:
     """Call Inception Labs API (OpenAI-compatible)"""
     try:
-        # Use provided API key or fall back to environment variable
-        key = api_key or os.environ.get('INCEPTION_API_KEY')
-        if not key:
-            raise ValueError("Inception API key not provided and INCEPTION_API_KEY environment variable not set")
+        # Require API key - do not fall back to environment variable
+        if not api_key:
+            raise ValueError("Inception API key is required. Please add your API key in Settings.")
+        key = api_key
         
         # Inception Labs uses OpenAI-compatible API
         client = openai.OpenAI(

@@ -32,19 +32,22 @@ async def get_models(
         # Get user's API keys from database
         api_keys = crud.get_user_api_keys(db, user_id)
         # Only return providers where user has active API keys
-        available_models = [key.provider for key in api_keys if key.is_active]
+        # Explicitly filter to ensure only active keys are included
+        available_models = [key.provider for key in api_keys if key.is_active is True]
+        
         # Also include custom integrations
         try:
             custom_integrations = crud.get_user_custom_integrations(db, user_id)
-            custom_providers = [int.provider_id for int in custom_integrations if int.is_active]
+            custom_providers = [int.provider_id for int in custom_integrations if int.is_active is True]
             available_models.extend(custom_providers)
         except Exception as e:
             # If custom integrations query fails, just continue with API keys
             pass
+        
         # Remove duplicates and return
+        # Always return a list, even if empty (don't fall back to all providers)
         return ModelsResponse(available_models=list(set(available_models)))
     else:
-        # No user_id provided - return all possible providers (for backwards compatibility)
-        return ModelsResponse(
-            available_models=["mistral", "openai", "anthropic", "inception"]
-        )
+        # No user_id provided - return empty list (user must provide user_id to get models)
+        # This prevents showing all providers when user_id is missing
+        return ModelsResponse(available_models=[])

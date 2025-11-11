@@ -1,0 +1,152 @@
+/* Modal styles matching custom integration modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+  padding: 20px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: #141414;
+  border: 1px solid #2A2A2A;
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 500px;
+  width: 100%;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-title {
+  font-family: 'Courier New', monospace;
+  font-size: 1.5rem;
+  color: #FFFFFF;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin: 0 0 30px 0;
+  text-align: center;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-label {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: #888888;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.form-input {
+  background: #1F1F1F;
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+  padding: 15px 20px;
+  color: #FFFFFF;
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: #2A2A2A;
+}
+
+.form-input::placeholder {
+  color: #555555;
+}
+
+.form-hint {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #666666;
+  margin-top: 5px;
+  letter-spacing: 0.5px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+
+.button-base {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.button-base:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-primary {
+  background: #B94539;
+  color: #FFFFFF;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: #A0382E;
+}
+
+.button-secondary {
+  background: #1F1F1F;
+  color: #E0E0E0;
+  border: 1px solid #2A2A2A;
+}
+
+.button-secondary:hover:not(:disabled) {
+  background: #2A2A2A;
+  border-color: #3A3A3A;
+}
+

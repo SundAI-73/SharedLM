@@ -75,8 +75,23 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         if api_key_obj:
             try:
                 api_key = decrypt_key(api_key_obj.encrypted_key)
+                logger.info(f"API key found in database for user {request.user_id}, provider {request.model_provider}")
             except Exception as e:
                 logger.warning(f"Failed to decrypt API key for {request.model_provider}: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to decrypt API key for {request.model_provider}. Please update your API key in Settings."
+                )
+        else:
+            # Don't fall back to .env - user must explicitly link the key
+            logger.warning(f"No API key found in database for user {request.user_id}, provider {request.model_provider}")
+            # Log all API keys for this user for debugging
+            all_user_keys = crud.get_user_api_keys(db, request.user_id)
+            logger.info(f"User {request.user_id} has {len(all_user_keys)} API keys: {[k.provider for k in all_user_keys]}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"No API key found for {request.model_provider}. Please add your API key in Settings."
+            )
         
         # 5. Search memories (Mem0)
         memories = mem0_client.search_memories(

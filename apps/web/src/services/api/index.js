@@ -730,9 +730,30 @@ class APIService {
     }
   }
 
+  async updateCustomIntegration(integrationId, integrationData) {
+    try {
+      const response = await this.makeRequest(`${API_BASE_URL}/custom-integrations/update/${integrationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(integrationData)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Failed to update custom integration' }));
+        throw new Error(error.detail || 'Failed to update custom integration');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Update custom integration failed:', error);
+      }
+      throw error;
+    }
+  }
+
   async deleteCustomIntegration(integrationId) {
     try {
-      const response = await this.makeRequest(`${API_BASE_URL}/custom-integrations/${integrationId}`, {
+      const response = await this.makeRequest(`${API_BASE_URL}/custom-integrations/delete/${integrationId}`, {
         method: 'DELETE'
       });
 

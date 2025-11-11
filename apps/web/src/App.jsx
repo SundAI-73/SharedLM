@@ -15,6 +15,7 @@ import './styles/index.css';
 const ChatPage = lazy(() => import('./pages/Chat/ChatPage'));
 const IntegrationsPage = lazy(() => import('./pages/Integrations/IntegrationsPage'));
 const AuthPage = lazy(() => import('./pages/Auth/AuthPage'));
+const AddCustomIntegrationPage = lazy(() => import('./pages/AddCustomIntegration/AddCustomIntegrationPage'));
 const ProjectsPage = lazy(() => import('./pages/Projects/ProjectsPage'));
 const ProjectLanding = lazy(() => import('./pages/Projects/ProjectLanding'));
 const HistoryPage = lazy(() => import('./pages/History/HistoryPage'));
@@ -167,6 +168,17 @@ function AppContent() {
               <ProtectedRoute>
                 <AuthPage
                   selectedLLM={selectedLLM}
+                  setSelectedLLM={setSelectedLLM}
+                  setConnectedLLMs={setConnectedLLMs}
+                  connectedLLMs={connectedLLMs}
+                />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/add-custom-integration" element={
+              <ProtectedRoute>
+                <AddCustomIntegrationPage
+                  setSelectedLLM={setSelectedLLM}
                   setConnectedLLMs={setConnectedLLMs}
                   connectedLLMs={connectedLLMs}
                 />

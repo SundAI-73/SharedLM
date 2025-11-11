@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X } from 'lucide-react';
 import { useNotification } from '../../contexts/NotificationContext';
@@ -14,16 +14,8 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
   const navigate = useNavigate();
   const notify = useNotification();
   const { userId } = useUser();
-  const modalRef = useRef(null);
 
   const [customIntegrations, setCustomIntegrations] = useState([]);
-  const [showCustomModal, setShowCustomModal] = useState(false);
-  const [customFormData, setCustomFormData] = useState({
-    name: '',
-    baseUrl: '',
-    logoUrl: ''
-  });
-  const [loadingCustom, setLoadingCustom] = useState(false);
 
   const defaultLLMs = [
     { 
@@ -110,21 +102,6 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
     loadConnectedModels();
   }, [loadConnectedModels]);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
-        setShowCustomModal(false);
-      }
-    };
-
-    if (showCustomModal) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showCustomModal]);
 
   const handleLLMClick = (llm) => {
     if (llm.status === 'available' && !connectedLLMs.includes(llm.id)) {
@@ -136,59 +113,9 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
   };
 
   const handleCustomIntegrationClick = () => {
-    setShowCustomModal(true);
+    navigate('/add-custom-integration');
   };
 
-  const handleCustomFormChange = (field, value) => {
-    setCustomFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleCreateCustomIntegration = async () => {
-    if (!customFormData.name.trim()) {
-      notify.error('Please enter an integration name');
-      return;
-    }
-
-    try {
-      setLoadingCustom(true);
-
-      const result = await apiService.createCustomIntegration(userId, {
-        name: customFormData.name.trim(),
-        base_url: customFormData.baseUrl.trim() || null,
-        logo_url: customFormData.logoUrl.trim() || null,
-        api_type: 'openai'
-      });
-
-      if (result.success) {
-        notify.success('Custom integration created successfully');
-        
-        await loadConnectedModels();
-        
-        setShowCustomModal(false);
-        setCustomFormData({ name: '', baseUrl: '', logoUrl: '' });
-        
-        const integration = result.integration;
-        setSelectedLLM({
-          id: integration.provider_id,
-          name: integration.name,
-          provider: 'Custom',
-          status: 'available',
-          logo: integration.logo_url,
-          isCustom: true,
-          baseUrl: integration.base_url
-        });
-        
-        navigate('/auth');
-      }
-    } catch (error) {
-      notify.error(error.message || 'Failed to create custom integration');
-    } finally {
-      setLoadingCustom(false);
-    }
-  };
 
   const handleDeleteCustomIntegration = async (integrationId, integrationName) => {
     const confirmed = await notify.confirm({
@@ -306,72 +233,6 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
           </div>
         </div>
       </div>
-
-      {showCustomModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" ref={modalRef}>
-            <h2 className="modal-title">ADD CUSTOM INTEGRATION</h2>
-            
-            <div className="modal-form">
-              <div className="form-group">
-                <label className="form-label">Integration Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., My Local LLM, Ollama, etc."
-                  value={customFormData.name}
-                  onChange={(e) => handleCustomFormChange('name', e.target.value)}
-                  className="form-input"
-                  autoFocus
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Base URL (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g., http://localhost:11434/v1"
-                  value={customFormData.baseUrl}
-                  onChange={(e) => handleCustomFormChange('baseUrl', e.target.value)}
-                  className="form-input"
-                />
-                <p className="form-hint">Leave empty if using default OpenAI-compatible endpoint</p>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Logo URL (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="https://example.com/logo.png"
-                  value={customFormData.logoUrl}
-                  onChange={(e) => handleCustomFormChange('logoUrl', e.target.value)}
-                  className="form-input"
-                />
-                <p className="form-hint">Direct link to an image file</p>
-              </div>
-
-              <div className="modal-actions">
-                <button 
-                  className="button-base button-secondary" 
-                  onClick={() => {
-                    setShowCustomModal(false);
-                    setCustomFormData({ name: '', baseUrl: '', logoUrl: '' });
-                  }}
-                  disabled={loadingCustom}
-                >
-                  Cancel
-                </button>
-                <button 
-                  className="button-base button-primary" 
-                  onClick={handleCreateCustomIntegration}
-                  disabled={!customFormData.name.trim() || loadingCustom}
-                >
-                  {loadingCustom ? 'Creating...' : 'Add Integration'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

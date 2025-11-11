@@ -31,6 +31,86 @@ class CustomIntegrationResponse(BaseModel):
     updated_at: str
 
 
+@router.patch("/update/{integration_id}")
+async def update_custom_integration(
+    integration_id: int,
+    integration_data: CustomIntegrationCreate,
+    db: Session = Depends(get_db)
+):
+    try:
+        integration = crud.get_custom_integration(db, integration_id)
+        
+        if not integration:
+            raise HTTPException(status_code=404, detail="Custom integration not found")
+        
+        # Update provider_id if name changed
+        update_data = {
+            "name": integration_data.name,
+            "base_url": integration_data.base_url,
+            "logo_url": integration_data.logo_url,
+            "api_type": integration_data.api_type or "openai"
+        }
+        
+        # Only update provider_id if name changed
+        if integration.name != integration_data.name:
+            new_provider_id = f"custom_{integration_data.name.lower().replace(' ', '_')}"
+            update_data["provider_id"] = new_provider_id
+        
+        updated_integration = crud.update_custom_integration(db, integration_id, **update_data)
+        
+        if updated_integration:
+            logger.info(f"Updated custom integration: {integration_id}")
+            return {
+                "success": True,
+                "message": "Custom integration updated successfully",
+                "integration": CustomIntegrationResponse(
+                    id=updated_integration.id,
+                    name=updated_integration.name,
+                    provider_id=updated_integration.provider_id,
+                    base_url=updated_integration.base_url,
+                    api_type=updated_integration.api_type or "openai",
+                    logo_url=updated_integration.logo_url,
+                    is_active=updated_integration.is_active,
+                    created_at=str(updated_integration.created_at),
+                    updated_at=str(updated_integration.updated_at)
+                )
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update custom integration")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update custom integration error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/delete/{integration_id}")
+async def delete_custom_integration(integration_id: int, db: Session = Depends(get_db)):
+    try:
+        integration = crud.get_custom_integration(db, integration_id)
+        
+        if not integration:
+            raise HTTPException(status_code=404, detail="Custom integration not found")
+        
+        success = crud.delete_custom_integration(db, integration_id)
+        
+        if success:
+            logger.info(f"Deleted custom integration: {integration_id}")
+            return {
+                "success": True,
+                "message": "Custom integration deleted successfully"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete custom integration")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Delete custom integration error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{user_id}", response_model=List[CustomIntegrationResponse])
 async def get_custom_integrations(user_id: str, db: Session = Depends(get_db)):
     try:
@@ -92,30 +172,4 @@ async def create_custom_integration(
         }
     except Exception as e:
         logger.error(f"Create custom integration error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/{integration_id}")
-async def delete_custom_integration(integration_id: int, db: Session = Depends(get_db)):
-    try:
-        integration = crud.get_custom_integration(db, integration_id)
-        
-        if not integration:
-            raise HTTPException(status_code=404, detail="Custom integration not found")
-        
-        success = crud.delete_custom_integration(db, integration_id)
-        
-        if success:
-            logger.info(f"Deleted custom integration: {integration_id}")
-            return {
-                "success": True,
-                "message": "Custom integration deleted successfully"
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Failed to delete custom integration")
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Delete custom integration error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
