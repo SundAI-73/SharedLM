@@ -1,8 +1,37 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const Store = require('electron-store');
 
-const store = new Store();
+// Use dynamic import for electron-store to handle both ESM and CommonJS
+let Store;
+let store;
+
+async function initializeStore() {
+  if (!store) {
+    try {
+      // Try dynamic import (works with ESM versions)
+      const storeModule = await import('electron-store');
+      Store = storeModule.default || storeModule;
+      store = new Store();
+    } catch (error) {
+      // Fallback to require (works with CommonJS versions)
+      try {
+        Store = require('electron-store');
+        store = new Store();
+      } catch (requireError) {
+        console.error('Failed to load electron-store:', requireError);
+        // Create a mock store if electron-store fails
+        store = {
+          get: () => undefined,
+          set: () => true,
+          delete: () => true,
+          clear: () => true
+        };
+      }
+    }
+  }
+  return store;
+}
+
 let mainWindow;
 
 // Determine if running in development mode
@@ -40,6 +69,11 @@ function createWindow() {
     if (isDev) {
       mainWindow.webContents.openDevTools({ mode: 'detach' });
     }
+
+    // Send initial window state after window is ready
+    if (mainWindow.isMaximized()) {
+      mainWindow.webContents.send('window-maximized');
+    }
   });
 
   mainWindow.on('closed', () => {
@@ -64,9 +98,31 @@ function createWindow() {
   ipcMain.on('window-close', () => {
     if (mainWindow) mainWindow.close();
   });
+
+  ipcMain.handle('window-is-maximized', () => {
+    return mainWindow ? mainWindow.isMaximized() : false;
+  });
+
+  // Send window state changes to renderer
+  mainWindow.on('maximize', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window-maximized');
+    }
+  });
+
+  mainWindow.on('unmaximize', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window-unmaximized');
+    }
+  });
 }
 
-app.whenReady().then(createWindow);
+// Initialize store and create window
+app.whenReady().then(async () => {
+  await initializeStore();
+  setupStorageHandlers();
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -80,22 +136,28 @@ app.on('activate', () => {
   }
 });
 
-// Storage handlers
-ipcMain.handle('store-get', (event, key) => {
-  return store.get(key);
-});
+// Storage handlers - ensure store is initialized before use
+function setupStorageHandlers() {
+  ipcMain.handle('store-get', async (event, key) => {
+    const storeInstance = await initializeStore();
+    return storeInstance.get(key);
+  });
 
-ipcMain.handle('store-set', (event, key, value) => {
-  store.set(key, value);
-  return true;
-});
+  ipcMain.handle('store-set', async (event, key, value) => {
+    const storeInstance = await initializeStore();
+    storeInstance.set(key, value);
+    return true;
+  });
 
-ipcMain.handle('store-delete', (event, key) => {
-  store.delete(key);
-  return true;
-});
+  ipcMain.handle('store-delete', async (event, key) => {
+    const storeInstance = await initializeStore();
+    storeInstance.delete(key);
+    return true;
+  });
 
-ipcMain.handle('store-clear', () => {
-  store.clear();
-  return true;
-});
+  ipcMain.handle('store-clear', async () => {
+    const storeInstance = await initializeStore();
+    storeInstance.clear();
+    return true;
+  });
+}

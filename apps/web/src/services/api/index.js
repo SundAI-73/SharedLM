@@ -17,8 +17,9 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-// Request timeout (30 seconds)
-const REQUEST_TIMEOUT = 30000;
+// Request timeout (15 seconds for faster error detection, chat requests may need longer)
+const REQUEST_TIMEOUT = 15000;
+const CHAT_REQUEST_TIMEOUT = 60000; // 60 seconds for chat (LLM calls can be slow)
 
 class APIService {
   
@@ -41,9 +42,10 @@ class APIService {
    * Make authenticated API request with rate limiting and session management
    * @param {string} url - API endpoint
    * @param {object} options - Fetch options
+   * @param {number} timeout - Custom timeout in milliseconds (optional)
    * @returns {Promise<Response>}
    */
-  async makeRequest(url, options = {}) {
+  async makeRequest(url, options = {}, timeout = null) {
     // Check session validity (don't redirect, just check)
     // Health check and auth endpoints don't require authentication
     const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/signup') || url.includes('/health');
@@ -69,7 +71,9 @@ class APIService {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    // Use custom timeout if provided, otherwise use default
+    const requestTimeout = timeout !== null ? timeout : REQUEST_TIMEOUT;
+    const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
 
     try {
       // Get auth headers
@@ -256,9 +260,12 @@ class APIService {
     }
   }
 
-  async getModels() {
+  async getModels(userId = null) {
     try {
-      const response = await this.makeRequest(`${API_BASE_URL}/models`);
+      const url = userId 
+        ? `${API_BASE_URL}/models?user_id=${userId}`
+        : `${API_BASE_URL}/models`;
+      const response = await this.makeRequest(url);
       if (!response.ok) throw new Error('Failed to fetch models');
       return await response.json();
     } catch (error) {
@@ -280,6 +287,8 @@ class APIService {
         modelProvider = 'anthropic';
       } else if (modelChoice === 'mistral') {
         modelProvider = 'mistral';
+      } else if (modelChoice === 'inception') {
+        modelProvider = 'inception';
       } else if (modelChoice && modelChoice.startsWith('custom_')) {
         // It's a custom integration - pass the provider_id directly
         modelProvider = modelChoice;
@@ -298,7 +307,8 @@ class APIService {
         // Standard providers
         modelToUse = specificModel || (
           modelChoice === 'openai' ? 'gpt-4o-mini' :
-          modelChoice === 'anthropic' ? 'claude-3-haiku-20240307' : 
+          modelChoice === 'anthropic' ? 'claude-3-haiku-20240307' :
+          modelChoice === 'inception' ? 'mercury' :
           'mistral-small-latest'
         );
       }
@@ -313,7 +323,7 @@ class APIService {
           session_id: sessionId ? String(sessionId) : null, // Convert to string as backend expects Optional[str]
           project_id: projectId
         })
-      });
+      }, CHAT_REQUEST_TIMEOUT); // Use longer timeout for chat requests
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Failed to send message' }));
@@ -724,9 +734,30 @@ class APIService {
     }
   }
 
+  async updateCustomIntegration(integrationId, integrationData) {
+    try {
+      const response = await this.makeRequest(`${API_BASE_URL}/custom-integrations/update/${integrationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(integrationData)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Failed to update custom integration' }));
+        throw new Error(error.detail || 'Failed to update custom integration');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Update custom integration failed:', error);
+      }
+      throw error;
+    }
+  }
+
   async deleteCustomIntegration(integrationId) {
     try {
-      const response = await this.makeRequest(`${API_BASE_URL}/custom-integrations/${integrationId}`, {
+      const response = await this.makeRequest(`${API_BASE_URL}/custom-integrations/delete/${integrationId}`, {
         method: 'DELETE'
       });
 

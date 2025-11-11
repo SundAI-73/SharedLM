@@ -21,10 +21,10 @@ config = load_dotenv()
 async def call_openai(prompt: str, model: str = None, api_key: str = None) -> str:
     """Call OpenAI API"""
     try:
-        # Use provided API key or fall back to environment variable
-        key = api_key or os.environ.get('OPENAI_API_KEY')
-        if not key:
-            raise ValueError("OpenAI API key not provided and OPENAI_API_KEY environment variable not set")
+        # Require API key - do not fall back to environment variable
+        if not api_key:
+            raise ValueError("OpenAI API key is required. Please add your API key in Settings.")
+        key = api_key
         
         client = openai.OpenAI(api_key=key)
         response = await asyncio.to_thread(
@@ -47,10 +47,10 @@ async def call_openai(prompt: str, model: str = None, api_key: str = None) -> st
 async def call_anthropic(prompt: str, model: str = None, api_key: str = None) -> str:
     """Call Anthropic API"""    
     try:
-        # Use provided API key or fall back to environment variable
-        key = api_key or os.environ.get('ANTHROPIC_API_KEY')
-        if not key:
-            raise ValueError("Anthropic API key not provided and ANTHROPIC_API_KEY environment variable not set")
+        # Require API key - do not fall back to environment variable
+        if not api_key:
+            raise ValueError("Anthropic API key is required. Please add your API key in Settings.")
+        key = api_key
         
         client = Anthropic(api_key=key)
         # New Anthropic API uses messages.create
@@ -74,10 +74,10 @@ async def call_anthropic(prompt: str, model: str = None, api_key: str = None) ->
 async def call_mistral(prompt: str, model: str = None, api_key: str = None) -> str:
     """Call Mistral API"""
     try:
-        # Use provided API key or fall back to environment variable
-        key = api_key or os.environ.get('MISTRAL_API_KEY')
-        if not key:
-            raise ValueError("Mistral API key not provided and MISTRAL_API_KEY environment variable not set")
+        # Require API key - do not fall back to environment variable
+        if not api_key:
+            raise ValueError("Mistral API key is required. Please add your API key in Settings.")
+        key = api_key
         
         client = MistralClient(api_key=key)
         response = await asyncio.to_thread(
@@ -93,6 +93,36 @@ async def call_mistral(prompt: str, model: str = None, api_key: str = None) -> s
     except Exception as e:
         logger.error(f"Mistral API error: {e}")
         raise Exception(f"Mistral API error: {str(e)}")
+
+
+async def call_inception(prompt: str, model: str = None, api_key: str = None) -> str:
+    """Call Inception Labs API (OpenAI-compatible)"""
+    try:
+        # Require API key - do not fall back to environment variable
+        if not api_key:
+            raise ValueError("Inception API key is required. Please add your API key in Settings.")
+        key = api_key
+        
+        # Inception Labs uses OpenAI-compatible API
+        client = openai.OpenAI(
+            api_key=key,
+            base_url="https://api.inceptionlabs.ai/v1"
+        )
+        response = await asyncio.to_thread(
+            client.chat.completions.create,
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000,
+            temperature=0.7
+        )
+        
+        reply = response.choices[0].message.content
+        logger.info(f"Inception {model} response generated")
+        return reply
+        
+    except Exception as e:
+        logger.error(f"Inception API error: {e}")
+        raise Exception(f"Inception API error: {str(e)}")
 
 
 # async def call_llama(prompt: str, model: str = None) -> str:
@@ -173,6 +203,9 @@ async def route_chat(
         return reply, model_choice
     elif model_provider == "mistral":
         reply = await call_mistral(prompt=prompt, model=model_choice, api_key=api_key)
+        return reply, model_choice
+    elif model_provider == "inception":
+        reply = await call_inception(prompt=prompt, model=model_choice, api_key=api_key)
         return reply, model_choice
     elif custom_integration and model_provider.startswith("custom_"):
         # Handle custom integration

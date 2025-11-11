@@ -178,13 +178,26 @@
   width: 40px;
   height: 40px;
   background: #1F1F1F;
-  border: 1px solid #2A2A2A;
-  border-radius: 12px;
+  border: 1px solid #252525;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #666666;
   flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  padding: 4px;
+}
+
+.message-model-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 8px;
+  display: block;
+  box-sizing: border-box;
 }
 
 .message-content {
@@ -301,14 +314,16 @@
   font-style: italic;
 }
 
-/* Code blocks (multi-line) */
+/* Code blocks (multi-line) - Claude style */
 .message-text pre {
   background: #1A1A1A;
   border: 1px solid #2A2A2A;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 16px;
   overflow-x: auto;
-  margin: 12px 0;
+  margin: 16px 0;
+  position: relative;
+  font-family: 'Courier New', 'Menlo', 'Monaco', 'Consolas', monospace;
 }
 
 .message-text pre code {
@@ -317,7 +332,116 @@
   padding: 0;
   color: #E0E0E0;
   font-size: 0.875rem;
-  line-height: 1.5;
+  line-height: 1.6;
+  display: block;
+  white-space: pre;
+  word-wrap: normal;
+  overflow-wrap: normal;
+  font-family: inherit;
+}
+
+/* Ensure code blocks preserve formatting */
+.message-text pre code {
+  white-space: pre;
+  word-break: normal;
+  overflow-x: auto;
+}
+
+/* Code block copy button */
+.message-text pre .code-copy-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #1F1F1F;
+  border: 1px solid #2A2A2A;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #E0E0E0;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  box-sizing: border-box;
+  pointer-events: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  min-height: 32px;
+}
+
+.message-text pre:hover .code-copy-btn {
+  opacity: 1;
+}
+
+.message-text pre .code-copy-btn:hover {
+  background: #2A2A2A;
+  border-color: #3A3A3A;
+  color: #FFFFFF;
+}
+
+.message-text pre .code-copy-btn:active {
+  transform: scale(0.98);
+  background: #252525;
+}
+
+.message-text pre .code-copy-btn.copied {
+  opacity: 1;
+  color: #00ff88;
+  border-color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+}
+
+.message-text pre .code-copy-btn.copied:hover {
+  background: rgba(0, 255, 136, 0.15);
+  border-color: #00ff88;
+}
+
+.message-text pre .code-copy-btn .code-copy-btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.message-text pre .code-copy-btn .code-copy-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.message-text pre .code-copy-btn .code-copy-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
+}
+
+.message-text pre .code-copy-btn .code-copy-text {
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* Language label for code blocks (optional - can be enabled if desired) */
+.message-text pre[class*="language-"]::before {
+  display: none; /* Hidden by default */
+  /* Uncomment below to show language labels */
+  /*
+  content: attr(class);
+  display: block;
+  font-size: 0.75rem;
+  color: #666666;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: 'Courier New', monospace;
+  */
 }
 
 /* Message Meta */

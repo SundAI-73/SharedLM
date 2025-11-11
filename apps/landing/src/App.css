@@ -1,0 +1,12 @@
+.App {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #000;
+  position: relative;
+}
+
+/* Smooth scroll behavior */
+section {
+  scroll-margin-top: 100px;
+}
+

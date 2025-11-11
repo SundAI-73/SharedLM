@@ -10,7 +10,16 @@ contextBridge.exposeInMainWorld('electron', {
   window: {
     minimize: () => ipcRenderer.send('window-minimize'),
     maximize: () => ipcRenderer.send('window-maximize'),
-    close: () => ipcRenderer.send('window-close')
+    close: () => ipcRenderer.send('window-close'),
+    isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+    onMaximize: (callback) => {
+      ipcRenderer.on('window-maximized', callback);
+      return () => ipcRenderer.removeListener('window-maximized', callback);
+    },
+    onUnmaximize: (callback) => {
+      ipcRenderer.on('window-unmaximized', callback);
+      return () => ipcRenderer.removeListener('window-unmaximized', callback);
+    }
   },
   
   // Storage APIs

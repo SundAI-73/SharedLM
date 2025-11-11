@@ -31,10 +31,10 @@ class Settings(BaseSettings):
     default_top_k: int = 5
     
     # CORS
+    # Note: Wildcards in CORS origins are not supported by FastAPI
+    # For production, specify exact origins via environment variables
     cors_origins: List[str] = [
         "https://shared-lm.vercel.app",
-        "https://shared-lm-*.vercel.app",
-        "https://*.vercel.app",
         "http://localhost:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3000",

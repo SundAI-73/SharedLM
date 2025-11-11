@@ -79,10 +79,15 @@ button, input, textarea, select {
       #050000 50%,
       #000000 100%
     );
-  background-attachment: fixed;
   background-size: 100% 100%;
   background-position: center;
+  background-repeat: no-repeat;
   position: relative;
+}
+
+/* Remove background-attachment: fixed in Electron as it causes scrolling issues */
+.nothing-app.electron-app {
+  background-attachment: scroll;
 }
 
 .nothing-main {
@@ -90,11 +95,14 @@ button, input, textarea, select {
   margin-left: 280px;
   transition: margin-left var(--transition-smooth);
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 100vh;
   height: 100vh;
   background: transparent;
   padding: 0;
   margin-top: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* When sidebar is collapsed, adjust main content margin */
@@ -221,29 +229,78 @@ select::-ms-expand {
   flex: 1;
   margin-left: 0 !important;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 100vh;
   height: 100vh;
   background: transparent;
   padding: 0;
   margin-top: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Electron titlebar spacing - only apply when electron-app class is present */
+/* Electron titlebar spacing - macOS style for all platforms (28px height) */
+.nothing-app.electron-app {
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
 .nothing-app.electron-app .nothing-sidebar {
-  top: 40px;
-  height: calc(100vh - 40px);
+  top: 28px;
+  height: calc(100vh - 28px);
+  padding: 20px;
+  padding-top: 20px;
+  box-sizing: border-box;
 }
 
 .nothing-app.electron-app .nothing-main {
-  padding-top: 40px;
-  height: calc(100vh - 40px);
-  min-height: calc(100vh - 40px);
+  margin-top: 28px;
+  height: calc(100vh - 28px);
+  min-height: calc(100vh - 28px);
+  max-height: calc(100vh - 28px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding-top: 0;
 }
 
 .nothing-app.electron-app .nothing-main-fullwidth {
-  padding-top: 40px;
-  height: calc(100vh - 40px);
-  min-height: calc(100vh - 40px);
+  margin-top: 28px;
+  height: calc(100vh - 28px);
+  min-height: calc(100vh - 28px);
+  max-height: calc(100vh - 28px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding-top: 0;
+}
+
+/* Ensure direct children fit within container in Electron */
+.nothing-app.electron-app .nothing-main-fullwidth > div,
+.nothing-app.electron-app .nothing-main > div {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+}
+
+/* For auth pages that should fit perfectly, prevent unnecessary scrolling */
+.nothing-app.electron-app .nothing-main-fullwidth .auth-page-container,
+.nothing-app.electron-app .nothing-main-fullwidth .auth-page {
+  max-height: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Rest of your existing CSS... */

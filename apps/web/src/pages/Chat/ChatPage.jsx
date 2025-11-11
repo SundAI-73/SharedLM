@@ -1,44 +1,24 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, X, Plus, SlidersHorizontal, Clock, ArrowUp, Search, Globe, Settings } from 'lucide-react';
 import { motion } from 'motion/react';
-import DOMPurify from 'dompurify';
 import { useUser } from '../../contexts/UserContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
 import ConnectorsModal from '../../components/ConnectorsModal/ConnectorsModal';
 import apiService from '../../services/api/index';
 import { logEvent, EventType, LogLevel } from '../../utils/auditLogger';
+import { formatMessage } from '../../utils/messageFormatter';
 import logo from '../../assets/images/logo main.svg';
+import mistralLogo from '../../assets/images/m-boxed-orange.png';
+import openaiLogo from '../../assets/images/openai-logo.svg';
+import anthropicLogo from '../../assets/images/claude-color.svg';
+import inceptionLogo from '../../assets/images/inception-labs.png';
 import './styles/chat-base.css';
 import './styles/chat-header.css';
 import './styles/chat-messages.css';
 import './styles/chat-input.css';
 import './styles/chat-responsive.css';
-
-const formatMessage = (text) => {
-  if (!text) return '';
-  
-  let formatted = text;
-  formatted = formatted.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
-  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  formatted = formatted.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
-  formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
-  
-  formatted = formatted.split('\n\n').map(para => {
-    return para.trim() ? `<p>${para.replace(/\n/g, ' ')}</p>` : '';
-  }).join('');
-  
-  if (!formatted.includes('<p>')) {
-    formatted = `<p>${formatted}</p>`;
-  }
-  
-  // Sanitize HTML to prevent XSS attacks
-  return DOMPurify.sanitize(formatted, {
-    ALLOWED_TAGS: ['p', 'strong', 'em', 'code', 'br'],
-    ALLOWED_ATTR: [],
-    KEEP_CONTENT: true
-  });
-};
 
 const generateChatTitle = (userMessage) => {
   const message = userMessage.toLowerCase();
@@ -56,13 +36,84 @@ const generateChatTitle = (userMessage) => {
   return title.length > 40 ? title.substring(0, 40) + '...' : title;
 };
 
-const Message = React.memo(({ msg }) => {
+// Helper function to get model logo based on model name/identifier
+const getModelLogo = (modelName, customIntegrations = []) => {
+  if (!modelName) return null;
+  
+  const modelLower = modelName.toLowerCase();
+  
+  // Check for provider names directly first
+  if (modelLower === 'openai') {
+    return openaiLogo;
+  }
+  if (modelLower === 'anthropic') {
+    return anthropicLogo;
+  }
+  if (modelLower === 'mistral') {
+    return mistralLogo;
+  }
+  if (modelLower === 'inception') {
+    return inceptionLogo;
+  }
+  
+  // Check for OpenAI models
+  if (modelLower.includes('gpt') || modelLower.includes('openai')) {
+    return openaiLogo;
+  }
+  
+  // Check for Anthropic/Claude models
+  if (modelLower.includes('claude') || modelLower.includes('anthropic')) {
+    return anthropicLogo;
+  }
+  
+  // Check for Mistral models
+  if (modelLower.includes('mistral') || modelLower.includes('mixtral')) {
+    return mistralLogo;
+  }
+  
+  // Check for Inception models
+  if (modelLower.includes('mercury') || modelLower.includes('inception')) {
+    return inceptionLogo;
+  }
+  
+  // Check for custom integrations
+  // Custom integration names are returned as the model identifier
+  const customIntegration = customIntegrations.find(int => 
+    int.name && modelLower.includes(int.name.toLowerCase())
+  );
+  if (customIntegration && customIntegration.logo_url) {
+    return customIntegration.logo_url;
+  }
+  
+  // Fallback: check if model name matches any custom integration provider_id
+  const customByProvider = customIntegrations.find(int => 
+    modelLower.includes(int.provider_id.toLowerCase().replace('custom_', ''))
+  );
+  if (customByProvider && customByProvider.logo_url) {
+    return customByProvider.logo_url;
+  }
+  
+  return null;
+};
+
+const Message = React.memo(({ msg, customIntegrations = [] }) => {
   const formattedContent = formatMessage(msg.content);
+  const modelLogo = msg.role === 'assistant' && msg.model ? getModelLogo(msg.model, customIntegrations) : null;
   
   return (
     <div className={`chat-message ${msg.role}`}>
       <div className="message-avatar">
-        {msg.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+        {msg.role === 'user' ? (
+          <User size={20} />
+        ) : modelLogo ? (
+          <img 
+            src={modelLogo} 
+            alt={`${msg.model || 'Model'} logo`}
+            className="message-model-logo"
+          />
+        ) : (
+          <Bot size={20} />
+        )}
       </div>
       <div className="message-content">
         <div 
@@ -108,6 +159,10 @@ const defaultModelVariants = {
     { value: 'claude-3-opus-20240229', label: 'OPUS 3' },
     { value: 'claude-3-sonnet-20240229', label: 'SONNET 3' },
     { value: 'claude-3-haiku-20240307', label: 'HAIKU 3' }
+  ],
+  inception: [
+    { value: 'mercury', label: 'MERCURY' },
+    { value: 'mercury-coder', label: 'MERCURY CODER' }
   ]
 };
 
@@ -128,12 +183,13 @@ const getUserDisplayName = () => {
 
 function ChatPage({ backendStatus }) {
   const { userId, currentModel, setCurrentModel } = useUser();
+  const notify = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [availableModels, setAvailableModels] = useState(['mistral', 'openai', 'anthropic']);
+  const [availableModels, setAvailableModels] = useState([]);
   const [chatTitle, setChatTitle] = useState('');
   const [showOptions, setShowOptions] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -145,13 +201,11 @@ function ChatPage({ backendStatus }) {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showHistoryMenu, setShowHistoryMenu] = useState(false);
   const [showConnectorsModal, setShowConnectorsModal] = useState(false);
+  const [customIntegrations, setCustomIntegrations] = useState([]);
   
-  const [modelProviders, setModelProviders] = useState([
-    { value: 'mistral', label: 'MISTRAL AI' },
-    { value: 'openai', label: 'OPENAI' },
-    { value: 'anthropic', label: 'ANTHROPIC' }
-  ]);
-  const [modelVariants, setModelVariants] = useState(defaultModelVariants);
+  // Initialize with empty arrays - will be populated based on available models
+  const [modelProviders, setModelProviders] = useState([]);
+  const [modelVariants, setModelVariants] = useState({});
   
   const messagesEndRef = useRef(null);
   const optionsRef = useRef(null);
@@ -164,41 +218,76 @@ function ChatPage({ backendStatus }) {
   const previousModelVariantRef = useRef(selectedModelVariant);
   const modelChangedDuringLoadingRef = useRef(false);
 
+  // Load custom integrations and add them to providers/variants (only if they're available)
   useEffect(() => {
     const loadCustomIntegrations = async () => {
-      if (!userId) return;
+      if (!userId) {
+        return;
+      }
 
       try {
         const integrations = await apiService.getCustomIntegrations(userId);
+        
+        // Store custom integrations for logo access
+        setCustomIntegrations(integrations || []);
 
-        const customProviders = integrations.map(int => ({
-          value: int.provider_id,
-          label: int.name.toUpperCase(),
-          isCustom: true
-        }));
+        // Only add custom integrations that are in availableModels (have API keys)
+        // This ensures we only show integrations that the user has actually set up
+        if (availableModels.length > 0) {
+          const customProviders = (integrations || [])
+            .filter(int => availableModels.includes(int.provider_id))
+            .map(int => ({
+              value: int.provider_id,
+              label: int.name.toUpperCase(),
+              isCustom: true
+            }));
 
-        setModelProviders(prev => [
-          ...prev.filter(p => !p.isCustom),
-          ...customProviders
-        ]);
+          // Update model providers to include custom integrations
+          // Only add if there are custom providers to add
+          if (customProviders.length > 0) {
+            setModelProviders(prev => {
+              const standardProviders = prev.filter(p => !p.isCustom);
+              return [...standardProviders, ...customProviders];
+            });
 
-        const customVariants = {};
-        integrations.forEach(int => {
-          customVariants[int.provider_id] = [];
-        });
-
-        setModelVariants(prev => ({
-          ...defaultModelVariants,
-          ...customVariants
-        }));
+            // Add custom integrations to variants (they don't have variants, so empty array)
+            setModelVariants(prev => {
+              const customVariants = {};
+              integrations
+                .filter(int => availableModels.includes(int.provider_id))
+                .forEach(int => {
+                  customVariants[int.provider_id] = [];
+                });
+              return { ...prev, ...customVariants };
+            });
+          }
+        } else {
+          // No available models - ensure custom integrations are not shown
+          setModelProviders(prev => prev.filter(p => !p.isCustom));
+          setModelVariants(prev => {
+            const cleaned = { ...prev };
+            Object.keys(cleaned).forEach(key => {
+              if (key.startsWith('custom_')) {
+                delete cleaned[key];
+              }
+            });
+            return cleaned;
+          });
+        }
 
       } catch (error) {
-        console.error('Failed to load custom integrations:', error);
+        console.error('[ChatPage] Failed to load custom integrations:', error);
+        // On error, remove custom integrations from providers
+        setModelProviders(prev => prev.filter(p => !p.isCustom));
       }
     };
 
-    loadCustomIntegrations();
-  }, [userId]);
+    // Only load custom integrations after availableModels has been set
+    // This prevents race conditions where custom integrations are loaded before we know which models are available
+    if (availableModels !== undefined) {
+      loadCustomIntegrations();
+    }
+  }, [userId, availableModels]);
 
   useEffect(() => {
     const variants = modelVariants[currentModel] || [];
@@ -320,20 +409,135 @@ function ChatPage({ backendStatus }) {
     }
   }, [location.search, loadConversation, currentConversationId, messages.length]);
 
-  useEffect(() => {
-    if (!currentModel) setCurrentModel('mistral');
-  }, [currentModel, setCurrentModel]);
-
-  useEffect(() => {
-    if (backendStatus === 'connected') {
-      apiService.getModels().then(data => {
-        if (data) setAvailableModels(data.available_models);
+  // Function to load available models
+  const loadAvailableModels = useCallback(() => {
+    if (backendStatus === 'connected' && userId) {
+      // Get available models for this specific user
+      apiService.getModels(userId).then(data => {
+        // Handle response - data might be null or have available_models
+        const available = (data && Array.isArray(data.available_models)) 
+          ? data.available_models 
+          : [];
+        
+        console.log('[ChatPage] Available models from backend:', available);
+        
+        // CRITICAL: Always set availableModels first, even if empty
+        setAvailableModels(available);
+        
+        // Define provider labels
+        const providerLabels = {
+          'mistral': 'MISTRAL AI',
+          'openai': 'OPENAI',
+          'anthropic': 'ANTHROPIC',
+          'inception': 'INCEPTION'
+        };
+        
+        // Build model providers list from available models only
+        // IMPORTANT: Only show models that are in the available array
+        // If available is empty, standardProviders will be empty array
+        const standardProviders = available
+          .filter(model => !model.startsWith('custom_'))
+          .map(model => ({
+            value: model,
+            label: providerLabels[model] || model.toUpperCase(),
+            isCustom: false
+          }));
+        
+        console.log('[ChatPage] Setting model providers:', standardProviders);
+        // CRITICAL: Always set modelProviders, even if empty
+        // This ensures that if no models are available, the dropdown is empty
+        setModelProviders(standardProviders);
+        
+        // Build model variants - only include variants for available models
+        // If available is empty, variants will be empty object
+        const variants = {};
+        available.forEach(model => {
+          if (defaultModelVariants[model]) {
+            variants[model] = defaultModelVariants[model];
+          }
+        });
+        console.log('[ChatPage] Setting model variants:', variants);
+        // CRITICAL: Always set modelVariants, even if empty
+        setModelVariants(variants);
+        
+        // Update current model and variant based on available models
+        if (available.length === 0) {
+          // CRITICAL: No models available - explicitly clear everything
+          console.log('[ChatPage] No models available, clearing current model and variant');
+          setCurrentModel(null);
+          setSelectedModelVariant('');
+        } else {
+          // Models are available - update current model if needed
+          setCurrentModel(prevModel => {
+            // If no previous model or previous model is not available, set to first available
+            if (!prevModel || !available.includes(prevModel)) {
+              // Set default variant for the new model
+              if (variants[available[0]] && variants[available[0]].length > 0) {
+                setSelectedModelVariant(variants[available[0]][0].value);
+              } else {
+                setSelectedModelVariant('');
+              }
+              return available[0];
+            }
+            // Previous model is still available - check if variant is valid
+            const currentVariants = variants[prevModel] || [];
+            setSelectedModelVariant(prevVariant => {
+              if (currentVariants.length > 0) {
+                if (!currentVariants.find(v => v.value === prevVariant)) {
+                  return currentVariants[0].value;
+                }
+                return prevVariant;
+              }
+              return '';
+            });
+            return prevModel;
+          });
+        }
+      }).catch(error => {
+        console.error('[ChatPage] Failed to load available models:', error);
+        // Fallback to empty array - user needs to add API keys
+        setAvailableModels([]);
+        setModelProviders([]);
+        setModelVariants({});
+        setCurrentModel(null);
+        setSelectedModelVariant('');
       });
     } else {
-      setAvailableModels(['mistral']);
-      setCurrentModel('mistral');
+      // Not connected or no userId - clear everything
+      setAvailableModels([]);
+      setModelProviders([]);
+      setModelVariants({});
     }
-  }, [backendStatus, setCurrentModel]);
+  }, [backendStatus, userId, setCurrentModel]);
+
+  // Load available models on mount and when dependencies change
+  useEffect(() => {
+    loadAvailableModels();
+  }, [loadAvailableModels]);
+
+  // Listen for API key updates to refresh models
+  useEffect(() => {
+    const handleApiKeysUpdated = () => {
+      // Refresh available models when API keys are added/removed
+      loadAvailableModels();
+    };
+
+    window.addEventListener('apiKeysUpdated', handleApiKeysUpdated);
+    
+    // Also refresh when page becomes visible (user might have added keys in another tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadAvailableModels();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('apiKeysUpdated', handleApiKeysUpdated);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadAvailableModels]);
 
   useEffect(() => {
     if (messages.length === 2 && !chatTitle) {
@@ -499,7 +703,14 @@ function ChatPage({ backendStatus }) {
     isSendingMessageRef.current = true; // Mark that we're sending a message
 
     // Define variables outside try block so they're accessible in catch
-    const modelToUse = currentModel || 'mistral';
+    if (!currentModel) {
+      notify.error('No model selected. Please add API keys in Settings.');
+      setLoading(false);
+      isSendingMessageRef.current = false;
+      return;
+    }
+    
+    const modelToUse = currentModel;
     
     // Check if it's a custom integration
     const isCustomIntegration = modelToUse && modelToUse.startsWith('custom_');
@@ -579,6 +790,17 @@ function ChatPage({ backendStatus }) {
           memories: response.memories,
           timestamp: new Date().toISOString()
         }]);
+        
+        // Emit event for usage tracking
+        // Determine the provider from modelToUse (handles both standard and custom integrations)
+        const provider = modelToUse || currentModel || 'mistral';
+        window.dispatchEvent(new CustomEvent('messageSent', {
+          detail: {
+            provider: provider,
+            model: responseModel,
+            timestamp: new Date().toISOString()
+          }
+        }));
         
         // Update URL after a delay to ensure message is in state first
         // This prevents the useEffect from clearing messages
@@ -910,13 +1132,32 @@ function ChatPage({ backendStatus }) {
           ) : (
             <div className="chat-messages-list">
               {messages.map((msg, idx) => (
-                <Message key={idx} msg={msg} />
+                <Message key={idx} msg={msg} customIntegrations={customIntegrations} />
               ))}
 
               {loading && (
                 <div className="chat-message assistant">
                   <div className="message-avatar">
-                    <Bot size={20} />
+                    {(() => {
+                      // Try to get logo from model variant first, then provider
+                      const modelName = selectedModelVariant || currentModel || '';
+                      let loadingLogo = getModelLogo(modelName, customIntegrations);
+                      
+                      // If no logo found and we have a provider name, try that
+                      if (!loadingLogo && currentModel) {
+                        loadingLogo = getModelLogo(currentModel, customIntegrations);
+                      }
+                      
+                      return loadingLogo ? (
+                        <img 
+                          src={loadingLogo} 
+                          alt={`${modelName || currentModel || 'Model'} logo`}
+                          className="message-model-logo"
+                        />
+                      ) : (
+                        <Bot size={20} />
+                      );
+                    })()}
                   </div>
                   <div className="message-content">
                     <div className="typing-indicator">
@@ -988,22 +1229,33 @@ function ChatPage({ backendStatus }) {
 
             {/* Right Side - Model Dropdowns */}
             <div className="chat-controls-right">
-              <CustomDropdown
-                value={currentModel}
-                onChange={setCurrentModel}
-                options={modelProviders.filter(opt =>
-                  availableModels.includes(opt.value) || opt.value === 'mistral' || opt.isCustom
-                )}
-                className="chat-model-dropdown-inline"
-              />
-              
-              {modelVariants[currentModel]?.length > 0 && (
-                <CustomDropdown
-                  value={selectedModelVariant}
-                  onChange={setSelectedModelVariant}
-                  options={modelVariants[currentModel]}
-                  className="chat-model-dropdown-inline"
-                />
+              {modelProviders.length > 0 ? (
+                <>
+                  <CustomDropdown
+                    value={currentModel || ''}
+                    onChange={setCurrentModel}
+                    options={modelProviders}
+                    className="chat-model-dropdown-inline"
+                  />
+                  
+                  {currentModel && modelVariants[currentModel]?.length > 0 && (
+                    <CustomDropdown
+                      value={selectedModelVariant}
+                      onChange={setSelectedModelVariant}
+                      options={modelVariants[currentModel]}
+                      className="chat-model-dropdown-inline"
+                    />
+                  )}
+                </>
+              ) : (
+                <div style={{ 
+                  padding: '8px 16px', 
+                  color: '#888888', 
+                  fontFamily: 'Courier New, monospace',
+                  fontSize: '0.875rem'
+                }}>
+                  No models available. Add API keys in Settings.
+                </div>
               )}
             </div>
           </div>
