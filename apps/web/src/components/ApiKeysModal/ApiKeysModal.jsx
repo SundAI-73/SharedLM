@@ -57,22 +57,22 @@ function ApiKeysModal({ isOpen, onClose, onApiKeyAdded }) {
     }
   }, [userId]);
 
-  const loadCustomIntegrations = useCallback(async () => {
-    try {
-      const integrations = await apiService.getCustomIntegrations(userId);
-      setCustomIntegrations(integrations || []);
-    } catch (error) {
-      console.error('Failed to load custom integrations:', error);
-      setCustomIntegrations([]);
-    }
-  }, [userId]);
-
   useEffect(() => {
-    if (isOpen) {
-      loadSavedApiKeys();
-      loadCustomIntegrations();
-    }
-  }, [isOpen, loadSavedApiKeys, loadCustomIntegrations]);
+    if (!isOpen) return;
+
+    const loadCustomIntegrations = async () => {
+      try {
+        const integrations = await apiService.getCustomIntegrations(userId);
+        setCustomIntegrations(integrations || []);
+      } catch (error) {
+        console.error('Failed to load custom integrations:', error);
+        setCustomIntegrations([]);
+      }
+    };
+
+    loadSavedApiKeys();
+    loadCustomIntegrations();
+  }, [isOpen, userId, loadSavedApiKeys]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
