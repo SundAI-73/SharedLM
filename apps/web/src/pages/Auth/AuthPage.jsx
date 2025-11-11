@@ -117,7 +117,7 @@ function AuthPage({ selectedLLM, setSelectedLLM, setConnectedLLMs, connectedLLMs
             </div>
 
             <p className="api-hint">
-              Your API key is encrypted and stored securely in the database
+              Your API key will be validated before saving and encrypted securely in the database
             </p>
           </div>
         </div>
@@ -128,7 +128,7 @@ function AuthPage({ selectedLLM, setSelectedLLM, setConnectedLLMs, connectedLLMs
           disabled={!apiKey.trim() || loading}
         >
           {loading ? (
-            <span>CONNECTING...</span>
+            <span>VALIDATING API KEY...</span>
           ) : (
             <span>CONNECT {currentLLM.name}</span>
           )}

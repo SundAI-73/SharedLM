@@ -6,6 +6,11 @@
  * Enforce HTTPS in production
  */
 export const enforceHTTPS = () => {
+  // Skip HTTPS enforcement in Electron (file:// protocol)
+  if (window.location.protocol === 'file:') {
+    return;
+  }
+  
   if (process.env.NODE_ENV === 'production' && 
       window.location.protocol !== 'https:' && 
       window.location.hostname !== 'localhost' &&
