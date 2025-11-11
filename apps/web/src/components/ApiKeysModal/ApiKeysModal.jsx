@@ -47,6 +47,26 @@ function ApiKeysModal({ isOpen, onClose, onApiKeyAdded }) {
   const [savedApiKeys, setSavedApiKeys] = useState([]);
   const [customIntegrations, setCustomIntegrations] = useState([]);
 
+  const loadSavedApiKeys = useCallback(async () => {
+    try {
+      const keys = await apiService.getApiKeys(userId);
+      setSavedApiKeys(keys.map(k => k.provider));
+    } catch (error) {
+      console.error('Failed to load API keys:', error);
+      setSavedApiKeys([]);
+    }
+  }, [userId]);
+
+  const loadCustomIntegrations = useCallback(async () => {
+    try {
+      const integrations = await apiService.getCustomIntegrations(userId);
+      setCustomIntegrations(integrations || []);
+    } catch (error) {
+      console.error('Failed to load custom integrations:', error);
+      setCustomIntegrations([]);
+    }
+  }, [userId]);
+
   useEffect(() => {
     if (isOpen) {
       loadSavedApiKeys();
@@ -69,26 +89,6 @@ function ApiKeysModal({ isOpen, onClose, onApiKeyAdded }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, onClose]);
-
-  const loadSavedApiKeys = useCallback(async () => {
-    try {
-      const keys = await apiService.getApiKeys(userId);
-      setSavedApiKeys(keys.map(k => k.provider));
-    } catch (error) {
-      console.error('Failed to load API keys:', error);
-      setSavedApiKeys([]);
-    }
-  }, [userId]);
-
-  const loadCustomIntegrations = useCallback(async () => {
-    try {
-      const integrations = await apiService.getCustomIntegrations(userId);
-      setCustomIntegrations(integrations || []);
-    } catch (error) {
-      console.error('Failed to load custom integrations:', error);
-      setCustomIntegrations([]);
-    }
-  }, [userId]);
 
   const handleProviderSelect = (provider) => {
     setSelectedProvider(provider);
