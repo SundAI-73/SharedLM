@@ -1,8 +1,9 @@
 .settings-layout {
   display: grid;
   grid-template-columns: 250px 1fr;
-  gap: 30px;
-  height: 600px;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
 }
 
 .settings-nav {
@@ -83,7 +84,7 @@
 .settings-section {
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 20px;
 }
 
 .settings-section > .setting-item:first-child {
@@ -127,7 +128,7 @@
 
 .setting-item-row {
   align-items: flex-start;
-  gap: 30px;
+  gap: 20px;
 }
 
 .setting-field-group {
@@ -337,8 +338,9 @@
 @media (max-width: 1024px) {
   .settings-layout {
     grid-template-columns: 220px 1fr;
-    height: 550px;
-    gap: 25px;
+    flex: 1;
+    min-height: 0;
+    gap: 20px;
   }
 
   .nav-tab {
@@ -396,7 +398,7 @@
   }
 
   .settings-content-wrapper {
-    height: 500px;
+    height: 100%;
   }
 
   .settings-content {
@@ -466,7 +468,7 @@
   }
 
   .settings-content-wrapper {
-    height: 450px;
+    height: 100%;
   }
 
   .settings-content {

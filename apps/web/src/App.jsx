@@ -44,16 +44,25 @@ const PageLoader = () => (
 // Layout wrapper that conditionally shows sidebar and titlebar
 function AppLayout({ children }) {
   const location = useLocation();
+  const [platform, setPlatform] = useState(null);
   
   // Pages that should NOT show the sidebar
   const noSidebarRoutes = ['/login', '/signup', '/forgot-password', '/auth/github/callback'];
   const shouldShowSidebar = !noSidebarRoutes.includes(location.pathname);
   
-  // Check if running in Electron
+  // Check if running in Electron and get platform
   const isElectron = window.electron?.isElectron || false;
 
+  useEffect(() => {
+    if (window.electron?.platform) {
+      setPlatform(window.electron.platform);
+    }
+  }, []);
+
+  const platformClass = platform === 'darwin' ? 'platform-macos' : platform === 'win32' ? 'platform-windows' : '';
+
   return (
-    <div className={`nothing-app ${isElectron ? 'electron-app' : ''}`}>
+    <div className={`nothing-app ${isElectron ? 'electron-app' : ''} ${platformClass}`}>
       {/* Show custom titlebar only in Electron */}
       {isElectron && <TitleBar />}
       

@@ -256,9 +256,12 @@ class APIService {
     }
   }
 
-  async getModels() {
+  async getModels(userId = null) {
     try {
-      const response = await this.makeRequest(`${API_BASE_URL}/models`);
+      const url = userId 
+        ? `${API_BASE_URL}/models?user_id=${userId}`
+        : `${API_BASE_URL}/models`;
+      const response = await this.makeRequest(url);
       if (!response.ok) throw new Error('Failed to fetch models');
       return await response.json();
     } catch (error) {
@@ -280,6 +283,8 @@ class APIService {
         modelProvider = 'anthropic';
       } else if (modelChoice === 'mistral') {
         modelProvider = 'mistral';
+      } else if (modelChoice === 'inception') {
+        modelProvider = 'inception';
       } else if (modelChoice && modelChoice.startsWith('custom_')) {
         // It's a custom integration - pass the provider_id directly
         modelProvider = modelChoice;
@@ -298,7 +303,8 @@ class APIService {
         // Standard providers
         modelToUse = specificModel || (
           modelChoice === 'openai' ? 'gpt-4o-mini' :
-          modelChoice === 'anthropic' ? 'claude-3-haiku-20240307' : 
+          modelChoice === 'anthropic' ? 'claude-3-haiku-20240307' :
+          modelChoice === 'inception' ? 'mercury' :
           'mistral-small-latest'
         );
       }

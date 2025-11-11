@@ -1,11 +1,11 @@
+/* TitleBar Base Styles */
 .electron-titlebar {
-  height: 40px;
-  background: #000000;
-  border-bottom: 1px solid #1F1F1F;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0 16px;
+  justify-content: space-between;
   -webkit-app-region: drag;
   user-select: none;
   position: fixed;
@@ -13,29 +13,152 @@
   left: 0;
   right: 0;
   z-index: 10000;
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
+  padding: 0 12px;
 }
 
-.titlebar-left {
+/* macOS Style - unified design for all platforms */
+.electron-titlebar.macos-style {
+  padding: 0 12px 0 16px;
+}
+
+/* macOS Traffic Light Buttons - Right Side */
+.macos-controls-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   -webkit-app-region: no-drag;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
 }
 
-.titlebar-logo {
-  width: 20px;
-  height: 20px;
+.mac-btn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+}
+
+.mac-btn-inner {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* Close Button - Red */
+.mac-btn.close-btn {
+  background: #ff5f56;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.mac-btn.close-btn:hover {
+  background: #ff3b30;
+  transform: scale(1.08);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.mac-btn.close-btn:hover .mac-btn-inner {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.mac-btn.close-btn:active {
+  transform: scale(0.96);
+  background: #ff2d20;
+}
+
+/* Minimize Button - Yellow */
+.mac-btn.minimize-btn {
+  background: #ffbd2e;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.mac-btn.minimize-btn:hover {
+  background: #ffcc02;
+  transform: scale(1.08);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.mac-btn.minimize-btn:hover .mac-btn-inner {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.mac-btn.minimize-btn:active {
+  transform: scale(0.96);
+  background: #ffb700;
+}
+
+/* Maximize Button - Green */
+.mac-btn.maximize-btn {
+  background: #27c93f;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.mac-btn.maximize-btn:hover {
+  background: #28cd41;
+  transform: scale(1.08);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.mac-btn.maximize-btn:hover .mac-btn-inner {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.mac-btn.maximize-btn:active {
+  transform: scale(0.96);
+  background: #26c93e;
+}
+
+/* Left Side - Logo and Title */
+.titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  -webkit-app-region: no-drag;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+/* Middle - Draggable Region */
+.titlebar-drag-region {
+  flex: 1;
+  height: 100%;
+  -webkit-app-region: drag;
+  position: relative;
+  min-width: 0;
+}
+
+/* Logo */
+.titlebar-logo {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .logo-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   background: #B94539;
   border-radius: 50%;
-  box-shadow: 0 0 8px rgba(185, 69, 57, 0.6);
+  box-shadow: 0 0 6px rgba(185, 69, 57, 0.5);
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -50,44 +173,41 @@
   }
 }
 
+/* Title */
 .titlebar-title {
   font-family: 'Courier New', monospace;
-  font-size: 0.75rem;
-  letter-spacing: 2px;
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
   color: #666666;
   text-transform: uppercase;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
-.titlebar-drag-region {
-  flex: 1;
-  height: 100%;
+/* Remove Windows controls styles - using macOS style for all */
+
+/* Ensure proper spacing for app content when titlebar is present */
+.electron-app {
+  padding-top: 28px;
 }
 
-.titlebar-controls {
-  display: flex;
-  gap: 0;
-  -webkit-app-region: no-drag;
+.electron-app .electron-titlebar.macos-style ~ * {
+  padding-top: 28px;
 }
 
-.titlebar-btn {
-  width: 46px;
-  height: 40px;
-  background: transparent;
-  border: none;
-  color: #666666;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Smooth transitions */
+.electron-titlebar * {
+  box-sizing: border-box;
 }
 
-.titlebar-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #FFFFFF;
+/* Focus styles for accessibility */
+.titlebar-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: -2px;
+  border-radius: 2px;
 }
 
-.titlebar-btn.close:hover {
-  background: #ff3b30;
-  color: #FFFFFF;
+.mac-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
 }

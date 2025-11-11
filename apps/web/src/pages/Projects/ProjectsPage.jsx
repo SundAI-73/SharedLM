@@ -241,127 +241,129 @@ function ProjectsPage() {
           </p>
         </motion.div>
 
-        <motion.div 
-          className="controls-section"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <div className="search-container">
-            <Search size={18} className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search projects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-base input-with-icon search-input"
-            />
-          </div>
-
-          <motion.button 
-            onClick={handleNewProject} 
-            className="button-base button-primary action-button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Plus size={16} />
-            NEW PROJECT
-          </motion.button>
-        </motion.div>
-
-        {isLoading ? (
-          <div className="empty-state">
-            <FolderOpen size={60} className="empty-state-icon" />
-            <h3 className="empty-state-title">LOADING...</h3>
-            <p className="empty-state-text">Fetching your projects</p>
-          </div>
-        ) : filteredProjects.length === 0 ? (
-          <div className="empty-state">
-            <FolderOpen size={60} className="empty-state-icon" />
-            <h3 className="empty-state-title">No Projects Found</h3>
-            <p className="empty-state-text">
-              {searchQuery 
-                ? 'Try adjusting your search' 
-                : 'Create a project to organize your conversations'}
-            </p>
-          </div>
-        ) : (
+        <div className="page-main-content">
           <motion.div 
-            className="grid-4 items-grid"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
+            className="controls-section"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <AnimatePresence>
-              {filteredProjects.map((project, index) => (
-                <motion.div
-                  key={project.id}
-                  className={`card-base card-clickable item-card ${openMenuId === project.id ? 'menu-open' : ''}`}
-                  onClick={() => handleProjectClick(project.id)}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                  whileHover={{ y: -2 }}
-                >
-                <div className="card-header">
-                  <FolderOpen size={22} className="card-icon" />
-                  <div style={{ position: 'relative' }} ref={openMenuId === project.id ? menuRef : null}>
-                    <button
-                      className="more-button"
-                      onClick={(e) => handleMoreClick(e, project.id)}
-                    >
-                      <MoreVertical size={16} />
-                    </button>
+            <div className="search-container">
+              <Search size={18} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search projects..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="input-base input-with-icon search-input"
+              />
+            </div>
 
-                    {openMenuId === project.id && (
-                      <div className="project-options-menu">
-                        <button 
-                          className="menu-item" 
-                          onClick={(e) => handleStarProject(e, project)}
-                        >
-                          <Star 
-                            size={16} 
-                            fill={isProjectStarred(project.id) ? '#B94539' : 'none'}
-                            color={isProjectStarred(project.id) ? '#B94539' : '#888888'}
-                          />
-                          <span>{isProjectStarred(project.id) ? 'Unstar' : 'Star'}</span>
-                        </button>
-                        <button className="menu-item" onClick={(e) => handleRenameProject(e, project.id)}>
-                          <Edit3 size={16} />
-                          <span>Rename</span>
-                        </button>
-                        <button className="menu-item" onClick={(e) => handleArchiveProject(e, project.id)}>
-                          <Archive size={16} />
-                          <span>Archive</span>
-                        </button>
-                        <button className="menu-item danger" onClick={(e) => handleDeleteProject(e, project.id)}>
-                          <Trash2 size={16} />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="card-content">
-                  <h3 className="card-title">{project.name}</h3>
-                  <p className="card-type">{project.type}</p>
-                </div>
-
-                <div className="card-stats">
-                  <span className="stat-item">{project.chats} chats</span>
-                  <span className="stat-divider">•</span>
-                  <span className="stat-item">
-                    <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                    {project.lastActive}
-                  </span>
-                </div>
-              </motion.div>
-              ))}
-            </AnimatePresence>
+            <motion.button 
+              onClick={handleNewProject} 
+              className="button-base button-primary action-button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Plus size={16} />
+              NEW PROJECT
+            </motion.button>
           </motion.div>
-        )}
+
+          {isLoading ? (
+            <div className="empty-state">
+              <FolderOpen size={60} className="empty-state-icon" />
+              <h3 className="empty-state-title">LOADING...</h3>
+              <p className="empty-state-text">Fetching your projects</p>
+            </div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="empty-state">
+              <FolderOpen size={60} className="empty-state-icon" />
+              <h3 className="empty-state-title">No Projects Found</h3>
+              <p className="empty-state-text">
+                {searchQuery 
+                  ? 'Try adjusting your search' 
+                  : 'Create a project to organize your conversations'}
+              </p>
+            </div>
+          ) : (
+            <motion.div 
+              className="grid-4 items-grid"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <AnimatePresence>
+                {filteredProjects.map((project, index) => (
+                  <motion.div
+                    key={project.id}
+                    className={`card-base card-clickable item-card ${openMenuId === project.id ? 'menu-open' : ''}`}
+                    onClick={() => handleProjectClick(project.id)}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.4, delay: index * 0.05 }}
+                    whileHover={{ y: -2 }}
+                  >
+                  <div className="card-header">
+                    <FolderOpen size={22} className="card-icon" />
+                    <div style={{ position: 'relative' }} ref={openMenuId === project.id ? menuRef : null}>
+                      <button
+                        className="more-button"
+                        onClick={(e) => handleMoreClick(e, project.id)}
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+
+                      {openMenuId === project.id && (
+                        <div className="project-options-menu">
+                          <button 
+                            className="menu-item" 
+                            onClick={(e) => handleStarProject(e, project)}
+                          >
+                            <Star 
+                              size={16} 
+                              fill={isProjectStarred(project.id) ? '#B94539' : 'none'}
+                              color={isProjectStarred(project.id) ? '#B94539' : '#888888'}
+                            />
+                            <span>{isProjectStarred(project.id) ? 'Unstar' : 'Star'}</span>
+                          </button>
+                          <button className="menu-item" onClick={(e) => handleRenameProject(e, project.id)}>
+                            <Edit3 size={16} />
+                            <span>Rename</span>
+                          </button>
+                          <button className="menu-item" onClick={(e) => handleArchiveProject(e, project.id)}>
+                            <Archive size={16} />
+                            <span>Archive</span>
+                          </button>
+                          <button className="menu-item danger" onClick={(e) => handleDeleteProject(e, project.id)}>
+                            <Trash2 size={16} />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="card-content">
+                    <h3 className="card-title">{project.name}</h3>
+                    <p className="card-type">{project.type}</p>
+                  </div>
+
+                  <div className="card-stats">
+                    <span className="stat-item">{project.chats} chats</span>
+                    <span className="stat-divider">•</span>
+                    <span className="stat-item">
+                      <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                      {project.lastActive}
+                    </span>
+                  </div>
+                </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </div>
 
         {/* Create Project Modal */}
         <AnimatePresence>

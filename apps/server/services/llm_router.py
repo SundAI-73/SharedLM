@@ -95,6 +95,36 @@ async def call_mistral(prompt: str, model: str = None, api_key: str = None) -> s
         raise Exception(f"Mistral API error: {str(e)}")
 
 
+async def call_inception(prompt: str, model: str = None, api_key: str = None) -> str:
+    """Call Inception Labs API (OpenAI-compatible)"""
+    try:
+        # Use provided API key or fall back to environment variable
+        key = api_key or os.environ.get('INCEPTION_API_KEY')
+        if not key:
+            raise ValueError("Inception API key not provided and INCEPTION_API_KEY environment variable not set")
+        
+        # Inception Labs uses OpenAI-compatible API
+        client = openai.OpenAI(
+            api_key=key,
+            base_url="https://api.inceptionlabs.ai/v1"
+        )
+        response = await asyncio.to_thread(
+            client.chat.completions.create,
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000,
+            temperature=0.7
+        )
+        
+        reply = response.choices[0].message.content
+        logger.info(f"Inception {model} response generated")
+        return reply
+        
+    except Exception as e:
+        logger.error(f"Inception API error: {e}")
+        raise Exception(f"Inception API error: {str(e)}")
+
+
 # async def call_llama(prompt: str, model: str = None) -> str:
 #     """Call LLama API"""
 #     try:
@@ -173,6 +203,9 @@ async def route_chat(
         return reply, model_choice
     elif model_provider == "mistral":
         reply = await call_mistral(prompt=prompt, model=model_choice, api_key=api_key)
+        return reply, model_choice
+    elif model_provider == "inception":
+        reply = await call_inception(prompt=prompt, model=model_choice, api_key=api_key)
         return reply, model_choice
     elif custom_integration and model_provider.startswith("custom_"):
         # Handle custom integration

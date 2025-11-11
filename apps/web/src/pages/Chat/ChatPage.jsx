@@ -1,44 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, X, Plus, SlidersHorizontal, Clock, ArrowUp, Search, Globe, Settings } from 'lucide-react';
 import { motion } from 'motion/react';
-import DOMPurify from 'dompurify';
 import { useUser } from '../../contexts/UserContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
 import ConnectorsModal from '../../components/ConnectorsModal/ConnectorsModal';
 import apiService from '../../services/api/index';
 import { logEvent, EventType, LogLevel } from '../../utils/auditLogger';
+import { formatMessage } from '../../utils/messageFormatter';
 import logo from '../../assets/images/logo main.svg';
+import mistralLogo from '../../assets/images/m-boxed-orange.png';
+import openaiLogo from '../../assets/images/openai-logo.svg';
+import anthropicLogo from '../../assets/images/claude-color.svg';
+import inceptionLogo from '../../assets/images/inception-labs.png';
 import './styles/chat-base.css';
 import './styles/chat-header.css';
 import './styles/chat-messages.css';
 import './styles/chat-input.css';
 import './styles/chat-responsive.css';
-
-const formatMessage = (text) => {
-  if (!text) return '';
-  
-  let formatted = text;
-  formatted = formatted.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
-  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  formatted = formatted.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
-  formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
-  
-  formatted = formatted.split('\n\n').map(para => {
-    return para.trim() ? `<p>${para.replace(/\n/g, ' ')}</p>` : '';
-  }).join('');
-  
-  if (!formatted.includes('<p>')) {
-    formatted = `<p>${formatted}</p>`;
-  }
-  
-  // Sanitize HTML to prevent XSS attacks
-  return DOMPurify.sanitize(formatted, {
-    ALLOWED_TAGS: ['p', 'strong', 'em', 'code', 'br'],
-    ALLOWED_ATTR: [],
-    KEEP_CONTENT: true
-  });
-};
 
 const generateChatTitle = (userMessage) => {
   const message = userMessage.toLowerCase();
@@ -56,13 +35,84 @@ const generateChatTitle = (userMessage) => {
   return title.length > 40 ? title.substring(0, 40) + '...' : title;
 };
 
-const Message = React.memo(({ msg }) => {
+// Helper function to get model logo based on model name/identifier
+const getModelLogo = (modelName, customIntegrations = []) => {
+  if (!modelName) return null;
+  
+  const modelLower = modelName.toLowerCase();
+  
+  // Check for provider names directly first
+  if (modelLower === 'openai') {
+    return openaiLogo;
+  }
+  if (modelLower === 'anthropic') {
+    return anthropicLogo;
+  }
+  if (modelLower === 'mistral') {
+    return mistralLogo;
+  }
+  if (modelLower === 'inception') {
+    return inceptionLogo;
+  }
+  
+  // Check for OpenAI models
+  if (modelLower.includes('gpt') || modelLower.includes('openai')) {
+    return openaiLogo;
+  }
+  
+  // Check for Anthropic/Claude models
+  if (modelLower.includes('claude') || modelLower.includes('anthropic')) {
+    return anthropicLogo;
+  }
+  
+  // Check for Mistral models
+  if (modelLower.includes('mistral') || modelLower.includes('mixtral')) {
+    return mistralLogo;
+  }
+  
+  // Check for Inception models
+  if (modelLower.includes('mercury') || modelLower.includes('inception')) {
+    return inceptionLogo;
+  }
+  
+  // Check for custom integrations
+  // Custom integration names are returned as the model identifier
+  const customIntegration = customIntegrations.find(int => 
+    int.name && modelLower.includes(int.name.toLowerCase())
+  );
+  if (customIntegration && customIntegration.logo_url) {
+    return customIntegration.logo_url;
+  }
+  
+  // Fallback: check if model name matches any custom integration provider_id
+  const customByProvider = customIntegrations.find(int => 
+    modelLower.includes(int.provider_id.toLowerCase().replace('custom_', ''))
+  );
+  if (customByProvider && customByProvider.logo_url) {
+    return customByProvider.logo_url;
+  }
+  
+  return null;
+};
+
+const Message = React.memo(({ msg, customIntegrations = [] }) => {
   const formattedContent = formatMessage(msg.content);
+  const modelLogo = msg.role === 'assistant' && msg.model ? getModelLogo(msg.model, customIntegrations) : null;
   
   return (
     <div className={`chat-message ${msg.role}`}>
       <div className="message-avatar">
-        {msg.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+        {msg.role === 'user' ? (
+          <User size={20} />
+        ) : modelLogo ? (
+          <img 
+            src={modelLogo} 
+            alt={`${msg.model || 'Model'} logo`}
+            className="message-model-logo"
+          />
+        ) : (
+          <Bot size={20} />
+        )}
       </div>
       <div className="message-content">
         <div 
@@ -108,6 +158,10 @@ const defaultModelVariants = {
     { value: 'claude-3-opus-20240229', label: 'OPUS 3' },
     { value: 'claude-3-sonnet-20240229', label: 'SONNET 3' },
     { value: 'claude-3-haiku-20240307', label: 'HAIKU 3' }
+  ],
+  inception: [
+    { value: 'mercury', label: 'MERCURY' },
+    { value: 'mercury-coder', label: 'MERCURY CODER' }
   ]
 };
 
@@ -133,7 +187,7 @@ function ChatPage({ backendStatus }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [availableModels, setAvailableModels] = useState(['mistral', 'openai', 'anthropic']);
+  const [availableModels, setAvailableModels] = useState([]);
   const [chatTitle, setChatTitle] = useState('');
   const [showOptions, setShowOptions] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -145,11 +199,13 @@ function ChatPage({ backendStatus }) {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showHistoryMenu, setShowHistoryMenu] = useState(false);
   const [showConnectorsModal, setShowConnectorsModal] = useState(false);
+  const [customIntegrations, setCustomIntegrations] = useState([]);
   
   const [modelProviders, setModelProviders] = useState([
     { value: 'mistral', label: 'MISTRAL AI' },
     { value: 'openai', label: 'OPENAI' },
-    { value: 'anthropic', label: 'ANTHROPIC' }
+    { value: 'anthropic', label: 'ANTHROPIC' },
+    { value: 'inception', label: 'INCEPTION' }
   ]);
   const [modelVariants, setModelVariants] = useState(defaultModelVariants);
   
@@ -170,6 +226,9 @@ function ChatPage({ backendStatus }) {
 
       try {
         const integrations = await apiService.getCustomIntegrations(userId);
+        
+        // Store custom integrations for logo access
+        setCustomIntegrations(integrations);
 
         const customProviders = integrations.map(int => ({
           value: int.provider_id,
@@ -321,19 +380,27 @@ function ChatPage({ backendStatus }) {
   }, [location.search, loadConversation, currentConversationId, messages.length]);
 
   useEffect(() => {
-    if (!currentModel) setCurrentModel('mistral');
-  }, [currentModel, setCurrentModel]);
-
-  useEffect(() => {
-    if (backendStatus === 'connected') {
-      apiService.getModels().then(data => {
-        if (data) setAvailableModels(data.available_models);
+    if (backendStatus === 'connected' && userId) {
+      // Get available models for this specific user
+      apiService.getModels(userId).then(data => {
+        if (data && data.available_models) {
+          setAvailableModels(data.available_models);
+          // Set default model if none is set, or switch if current model is not available
+          if (data.available_models.length > 0) {
+            if (!currentModel || !data.available_models.includes(currentModel)) {
+              setCurrentModel(data.available_models[0]);
+            }
+          }
+        }
+      }).catch(error => {
+        console.error('Failed to load available models:', error);
+        // Fallback to empty array - user needs to add API keys
+        setAvailableModels([]);
       });
     } else {
-      setAvailableModels(['mistral']);
-      setCurrentModel('mistral');
+      setAvailableModels([]);
     }
-  }, [backendStatus, setCurrentModel]);
+  }, [backendStatus, userId, currentModel, setCurrentModel]);
 
   useEffect(() => {
     if (messages.length === 2 && !chatTitle) {
@@ -910,13 +977,32 @@ function ChatPage({ backendStatus }) {
           ) : (
             <div className="chat-messages-list">
               {messages.map((msg, idx) => (
-                <Message key={idx} msg={msg} />
+                <Message key={idx} msg={msg} customIntegrations={customIntegrations} />
               ))}
 
               {loading && (
                 <div className="chat-message assistant">
                   <div className="message-avatar">
-                    <Bot size={20} />
+                    {(() => {
+                      // Try to get logo from model variant first, then provider
+                      const modelName = selectedModelVariant || currentModel || '';
+                      let loadingLogo = getModelLogo(modelName, customIntegrations);
+                      
+                      // If no logo found and we have a provider name, try that
+                      if (!loadingLogo && currentModel) {
+                        loadingLogo = getModelLogo(currentModel, customIntegrations);
+                      }
+                      
+                      return loadingLogo ? (
+                        <img 
+                          src={loadingLogo} 
+                          alt={`${modelName || currentModel || 'Model'} logo`}
+                          className="message-model-logo"
+                        />
+                      ) : (
+                        <Bot size={20} />
+                      );
+                    })()}
                   </div>
                   <div className="message-content">
                     <div className="typing-indicator">

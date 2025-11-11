@@ -28,8 +28,11 @@ def get_user_by_id(db: Session, user_id: str):
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-def create_api_key(db: Session, user_id: str, provider: str, encrypted_key: str, key_name: str = None):
-    key_preview = f"...{encrypted_key[-6:]}"
+def create_api_key(db: Session, user_id: str, provider: str, encrypted_key: str, key_name: str = None, key_preview: str = None):
+    # Use provided key_preview or generate from encrypted_key as fallback
+    if not key_preview:
+        # Fallback: use last 6 chars of encrypted key (less ideal but works)
+        key_preview = f"...{encrypted_key[-6:]}" if len(encrypted_key) >= 6 else f"...{encrypted_key}"
     
     api_key = APIKey(
         user_id=user_id,

@@ -7,6 +7,7 @@ import apiService from '../../services/api/index';
 import mistralLogo from '../../assets/images/m-boxed-orange.png';
 import openaiLogo from '../../assets/images/openai-logo.svg';
 import anthropicLogo from '../../assets/images/claude-color.svg';
+import inceptionLogo from '../../assets/images/inception-labs.png';
 import './Integrations.css';
 
 function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
@@ -33,6 +34,13 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
       logo: mistralLogo 
     },
     { 
+      id: 'inception', 
+      name: 'Inception', 
+      provider: 'Inception Labs', 
+      status: 'available',
+      logo: inceptionLogo
+    },
+    { 
       id: 'openai', 
       name: 'Chat-GPT', 
       provider: 'OpenAI', 
@@ -41,7 +49,7 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
     },
     { 
       id: 'anthropic', 
-      name: 'SHAREDLM', 
+      name: 'claude', 
       provider: 'Anthropic', 
       status: 'available', 
       logo: anthropicLogo 
@@ -69,46 +77,38 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
     },
   ];
 
-  useEffect(() => {
-    const connected = [];
-    
-    if (localStorage.getItem('sharedlm_api_openai')) {
-      connected.push('openai');
-    }
-    if (localStorage.getItem('sharedlm_api_anthropic')) {
-      connected.push('anthropic');
-    }
-    if (localStorage.getItem('sharedlm_api_mistral')) {
-      connected.push('mistral');
-    }
-    
-    if (connected.length > 0 && setConnectedLLMs) {
-      setConnectedLLMs(connected);
-    }
-  }, [setConnectedLLMs]);
-
-  const loadCustomIntegrations = useCallback(async () => {
+  const loadConnectedModels = useCallback(async () => {
     if (!userId) return;
-
+    
     try {
+      // Fetch API keys from database
+      const apiKeys = await apiService.getApiKeys(userId);
+      const connectedFromKeys = apiKeys
+        .filter(key => key.is_active)
+        .map(key => key.provider);
+      
+      // Fetch custom integrations
       const integrations = await apiService.getCustomIntegrations(userId);
       setCustomIntegrations(integrations);
       
-      const connected = integrations
+      const connectedFromIntegrations = integrations
         .filter(int => int.is_active)
         .map(int => int.provider_id);
       
-      if (connected.length > 0 && setConnectedLLMs) {
-        setConnectedLLMs(connected);
+      // Merge both lists and remove duplicates
+      const allConnected = [...new Set([...connectedFromKeys, ...connectedFromIntegrations])];
+      
+      if (allConnected.length > 0 && setConnectedLLMs) {
+        setConnectedLLMs(allConnected);
       }
     } catch (error) {
-      console.error('Failed to load custom integrations:', error);
+      console.error('Failed to load connected models:', error);
     }
   }, [userId, setConnectedLLMs]);
 
   useEffect(() => {
-    loadCustomIntegrations();
-  }, [loadCustomIntegrations]);
+    loadConnectedModels();
+  }, [loadConnectedModels]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -165,7 +165,7 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
       if (result.success) {
         notify.success('Custom integration created successfully');
         
-        await loadCustomIntegrations();
+        await loadConnectedModels();
         
         setShowCustomModal(false);
         setCustomFormData({ name: '', baseUrl: '', logoUrl: '' });
@@ -203,7 +203,7 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
       try {
         await apiService.deleteCustomIntegration(integrationId);
         notify.success('Custom integration deleted');
-        await loadCustomIntegrations();
+        await loadConnectedModels();
       } catch (error) {
         notify.error(error.message || 'Failed to delete custom integration');
       }
@@ -218,90 +218,92 @@ function IntegrationsPage({ connectedLLMs, setSelectedLLM, setConnectedLLMs }) {
           <p className="page-subtitle">Connect and manage your AI models</p>
         </div>
 
-        <div className="grid-4 integrations-grid">
-          {defaultLLMs.map(llm => (
-            <button
-              key={llm.id}
-              className={`card-base integration-card ${connectedLLMs.includes(llm.id) ? 'connected' : ''}`}
-              onClick={() => handleLLMClick(llm)}
-              disabled={llm.status === 'coming'}
-              style={{
-                opacity: llm.status === 'coming' ? 0.5 : 1,
-                cursor: llm.status === 'coming' ? 'not-allowed' : 
-                        connectedLLMs.includes(llm.id) ? 'default' : 'pointer'
-              }}
-            >
-              {llm.status === 'coming' && (
-                <div className="coming-soon-badge">SOON</div>
-              )}
-              <div className="integration-content">
-                <div className="integration-icon-placeholder">
-                  {llm.logo ? (
-                    <img 
-                      src={llm.logo} 
-                      alt={`${llm.name} logo`} 
-                      className="integration-logo"
-                    />
-                  ) : connectedLLMs.includes(llm.id) ? (
-                    <Check size={20} color="#00ff88" />
-                  ) : null}
-                </div>
-                <div className="integration-text">
-                  <h3 className="integration-name">{llm.name}</h3>
-                  <p className="integration-provider">{llm.provider}</p>
-                </div>
-              </div>
-              {connectedLLMs.includes(llm.id) && (
-                <div className="connected-indicator"></div>
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div className="custom-section">
-          <p className="custom-label">CUSTOM INTEGRATIONS</p>
-          
-          {customIntegrations.length > 0 && (
-            <div className="grid-4 custom-integrations-grid">
-              {customIntegrations.map(integration => (
-                <div key={integration.id} className="card-base integration-card custom-integration-item">
-                  <button
-                    className="custom-integration-delete"
-                    onClick={() => handleDeleteCustomIntegration(integration.id, integration.name)}
-                    title="Delete integration"
-                  >
-                    <X size={16} />
-                  </button>
-                  
-                  <div className="integration-content">
-                    <div className="integration-icon-placeholder">
-                      {integration.logo_url ? (
-                        <img 
-                          src={integration.logo_url} 
-                          alt={`${integration.name} logo`}
-                          className="integration-logo"
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                      ) : (
-                        <Check size={20} color="#B94539" />
-                      )}
-                    </div>
-                    <div className="integration-text">
-                      <h3 className="integration-name">{integration.name}</h3>
-                      <p className="integration-provider">Custom</p>
-                    </div>
+        <div className="page-main-content">
+          <div className="grid-4 integrations-grid">
+            {defaultLLMs.map(llm => (
+              <button
+                key={llm.id}
+                className={`card-base integration-card ${connectedLLMs.includes(llm.id) ? 'connected' : ''}`}
+                onClick={() => handleLLMClick(llm)}
+                disabled={llm.status === 'coming'}
+                style={{
+                  opacity: llm.status === 'coming' ? 0.5 : 1,
+                  cursor: llm.status === 'coming' ? 'not-allowed' : 
+                          connectedLLMs.includes(llm.id) ? 'default' : 'pointer'
+                }}
+              >
+                {llm.status === 'coming' && (
+                  <div className="coming-soon-badge">SOON</div>
+                )}
+                <div className="integration-content">
+                  <div className="integration-icon-placeholder">
+                    {llm.logo ? (
+                      <img 
+                        src={llm.logo} 
+                        alt={`${llm.name} logo`} 
+                        className="integration-logo"
+                      />
+                    ) : connectedLLMs.includes(llm.id) ? (
+                      <Check size={20} color="#00ff88" />
+                    ) : null}
+                  </div>
+                  <div className="integration-text">
+                    <h3 className="integration-name">{llm.name}</h3>
+                    <p className="integration-provider">{llm.provider}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-          
-          <button
-            className="button-base button-primary custom-integration-btn"
-            onClick={handleCustomIntegrationClick}
-          >
-            ADD CUSTOM INTEGRATION
-          </button>
+                {connectedLLMs.includes(llm.id) && (
+                  <div className="connected-indicator"></div>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="custom-section">
+            <p className="custom-label">CUSTOM INTEGRATIONS</p>
+            
+            {customIntegrations.length > 0 && (
+              <div className="grid-4 custom-integrations-grid">
+                {customIntegrations.map(integration => (
+                  <div key={integration.id} className="card-base integration-card custom-integration-item">
+                    <button
+                      className="custom-integration-delete"
+                      onClick={() => handleDeleteCustomIntegration(integration.id, integration.name)}
+                      title="Delete integration"
+                    >
+                      <X size={16} />
+                    </button>
+                    
+                    <div className="integration-content">
+                      <div className="integration-icon-placeholder">
+                        {integration.logo_url ? (
+                          <img 
+                            src={integration.logo_url} 
+                            alt={`${integration.name} logo`}
+                            className="integration-logo"
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <Check size={20} color="#B94539" />
+                        )}
+                      </div>
+                      <div className="integration-text">
+                        <h3 className="integration-name">{integration.name}</h3>
+                        <p className="integration-provider">Custom</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <button
+              className="button-base button-primary custom-integration-btn"
+              onClick={handleCustomIntegrationClick}
+            >
+              ADD CUSTOM INTEGRATION
+            </button>
+          </div>
         </div>
       </div>
 

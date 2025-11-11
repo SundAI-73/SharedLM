@@ -1,25 +1,84 @@
-import React from 'react';
-import { Minus, Square, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import './TitleBar.css';
 
 function TitleBar() {
-  // Only show if running in Electron
-  if (!window.electron) return null;
+  // Hooks must be called unconditionally - check after hooks
+  const [platform, setPlatform] = useState('win32');
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [isElectron, setIsElectron] = useState(false);
+
+  useEffect(() => {
+    // Check if running in Electron
+    const electronAvailable = window.electron?.isElectron || false;
+    setIsElectron(electronAvailable);
+
+    if (!electronAvailable) {
+      return;
+    }
+
+    // Detect platform
+    if (window.electron?.platform) {
+      setPlatform(window.electron.platform);
+    }
+
+    // Get initial maximize state
+    const checkMaximized = async () => {
+      if (window.electron?.window?.isMaximized) {
+        try {
+          const maximized = await window.electron.window.isMaximized();
+          setIsMaximized(maximized);
+        } catch (error) {
+          console.error('Error checking window state:', error);
+        }
+      }
+    };
+
+    checkMaximized();
+
+    // Listen for window state changes
+    let cleanupMaximize, cleanupUnmaximize;
+    if (window.electron?.window?.onMaximize && window.electron?.window?.onUnmaximize) {
+      cleanupMaximize = window.electron.window.onMaximize(() => {
+        setIsMaximized(true);
+      });
+      cleanupUnmaximize = window.electron.window.onUnmaximize(() => {
+        setIsMaximized(false);
+      });
+    }
+
+    return () => {
+      if (cleanupMaximize) cleanupMaximize();
+      if (cleanupUnmaximize) cleanupUnmaximize();
+    };
+  }, []);
 
   const handleMinimize = () => {
-    window.electron.window.minimize();
+    if (window.electron?.window?.minimize) {
+      window.electron.window.minimize();
+    }
   };
 
   const handleMaximize = () => {
-    window.electron.window.maximize();
+    if (window.electron?.window?.maximize) {
+      window.electron.window.maximize();
+      // State will be updated via event listeners
+    }
   };
 
   const handleClose = () => {
-    window.electron.window.close();
+    if (window.electron?.window?.close) {
+      window.electron.window.close();
+    }
   };
 
+  // Only render if running in Electron
+  if (!isElectron) {
+    return null;
+  }
+
   return (
-    <div className="electron-titlebar">
+    <div className="electron-titlebar macos-style">
+      {/* Left side - Logo and Title */}
       <div className="titlebar-left">
         <div className="titlebar-logo">
           <div className="logo-dot"></div>
@@ -27,17 +86,34 @@ function TitleBar() {
         <span className="titlebar-title">SHARED LM</span>
       </div>
       
+      {/* Middle - Draggable region */}
       <div className="titlebar-drag-region"></div>
       
-      <div className="titlebar-controls">
-        <button className="titlebar-btn minimize" onClick={handleMinimize} title="Minimize">
-          <Minus size={14} />
+      {/* Right side - macOS style traffic light buttons */}
+      <div className="titlebar-controls macos-controls-right">
+        <button 
+          className="titlebar-btn mac-btn close-btn" 
+          onClick={handleClose} 
+          title="Close"
+          aria-label="Close"
+        >
+          <span className="mac-btn-inner"></span>
         </button>
-        <button className="titlebar-btn maximize" onClick={handleMaximize} title="Maximize">
-          <Square size={12} />
+        <button 
+          className="titlebar-btn mac-btn minimize-btn" 
+          onClick={handleMinimize} 
+          title="Minimize"
+          aria-label="Minimize"
+        >
+          <span className="mac-btn-inner"></span>
         </button>
-        <button className="titlebar-btn close" onClick={handleClose} title="Close">
-          <X size={14} />
+        <button 
+          className="titlebar-btn mac-btn maximize-btn" 
+          onClick={handleMaximize} 
+          title={isMaximized ? "Restore" : "Maximize"}
+          aria-label={isMaximized ? "Restore" : "Maximize"}
+        >
+          <span className="mac-btn-inner"></span>
         </button>
       </div>
     </div>
