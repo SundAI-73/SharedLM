@@ -24,9 +24,23 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
   const [apiKey, setApiKey] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(false);
   const [apiKeyPreview, setApiKeyPreview] = useState('');
   const [editingApiKey, setEditingApiKey] = useState(false);
+
+  // Load API key preview for editing
+  const loadApiKeyPreview = useCallback(async (providerId) => {
+    try {
+      const apiKeys = await apiService.getApiKeys(userId);
+      const existingKey = apiKeys.find(key => key.provider === providerId);
+      if (existingKey && existingKey.key_preview) {
+        setApiKeyPreview(existingKey.key_preview);
+        setApiKey(''); // Clear the input for new key
+      }
+    } catch (error) {
+      console.error('Failed to load API key preview:', error);
+    }
+  }, [userId]);
+
 
   // Load existing integration if provided via location state
   useEffect(() => {
@@ -60,41 +74,12 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
       setCreatedIntegration(llmData);
       setSelectedLLM(llmData);
       
-      // Check if integration has API key and load preview if editing
-      checkApiKey(existingIntegration.provider_id);
-      
       // If editing API key, load the current API key preview
       if (isEditingApiKey) {
         loadApiKeyPreview(existingIntegration.provider_id);
       }
     }
-  }, [location.state, setSelectedLLM]);
-
-  // Load API key preview for editing
-  const loadApiKeyPreview = async (providerId) => {
-    try {
-      const apiKeys = await apiService.getApiKeys(userId);
-      const existingKey = apiKeys.find(key => key.provider === providerId);
-      if (existingKey && existingKey.key_preview) {
-        setApiKeyPreview(existingKey.key_preview);
-        setApiKey(''); // Clear the input for new key
-      }
-    } catch (error) {
-      console.error('Failed to load API key preview:', error);
-    }
-  };
-
-  // Check if integration already has an API key
-  const checkApiKey = async (providerId) => {
-    try {
-      const apiKeys = await apiService.getApiKeys(userId);
-      const hasKey = apiKeys.some(key => key.provider === providerId);
-      setHasApiKey(hasKey);
-    } catch (error) {
-      console.error('Failed to check API key:', error);
-      setHasApiKey(false);
-    }
-  };
+  }, [location.state, setSelectedLLM, loadApiKeyPreview]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -183,9 +168,6 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
           baseUrl: integration.base_url || '',
           logoUrl: integration.logo_url || ''
         });
-        
-        // Check if integration has API key
-        checkApiKey(integration.provider_id);
       }
     } catch (error) {
       console.error('Failed to create custom integration:', error);
@@ -283,9 +265,6 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
           baseUrl: integration.base_url || '',
           logoUrl: integration.logo_url || ''
         });
-        
-        // Check if integration has API key after update
-        checkApiKey(integration.provider_id);
       }
     } catch (error) {
       console.error('Failed to update custom integration:', error);

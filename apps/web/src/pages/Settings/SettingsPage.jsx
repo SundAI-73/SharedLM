@@ -142,9 +142,7 @@ function SettingsPage() {
       setLoadingUsage(true);
       
       // Get current session usage from sessionStorage
-      const sessionStartTime = sessionStorage.getItem('sharedlm_session_start');
       const sessionMessages = parseInt(sessionStorage.getItem('sharedlm_session_messages') || '0');
-      const currentTime = Date.now();
       
       // Calculate session usage (assuming 100 messages per session limit)
       const sessionLimit = 100;
@@ -485,79 +483,7 @@ function SettingsPage() {
     setShowNameSaveButtons(false);
   };
 
-  // API Keys Handlers
-  const toggleApiKeyVisibility = (provider) => {
-    setApiKeys(prev => ({
-      ...prev,
-      [provider]: { ...prev[provider], visible: !prev[provider].visible }
-    }));
-  };
-
-  const handleApiKeyChange = (provider, value) => {
-    setApiKeys(prev => ({
-      ...prev,
-      [provider]: { ...prev[provider], value: value }
-    }));
-  };
-
-  const handleSaveApiKey = async (provider) => {
-    const key = apiKeys[provider].value.trim();
-    
-    if (!key) {
-      notify.error('API key cannot be empty');
-      return;
-    }
-
-    // Validate key format
-    if (provider === 'openai' && !key.startsWith('sk-')) {
-      notify.error('Invalid OpenAI API key format (must start with sk-)');
-      return;
-    }
-    if (provider === 'anthropic' && !key.startsWith('sk-ant-')) {
-      notify.error('Invalid Anthropic API key format (must start with sk-ant-)');
-      return;
-    }
-
-    try {
-      // Save to database
-      const result = await apiService.saveApiKey(
-        userId,
-        provider,
-        key,
-        `${provider.toUpperCase()} API Key`
-      );
-
-      if (result.success) {
-        // DO NOT save API keys to localStorage - they should only be in the backend
-        // localStorage is vulnerable to XSS attacks
-        // API keys are stored securely in the backend database
-        
-        // Log API key save event
-        logEvent(EventType.API_KEY_SAVED, LogLevel.INFO, 'API key saved', {
-          userId,
-          provider
-        });
-        
-        // Reload keys to get updated state
-        await loadApiKeys();
-        
-        // Clear input
-        setApiKeys(prev => ({
-          ...prev,
-          [provider]: { ...prev[provider], value: '' }
-        }));
-
-        // Dispatch event to notify other components (like ChatPage) that models changed
-        window.dispatchEvent(new CustomEvent('apiKeysUpdated', {
-          detail: { provider, action: 'added' }
-        }));
-
-        notify.success(`${provider.toUpperCase()} API key saved successfully`);
-      }
-    } catch (error) {
-      notify.error(error.message || 'Failed to save API key');
-    }
-  };
+  // API Keys are managed through ApiKeysModal component
 
   const handleRemoveApiKey = async (provider) => {
     const customIntegration = customIntegrations.find(int => int.provider_id === provider);

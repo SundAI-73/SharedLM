@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useUser } from '../../contexts/UserContext';
@@ -17,7 +17,6 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
   const { userId } = useUser();
 
   const [customIntegrations, setCustomIntegrations] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [apiKeys, setApiKeys] = useState([]);
 
   const defaultLLMs = [
@@ -74,12 +73,10 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
 
   const loadConnectedModels = useCallback(async () => {
     if (!userId) {
-      setIsLoading(false);
       return;
     }
     
     try {
-      setIsLoading(true);
       // Fetch API keys from database
       // Backend already filters for is_active == True, so all returned keys are active
       const fetchedApiKeys = await apiService.getApiKeys(userId);
@@ -123,10 +120,8 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
       }
     } catch (error) {
       console.error('[IntegrationsPage] Failed to load connected models:', error);
-    } finally {
-      setIsLoading(false);
     }
-  }, [userId, setConnectedLLMs]);
+  }, [userId, setConnectedLLMs, connectedLLMs]);
 
   useEffect(() => {
     loadConnectedModels();
@@ -175,27 +170,6 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
     navigate('/add-custom-integration', {
       state: { integration }
     });
-  };
-
-
-  const handleDeleteCustomIntegration = async (integrationId, integrationName) => {
-    const confirmed = await notify.confirm({
-      title: 'Delete Custom Integration',
-      message: `Are you sure you want to delete "${integrationName}"? This will also remove its API key.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      variant: 'danger'
-    });
-
-    if (confirmed) {
-      try {
-        await apiService.deleteCustomIntegration(integrationId);
-        notify.success('Custom integration deleted');
-        await loadConnectedModels();
-      } catch (error) {
-        notify.error(error.message || 'Failed to delete custom integration');
-      }
-    }
   };
 
   return (

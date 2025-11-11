@@ -3,7 +3,6 @@ import './TitleBar.css';
 
 function TitleBar() {
   // Hooks must be called unconditionally - check after hooks
-  const [platform, setPlatform] = useState('win32');
   const [isMaximized, setIsMaximized] = useState(false);
   const [isElectron, setIsElectron] = useState(false);
 
@@ -14,11 +13,6 @@ function TitleBar() {
 
     if (!electronAvailable) {
       return;
-    }
-
-    // Detect platform
-    if (window.electron?.platform) {
-      setPlatform(window.electron.platform);
     }
 
     // Get initial maximize state
