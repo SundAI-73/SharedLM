@@ -71,12 +71,26 @@ const NothingSidebar = React.memo(() => {
 
   const handleNewChat = useCallback(() => {
     // Navigate to chat and clear any conversation state
-    // Use replace: false to allow browser back button to work
-    navigate('/chat', { 
-      state: { newChat: true }
-    });
+    // Add timestamp to ensure state change is detected even when already on /chat
+    // If already on /chat, add a temporary query param to force navigation
+    const timestamp = Date.now();
+    const isAlreadyOnChat = location.pathname === '/chat';
+    
+    if (isAlreadyOnChat) {
+      // Add temporary query param to force React Router to treat as new navigation
+      // The query param will be cleaned up by ChatPage after processing
+      navigate(`/chat?new=${timestamp}`, { 
+        state: { newChat: true, timestamp },
+        replace: false
+      });
+    } else {
+      navigate('/chat', { 
+        state: { newChat: true, timestamp },
+        replace: false
+      });
+    }
     setIsMobileOpen(false);
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   const toggleSidebar = useCallback(() => setIsCollapsed(prev => !prev), []);
   

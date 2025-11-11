@@ -1,5 +1,7 @@
 .auth-page-container {
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -28,9 +30,16 @@
       #050000 50%,
       #000000 100%
     );
-  background-attachment: fixed;
   background-size: 100% 100%;
   background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Remove background-attachment: fixed in Electron as it causes scrolling issues */
+.electron-app .auth-page-container {
+  background-attachment: scroll;
 }
 
 /* Background glows */
@@ -81,12 +90,13 @@
 .auth-two-column {
   width: 100%;
   max-width: 1400px;
-  height: 100vh;
-  max-height: 1200px;
+  height: 100%;
+  max-height: 100%;
   display: grid;
   grid-template-columns: 1fr 1fr;
   position: relative;
   z-index: 1;
+  overflow: hidden;
 }
 
 /* Left Column - Branding */
@@ -602,8 +612,8 @@
 @media (max-width: 768px) {
   .auth-two-column {
     grid-template-columns: 1fr;
-    height: auto;
-    min-height: 100vh;
+    height: 100%;
+    min-height: 100%;
   }
 
   .auth-left-column {

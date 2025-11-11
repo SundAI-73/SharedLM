@@ -1,11 +1,13 @@
 @media (max-width: 1024px) {
   .chat-page-container {
-    padding: 24px;
+    padding: 20px;
   }
   
   .chat-page-content {
     max-width: 1200px;
-    height: 80vh;
+    flex: 1;
+    min-height: 0;
+    max-height: 100%;
   }
 
   .chat-top-bar,
@@ -58,12 +60,26 @@
 
 @media (max-width: 768px) {
   .chat-page-container {
-    padding: 16px;
+    padding: 20px;
+  }
+
+  .chat-page-container::before {
+    width: 180px;
+    height: 180px;
+    filter: blur(50px);
+  }
+
+  .chat-page-container::after {
+    width: 200px;
+    height: 200px;
+    filter: blur(60px);
   }
 
   .chat-page-content {
-    height: calc(100vh - 32px);
-    border-radius: 16px;
+    flex: 1;
+    min-height: 0;
+    max-height: 100%;
+    border-radius: 20px;
   }
 
   .chat-top-bar,
@@ -194,11 +210,28 @@
 
 @media (max-width: 480px) {
   .chat-page-container {
-    padding: 12px;
+    padding: 20px;
+  }
+
+  .chat-page-container::before {
+    width: 150px;
+    height: 150px;
+    top: 10%;
+    filter: blur(40px);
+  }
+
+  .chat-page-container::after {
+    width: 170px;
+    height: 170px;
+    bottom: 10%;
+    filter: blur(50px);
   }
 
   .chat-page-content {
-    height: calc(100vh - 24px);
+    flex: 1;
+    min-height: 0;
+    max-height: 100%;
+    border-radius: 16px;
   }
 
   .chat-top-bar,
@@ -359,6 +392,19 @@
   .chat-send-btn {
     width: 40px;
     height: 40px;
+  }
+}
+
+@media (max-width: 375px) {
+  .chat-page-container {
+    padding: 20px;
+  }
+
+  .chat-page-content {
+    flex: 1;
+    min-height: 0;
+    max-height: 100%;
+    border-radius: 16px;
   }
 }
 

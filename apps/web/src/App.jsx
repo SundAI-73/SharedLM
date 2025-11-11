@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import NothingSidebar from './components/layout/Sidebar/Sidebar';
 import TitleBar from './components/common/TitleBar/TitleBar';
@@ -15,6 +15,7 @@ import './styles/index.css';
 const ChatPage = lazy(() => import('./pages/Chat/ChatPage'));
 const IntegrationsPage = lazy(() => import('./pages/Integrations/IntegrationsPage'));
 const AuthPage = lazy(() => import('./pages/Auth/AuthPage'));
+const AddCustomIntegrationPage = lazy(() => import('./pages/AddCustomIntegration/AddCustomIntegrationPage'));
 const ProjectsPage = lazy(() => import('./pages/Projects/ProjectsPage'));
 const ProjectLanding = lazy(() => import('./pages/Projects/ProjectLanding'));
 const HistoryPage = lazy(() => import('./pages/History/HistoryPage'));
@@ -44,16 +45,25 @@ const PageLoader = () => (
 // Layout wrapper that conditionally shows sidebar and titlebar
 function AppLayout({ children }) {
   const location = useLocation();
+  const [platform, setPlatform] = useState(null);
   
   // Pages that should NOT show the sidebar
   const noSidebarRoutes = ['/login', '/signup', '/forgot-password', '/auth/github/callback'];
   const shouldShowSidebar = !noSidebarRoutes.includes(location.pathname);
   
-  // Check if running in Electron
+  // Check if running in Electron and get platform
   const isElectron = window.electron?.isElectron || false;
 
+  useEffect(() => {
+    if (window.electron?.platform) {
+      setPlatform(window.electron.platform);
+    }
+  }, []);
+
+  const platformClass = platform === 'darwin' ? 'platform-macos' : platform === 'win32' ? 'platform-windows' : '';
+
   return (
-    <div className={`nothing-app ${isElectron ? 'electron-app' : ''}`}>
+    <div className={`nothing-app ${isElectron ? 'electron-app' : ''} ${platformClass}`}>
       {/* Show custom titlebar only in Electron */}
       {isElectron && <TitleBar />}
       
@@ -62,18 +72,25 @@ function AppLayout({ children }) {
       
       {/* Main content area */}
       <main className={shouldShowSidebar ? 'nothing-main' : 'nothing-main-fullwidth'}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            style={{ width: '100%', height: '100%' }}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        <Suspense fallback={<PageLoader />}>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12, ease: [0.4, 0, 0.2, 1] }}
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                position: 'relative',
+                contain: 'layout style paint'
+              }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        </Suspense>
       </main>
     </div>
   );
@@ -124,80 +141,93 @@ function AppContent() {
     }
   }, []);
 
+  // Use HashRouter in Electron, BrowserRouter in web
+  const Router = window.electron ? HashRouter : BrowserRouter;
+  
   return (
-    <BrowserRouter>
+    <Router>
       <AppLayout>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            {/* Root redirect */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            
-            {/* Authentication routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/auth/github/callback" element={<GitHubCallback />} />
-            
-            {/* Main app routes - Protected */}
-            <Route path="/chat" element={
-              <ProtectedRoute>
-                <ChatPage backendStatus={backendStatus} />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/integrations" element={
-              <ProtectedRoute>
-                <IntegrationsPage 
-                  connectedLLMs={connectedLLMs}
-                  setSelectedLLM={setSelectedLLM}
-                />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/auth" element={
-              <ProtectedRoute>
-                <AuthPage
-                  selectedLLM={selectedLLM}
-                  setConnectedLLMs={setConnectedLLMs}
-                  connectedLLMs={connectedLLMs}
-                />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/projects" element={
-              <ProtectedRoute>
-                <ProjectsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/projects/:projectId" element={
-              <ProtectedRoute>
-                <ProjectLanding />
-              </ProtectedRoute>
-            } />
-            <Route path="/history" element={
-              <ProtectedRoute>
-                <HistoryPage />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/analytics" element={
-              <ProtectedRoute>
-                {analyticsEnabled ? <AnalyticsPage /> : <Navigate to="/chat" replace />}
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <SettingsPage />
-              </ProtectedRoute>
-            } />
-            
-            {/* Catch all - redirect to login if not authenticated, chat if authenticated */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </Suspense>
+        <Routes>
+          {/* Root redirect */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          
+          {/* Authentication routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/auth/github/callback" element={<GitHubCallback />} />
+          
+          {/* Main app routes - Protected */}
+          <Route path="/chat" element={
+            <ProtectedRoute>
+              <ChatPage backendStatus={backendStatus} />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/integrations" element={
+            <ProtectedRoute>
+              <IntegrationsPage 
+                connectedLLMs={connectedLLMs}
+                setConnectedLLMs={setConnectedLLMs}
+                setSelectedLLM={setSelectedLLM}
+              />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/auth" element={
+            <ProtectedRoute>
+              <AuthPage
+                selectedLLM={selectedLLM}
+                setSelectedLLM={setSelectedLLM}
+                setConnectedLLMs={setConnectedLLMs}
+                connectedLLMs={connectedLLMs}
+              />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/add-custom-integration" element={
+            <ProtectedRoute>
+              <AddCustomIntegrationPage
+                setSelectedLLM={setSelectedLLM}
+                setConnectedLLMs={setConnectedLLMs}
+                connectedLLMs={connectedLLMs}
+              />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/projects" element={
+            <ProtectedRoute>
+              <ProjectsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/projects/:projectId" element={
+            <ProtectedRoute>
+              <ProjectLanding />
+            </ProtectedRoute>
+          } />
+          <Route path="/history" element={
+            <ProtectedRoute>
+              <HistoryPage />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/analytics" element={
+            <ProtectedRoute>
+              {analyticsEnabled ? <AnalyticsPage /> : <Navigate to="/chat" replace />}
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Catch all - redirect to login if not authenticated, chat if authenticated */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
       </AppLayout>
-    </BrowserRouter>
+    </Router>
   );
 }
 

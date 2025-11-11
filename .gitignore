@@ -64,3 +64,5 @@ apps/server/sharedlm.db-shm
 apps/server/sharedlm.db
 apps/server/sharedlm.db-wal
 apps/desktop/
+
+apps/application

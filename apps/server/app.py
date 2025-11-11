@@ -30,21 +30,47 @@ app = FastAPI(
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Log validation errors for debugging"""
+    import json
+    from utils.security import sanitize_request_body
+    
     body = await request.body()
-    logger.error(f"Validation error on {request.url.path}: {exc.errors()}")
-    logger.error(f"Request body: {body.decode() if body else 'empty'}")
+    try:
+        if body:
+            body_dict = json.loads(body.decode())
+            sanitized_body = sanitize_request_body(body_dict)
+            logger.error(f"Validation error on {request.url.path}: {exc.errors()}")
+            logger.error(f"Request body: {json.dumps(sanitized_body)}")
+        else:
+            logger.error(f"Validation error on {request.url.path}: {exc.errors()}")
+    except Exception:
+        # If body can't be parsed, just log the error
+        logger.error(f"Validation error on {request.url.path}: {exc.errors()}")
+    
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": exc.errors()},
     )
 
 # Configure CORS
+# In production, restrict origins to specific domains
+# For development, allow localhost origins
+import os
+env = os.getenv("ENVIRONMENT", "development")
+if env == "production":
+    # In production, use explicit origins from settings
+    cors_origins = [origin for origin in settings.cors_origins if origin.startswith("https://")]
+else:
+    # In development, allow localhost and settings origins
+    cors_origins = settings.cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-User-ID"],
+    expose_headers=["Content-Type"],
+    max_age=3600,
 )
 
 # Register routers

@@ -1,11 +1,27 @@
 .chat-page-container {
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: 40px;
-  animation: fadeInUp 0.3s ease;
+  align-items: stretch;
+  padding: 20px;
   position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+/* In Electron, ensure container fits within available height (accounting for 28px title bar) */
+.nothing-app.electron-app .nothing-main .chat-page-container,
+.nothing-app.electron-app .nothing-main-fullwidth .chat-page-container {
+  max-height: 100%;
+  height: 100%;
+  overflow: hidden;
+  min-height: 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 20px;
 }
 
 /* Background decoration - Top left glow */
@@ -44,7 +60,9 @@
   border-radius: 24px;
   width: 100%;
   max-width: 1400px;
-  height: 85vh;
+  flex: 1;
+  min-height: 0;
+  max-height: 100%;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 1;
@@ -52,6 +70,19 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-sizing: border-box;
+  align-self: stretch;
+  margin: 0;
+}
+
+/* In Electron, ensure content fits within available height */
+.nothing-app.electron-app .chat-page-content {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  flex: 1 1 auto;
 }
 
 /* Animations */

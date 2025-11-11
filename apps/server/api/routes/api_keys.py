@@ -1,20 +1,33 @@
 import logging
 import os
+import bcrypt
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import List
 from database.connection import get_db
 from database import crud
+from database.models import APIKey, User, CustomIntegration
 from models.schemas import APIKeyCreate, APIKeyResponse
 from utils.encryption import encrypt_key, decrypt_key
+from utils.cache import clear_api_key_cache
+from api.dependencies import get_current_user, verify_user_ownership, verify_api_key_ownership
+from utils.security import validate_provider, sanitize_error_message, sanitize_request_body
+from utils.api_key_validation import validate_api_key
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api-keys", tags=["api_keys"])
 
 @router.get("/{user_id}", response_model=List[APIKeyResponse])
-async def get_api_keys(user_id: str, db: Session = Depends(get_db)):
+async def get_api_keys(
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Get all API keys for user"""
     try:
+        # Verify user owns the requested resources
+        verify_user_ownership(current_user, user_id, "API keys")
+        
         api_keys = crud.get_user_api_keys(db, user_id)
         return [
             APIKeyResponse(
@@ -28,39 +41,109 @@ async def get_api_keys(user_id: str, db: Session = Depends(get_db)):
             )
             for key in api_keys
         ]
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Get API keys error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to retrieve API keys"))
 
 @router.post("/{user_id}")
 async def create_api_key(
     user_id: str, 
-    api_key_data: APIKeyCreate, 
+    api_key_data: APIKeyCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create or update API key for user"""
     try:
-        # Check if key already exists for this provider
-        existing_key = crud.get_api_key(db, user_id, api_key_data.provider)
+        # Verify user owns the requested resources
+        verify_user_ownership(current_user, user_id, "API keys")
+        
+        # Validate provider
+        validated_provider = validate_provider(api_key_data.provider)
+        
+        # Validate API key
+        if not api_key_data.api_key or not api_key_data.api_key.strip():
+            raise HTTPException(status_code=400, detail="API key is required")
+        
+        api_key_value = api_key_data.api_key.strip()
+        
+        # Validate API key by making actual API call
+        # For custom integrations, we need to fetch the integration details
+        base_url = None
+        api_type = None
+        if validated_provider.startswith('custom_'):
+            # Fetch custom integration to get base_url and api_type
+            custom_integration = db.query(CustomIntegration).filter(
+                CustomIntegration.user_id == user_id,
+                CustomIntegration.provider_id == validated_provider,
+                CustomIntegration.is_active == True
+            ).first()
+            
+            if not custom_integration:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Custom integration '{validated_provider}' not found. Please create the integration first."
+                )
+            
+            base_url = custom_integration.base_url
+            api_type = custom_integration.api_type or "openai"
+        
+        # Validate the API key by making an actual API call
+        logger.info(f"Validating API key for provider: {validated_provider}")
+        is_valid, error_message = await validate_api_key(
+            validated_provider,
+            api_key_value,
+            base_url=base_url,
+            api_type=api_type
+        )
+        
+        if not is_valid:
+            logger.warning(f"API key validation failed for {validated_provider}: {error_message}")
+            raise HTTPException(
+                status_code=400,
+                detail=error_message or f"Invalid API key for {validated_provider}. Please check your API key."
+            )
+        
+        logger.info(f"API key validation successful for {validated_provider}")
+        
+        # Check if key already exists for this provider (active or inactive)
+        existing_key = db.query(APIKey).filter(
+            APIKey.user_id == user_id,
+            APIKey.provider == validated_provider
+        ).first()
+        
+        # Calculate key preview from original key (before encryption)
+        key_preview = f"...{api_key_value[-6:]}" if len(api_key_value) >= 6 else f"...{api_key_value}"
         
         # Encrypt the API key
-        encrypted_key = encrypt_key(api_key_data.api_key)
+        try:
+            encrypted_key = encrypt_key(api_key_value)
+        except ValueError as e:
+            logger.error(f"Encryption error for {validated_provider}: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=500, 
+                detail="Failed to encrypt API key. Please contact support."
+            )
         
         if existing_key:
             # Update existing key
             existing_key.encrypted_key = encrypted_key
-            existing_key.key_preview = f"...{api_key_data.api_key[-6:]}"
+            existing_key.key_preview = key_preview
             existing_key.is_active = True
             if api_key_data.key_name:
                 existing_key.key_name = api_key_data.key_name
             db.commit()
             db.refresh(existing_key)
             
-            logger.info(f"Updated API key for {user_id} - {api_key_data.provider}")
+            # Clear cache when API key is updated
+            clear_api_key_cache(user_id, validated_provider)
+            
+            logger.info(f"Updated API key for {user_id} - {validated_provider}")
             
             return {
                 "success": True,
-                "message": f"{api_key_data.provider} API key updated",
+                "message": f"{validated_provider} API key updated",
                 "api_key": {
                     "id": existing_key.id,
                     "provider": existing_key.provider,
@@ -68,45 +151,50 @@ async def create_api_key(
                 }
             }
         else:
-            # Create new key
+            # Create new key - pass key_preview separately
             api_key = crud.create_api_key(
                 db,
                 user_id=user_id,
-                provider=api_key_data.provider,
+                provider=validated_provider,
                 encrypted_key=encrypted_key,
-                key_name=api_key_data.key_name or f"{api_key_data.provider} API Key"
+                key_name=api_key_data.key_name or f"{validated_provider} API Key",
+                key_preview=key_preview
             )
             
-            logger.info(f"Created API key for {user_id} - {api_key_data.provider}")
+            # Clear cache when new API key is created (in case old cached key exists)
+            clear_api_key_cache(user_id, validated_provider)
+            
+            logger.info(f"Created API key for {user_id} - {validated_provider}")
             
             return {
                 "success": True,
-                "message": f"{api_key_data.provider} API key created",
+                "message": f"{validated_provider} API key created",
                 "api_key": {
                     "id": api_key.id,
                     "provider": api_key.provider,
                     "key_preview": api_key.key_preview
                 }
             }
-    except ValueError as e:
-        logger.error(f"Encryption error: {e}")
-        raise HTTPException(status_code=500, detail="Encryption key not configured properly")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Create API key error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Create API key error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to create API key"))
 
 @router.get("/{user_id}/{provider}/decrypt")
 async def get_decrypted_key(
     user_id: str, 
-    provider: str, 
+    provider: str,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get decrypted API key for use"""
     try:
-        api_key = crud.get_api_key(db, user_id, provider)
+        # Verify user ownership
+        verify_user_ownership(current_user, user_id, "API keys")
         
-        if not api_key:
-            raise HTTPException(status_code=404, detail=f"No API key found for {provider}")
+        # Verify API key ownership
+        api_key = await verify_api_key_ownership(current_user, provider, db)
         
         decrypted_key = decrypt_key(api_key.encrypted_key)
         
@@ -118,23 +206,28 @@ async def get_decrypted_key(
         raise
     except Exception as e:
         logger.error(f"Get decrypted key error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to retrieve API key"))
 
 @router.delete("/{user_id}/{provider}")
 async def delete_api_key(
     user_id: str, 
-    provider: str, 
+    provider: str,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Delete API key for provider"""
     try:
-        api_key = crud.get_api_key(db, user_id, provider)
+        # Verify user ownership
+        verify_user_ownership(current_user, user_id, "API keys")
         
-        if not api_key:
-            raise HTTPException(status_code=404, detail="API key not found")
+        # Verify API key ownership
+        api_key = await verify_api_key_ownership(current_user, provider, db)
         
         db.delete(api_key)
         db.commit()
+        
+        # Clear cache when API key is deleted
+        clear_api_key_cache(user_id, provider)
         
         logger.info(f"Deleted API key for {user_id} - {provider}")
         
@@ -146,28 +239,54 @@ async def delete_api_key(
         raise
     except Exception as e:
         logger.error(f"Delete API key error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to delete API key"))
 
 @router.post("/{user_id}/{provider}/test")
 async def test_api_key(
     user_id: str,
     provider: str,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Test API key connection"""
+    """Test API key connection by making actual API call"""
     try:
-        api_key = crud.get_api_key(db, user_id, provider)
+        # Verify user ownership
+        verify_user_ownership(current_user, user_id, "API keys")
         
-        if not api_key:
-            raise HTTPException(status_code=404, detail="API key not found")
+        # Verify API key ownership
+        api_key = await verify_api_key_ownership(current_user, provider, db)
         
         decrypted_key = decrypt_key(api_key.encrypted_key)
         
-        # Validate key format
-        if provider == 'openai' and not decrypted_key.startswith('sk-'):
-            raise HTTPException(status_code=400, detail="Invalid OpenAI API key format")
-        if provider == 'anthropic' and not decrypted_key.startswith('sk-ant-'):
-            raise HTTPException(status_code=400, detail="Invalid Anthropic API key format")
+        # For custom integrations, fetch the integration details
+        base_url = None
+        api_type = None
+        if provider.startswith('custom_'):
+            custom_integration = db.query(CustomIntegration).filter(
+                CustomIntegration.user_id == user_id,
+                CustomIntegration.provider_id == provider,
+                CustomIntegration.is_active == True
+            ).first()
+            
+            if custom_integration:
+                base_url = custom_integration.base_url
+                api_type = custom_integration.api_type or "openai"
+        
+        # Validate the API key by making an actual API call
+        logger.info(f"Testing API key for provider: {provider}")
+        is_valid, error_message = await validate_api_key(
+            provider,
+            decrypted_key,
+            base_url=base_url,
+            api_type=api_type
+        )
+        
+        if not is_valid:
+            logger.warning(f"API key test failed for {provider}: {error_message}")
+            raise HTTPException(
+                status_code=400,
+                detail=error_message or f"API key test failed for {provider}"
+            )
         
         logger.info(f"API key test successful for {user_id} - {provider}")
         
@@ -180,4 +299,4 @@ async def test_api_key(
         raise
     except Exception as e:
         logger.error(f"Test API key error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to test API key"))

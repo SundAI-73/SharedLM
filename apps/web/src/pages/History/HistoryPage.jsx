@@ -19,6 +19,24 @@ function HistoryPage() {
   const [availableProjects, setAvailableProjects] = useState([]);
   const notify = useNotification();
 
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now - date;
+    const diffInMinutes = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMs / 3600000);
+    const diffInDays = Math.floor(diffInMs / 86400000);
+
+    if (diffInMinutes < 1) return 'just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+    if (diffInHours < 24) return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+    if (diffInDays === 1) return '1 day ago';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 14) return '1 week ago';
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    return date.toLocaleDateString();
+  };
+
   const loadConversations = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -65,24 +83,6 @@ function HistoryPage() {
       setIsLoading(false);
     }
   }, [userId]);
-
-  const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMs = now - date;
-    const diffInMinutes = Math.floor(diffInMs / 60000);
-    const diffInHours = Math.floor(diffInMs / 3600000);
-    const diffInDays = Math.floor(diffInMs / 86400000);
-
-    if (diffInMinutes < 1) return 'just now';
-    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
-    if (diffInHours < 24) return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
-    if (diffInDays === 1) return '1 day ago';
-    if (diffInDays < 7) return `${diffInDays} days ago`;
-    if (diffInDays < 14) return '1 week ago';
-    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
-    return date.toLocaleDateString();
-  };
 
   const loadProjectsForFilter = useCallback(async () => {
     try {
@@ -176,12 +176,7 @@ function HistoryPage() {
   };
 
   return (
-    <motion.div 
-      className="page-container"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
+    <div className="page-container">
       <div className="page-content">
         <motion.div 
           className="page-header"
@@ -195,140 +190,143 @@ function HistoryPage() {
           </p>
         </motion.div>
 
-        <motion.div 
-          className="controls-section"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <div className="search-container">
-            <Search size={18} className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-base input-with-icon search-input"
-            />
-          </div>
-
-          <div className="filter-container">
-            <Filter size={18} className="filter-icon" />
-            <CustomDropdown
-              value={selectedProject}
-              onChange={setSelectedProject}
-              options={projectOptions}
-              className="history-filter-dropdown"
-            />
-          </div>
-        </motion.div>
-
-        <AnimatePresence>
-          {selectedChats.length > 0 && (
-            <motion.div 
-              className="action-bar"
-              initial={{ opacity: 0, height: 0, y: -10 }}
-              animate={{ opacity: 1, height: "auto", y: 0 }}
-              exit={{ opacity: 0, height: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-            >
-          <div className="selection-info">
-            <span className="selection-count">
-              {selectedChats.length} SELECTED
-            </span>
-            <button className="clear-selection-btn" onClick={handleClearSelection}>
-              Clear
-            </button>
-          </div>
-
-          <div className="action-buttons-group">
-            <button className="action-btn delete-btn" onClick={handleDeleteSelected}>
-              <Trash2 size={16} />
-              <span>Delete</span>
-            </button>
-          </div>
-          </motion.div>
-          )}
-        </AnimatePresence>
-
-        {isLoading ? (
-          <div className="empty-state">
-            <Clock size={60} className="empty-state-icon" />
-            <h3 className="empty-state-title">LOADING...</h3>
-            <p className="empty-state-text">Fetching your conversations</p>
-          </div>
-        ) : filteredChats.length === 0 ? (
-          <div className="empty-state">
-            <MessageSquare size={60} className="empty-state-icon" />
-            <h3 className="empty-state-title">No Conversations Found</h3>
-            <p className="empty-state-text">
-              {searchQuery || selectedProject !== 'all' 
-                ? 'Try adjusting your filters' 
-                : 'Start a new chat to see it here'}
-            </p>
-          </div>
-        ) : (
+        <div className="page-main-content">
           <motion.div 
-            className="list-layout chat-list"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
+            className="controls-section"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <AnimatePresence>
-              {filteredChats.map((chat, index) => (
-                <motion.div
-                  key={chat.id}
-                  className={`list-item list-item-clickable chat-item ${selectedChats.includes(chat.id) ? 'selected' : ''}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.3, delay: index * 0.03 }}
-                  whileHover={{ x: 4 }}
-                >
-                <div 
-                  className="chat-checkbox-container"
-                  onClick={(e) => handleCheckboxClick(e, chat.id)}
-                >
-                  <div className={`chat-checkbox ${selectedChats.includes(chat.id) ? 'checked' : ''}`}>
-                    {selectedChats.includes(chat.id) && <Check size={14} />}
-                  </div>
-                </div>
+            <div className="search-container">
+              <Search size={18} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="input-base input-with-icon search-input"
+              />
+            </div>
 
-                <MessageSquare size={20} className="chat-icon" />
-                
-                <div className="chat-content" onClick={() => handleChatClick(chat.id)}>
-                  <h3 className="chat-title">{chat.title}</h3>
-                  <div className="chat-meta">
-                    <span className="meta-item model">{chat.model}</span>
-                    <span className="meta-divider">•</span>
-                    <span className="meta-item">{chat.messages} messages</span>
-                    <span className="meta-divider">•</span>
-                    <span className="meta-item">
-                      <Clock size={10} style={{ display: 'inline', marginRight: '4px' }} />
-                      {chat.time}
-                    </span>
-                  </div>
-                </div>
-                
-                {/*FIXED: Always show project info */}
-                {chat.projectName ? (
-                  <span className="project-badge">{chat.projectName}</span>
-                ) : (
-                  <span className="no-project-badge">NO PROJECT</span>
-                )}
-                
-                <ChevronRight 
-                  size={18} 
-                  className="chevron-icon" 
-                  onClick={() => handleChatClick(chat.id)}
-                />
-              </motion.div>
-              ))}
-            </AnimatePresence>
+            <div className="filter-container">
+              <Filter size={18} className="filter-icon" />
+              <CustomDropdown
+                value={selectedProject}
+                onChange={setSelectedProject}
+                options={projectOptions}
+                className="history-filter-dropdown"
+              />
+            </div>
           </motion.div>
-        )}
+
+          <AnimatePresence>
+            {selectedChats.length > 0 && (
+              <motion.div 
+                className="action-bar"
+                initial={{ opacity: 0, height: 0, y: -10 }}
+                animate={{ opacity: 1, height: "auto", y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+            <div className="selection-info">
+              <span className="selection-count">
+                {selectedChats.length} SELECTED
+              </span>
+              <button className="clear-selection-btn" onClick={handleClearSelection}>
+                Clear
+              </button>
+            </div>
+
+            <div className="action-buttons-group">
+              <button className="action-btn delete-btn" onClick={handleDeleteSelected}>
+                <Trash2 size={16} />
+                <span>Delete</span>
+              </button>
+            </div>
+            </motion.div>
+            )}
+          </AnimatePresence>
+
+          {isLoading ? (
+            <div className="empty-state">
+              <Clock size={60} className="empty-state-icon" />
+              <h3 className="empty-state-title">LOADING...</h3>
+              <p className="empty-state-text">Fetching your conversations</p>
+            </div>
+          ) : filteredChats.length === 0 ? (
+            <div className="empty-state">
+              <MessageSquare size={60} className="empty-state-icon" />
+              <h3 className="empty-state-title">No Conversations Found</h3>
+              <p className="empty-state-text">
+                {searchQuery || selectedProject !== 'all' 
+                  ? 'Try adjusting your filters' 
+                  : 'Start a new chat to see it here'}
+              </p>
+            </div>
+          ) : (
+            <motion.div 
+              className="list-layout chat-list"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <AnimatePresence>
+                {filteredChats.map((chat, index) => (
+                  <motion.div
+                    key={chat.id}
+                    className={`list-item list-item-clickable chat-item ${selectedChats.includes(chat.id) ? 'selected' : ''}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3, delay: index * 0.03 }}
+                    whileHover={{ x: 6, scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                  <div 
+                    className="chat-checkbox-container"
+                    onClick={(e) => handleCheckboxClick(e, chat.id)}
+                  >
+                    <div className={`chat-checkbox ${selectedChats.includes(chat.id) ? 'checked' : ''}`}>
+                      {selectedChats.includes(chat.id) && <Check size={14} />}
+                    </div>
+                  </div>
+
+                  <MessageSquare size={20} className="chat-icon" />
+                  
+                  <div className="chat-content" onClick={() => handleChatClick(chat.id)}>
+                    <h3 className="chat-title">{chat.title}</h3>
+                    <div className="chat-meta">
+                      <span className="meta-item model">{chat.model}</span>
+                      <span className="meta-divider">•</span>
+                      <span className="meta-item">{chat.messages} messages</span>
+                      <span className="meta-divider">•</span>
+                      <span className="meta-item">
+                        <Clock size={10} style={{ display: 'inline', marginRight: '4px' }} />
+                        {chat.time}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/*FIXED: Always show project info */}
+                  {chat.projectName ? (
+                    <span className="project-badge">{chat.projectName}</span>
+                  ) : (
+                    <span className="no-project-badge">NO PROJECT</span>
+                  )}
+                  
+                  <ChevronRight 
+                    size={18} 
+                    className="chevron-icon" 
+                    onClick={() => handleChatClick(chat.id)}
+                  />
+                </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
