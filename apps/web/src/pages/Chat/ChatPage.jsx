@@ -876,7 +876,7 @@ function ChatPage({ backendStatus }) {
       // Check if model changed during loading - if so, handle it now
       // This is handled by the useEffect that watches currentModel and loading state
     }
-  }, [currentModel, selectedModelVariant, userId, currentConversationId, selectedProject, modelVariants, modelProviders, navigate]);
+  }, [currentModel, selectedModelVariant, userId, currentConversationId, selectedProject, modelVariants, modelProviders, navigate, notify]);
 
   useEffect(() => {
     const { projectId, projectName, initialMessage, newChat } = location.state || {};

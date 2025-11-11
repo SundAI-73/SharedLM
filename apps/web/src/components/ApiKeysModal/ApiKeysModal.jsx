@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Zap, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Zap, Eye, EyeOff } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import apiService from '../../services/api';
@@ -52,7 +52,7 @@ function ApiKeysModal({ isOpen, onClose, onApiKeyAdded }) {
       loadSavedApiKeys();
       loadCustomIntegrations();
     }
-  }, [isOpen, userId]);
+  }, [isOpen, loadSavedApiKeys, loadCustomIntegrations]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -70,7 +70,7 @@ function ApiKeysModal({ isOpen, onClose, onApiKeyAdded }) {
     };
   }, [isOpen, onClose]);
 
-  const loadSavedApiKeys = async () => {
+  const loadSavedApiKeys = useCallback(async () => {
     try {
       const keys = await apiService.getApiKeys(userId);
       setSavedApiKeys(keys.map(k => k.provider));
@@ -78,9 +78,9 @@ function ApiKeysModal({ isOpen, onClose, onApiKeyAdded }) {
       console.error('Failed to load API keys:', error);
       setSavedApiKeys([]);
     }
-  };
+  }, [userId]);
 
-  const loadCustomIntegrations = async () => {
+  const loadCustomIntegrations = useCallback(async () => {
     try {
       const integrations = await apiService.getCustomIntegrations(userId);
       setCustomIntegrations(integrations || []);
@@ -88,7 +88,7 @@ function ApiKeysModal({ isOpen, onClose, onApiKeyAdded }) {
       console.error('Failed to load custom integrations:', error);
       setCustomIntegrations([]);
     }
-  };
+  }, [userId]);
 
   const handleProviderSelect = (provider) => {
     setSelectedProvider(provider);

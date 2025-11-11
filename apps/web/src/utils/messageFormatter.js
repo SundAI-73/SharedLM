@@ -78,13 +78,12 @@ export const formatMessage = (text) => {
   
   // Process text into paragraphs, but preserve code block placeholders
   const parts = formatted.split(/(__CODE_BLOCK_\d+__)/);
-  let result = '';
-  
-  for (const part of parts) {
+  const processTextPart = (part, codeBlocksArray) => {
+    let partResult = '';
     if (part.match(/^__CODE_BLOCK_\d+__$/)) {
       // This is a code block placeholder, restore it
       const blockIndex = parseInt(part.match(/\d+/)[0]);
-      const codeBlock = codeBlocks[blockIndex];
+      const codeBlock = codeBlocksArray[blockIndex];
       if (codeBlock) {
         // Escape HTML in code
         const escapedCode = codeBlock.code
@@ -96,7 +95,7 @@ export const formatMessage = (text) => {
         
         // Create code block with language class if specified
         const langClass = codeBlock.language ? ` class="language-${codeBlock.language}"` : '';
-        result += `<pre><code${langClass}>${escapedCode}</code></pre>`;
+        partResult = `<pre><code${langClass}>${escapedCode}</code></pre>`;
       }
     } else {
       // This is regular text, process as paragraphs
@@ -104,8 +103,10 @@ export const formatMessage = (text) => {
         // Split by lines first to identify headers on their own lines
         const lines = part.split('\n');
         let currentParagraph = [];
+        const paragraphs = [];
         
-        lines.forEach((line) => {
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
           const trimmedLine = line.trim();
           
           // Check if this line is a header
@@ -118,7 +119,7 @@ export const formatMessage = (text) => {
                 const processedPara = paraText.replace(/__HEADER__(.+?)__END_HEADER__/g, '<strong>$1</strong>');
                 // Convert line breaks to <br> within the paragraph
                 const paraWithBreaks = processedPara.replace(/\n/g, '<br>');
-                result += `<p>${paraWithBreaks}</p>`;
+                paragraphs.push(`<p>${paraWithBreaks}</p>`);
               }
               currentParagraph = [];
             }
@@ -128,7 +129,7 @@ export const formatMessage = (text) => {
             if (headerMatch) {
               const headerText = headerMatch[1];
               // Format header as bold paragraph with extra spacing
-              result += `<p style="font-weight: bold; margin-top: 1.2em; margin-bottom: 0.6em;"><strong>${headerText}</strong></p>`;
+              paragraphs.push(`<p style="font-weight: bold; margin-top: 1.2em; margin-bottom: 0.6em;"><strong>${headerText}</strong></p>`);
             }
           } else if (trimmedLine === '') {
             // Empty line - if we have a paragraph, output it and start a new one
@@ -139,7 +140,7 @@ export const formatMessage = (text) => {
                 const processedPara = paraText.replace(/__HEADER__(.+?)__END_HEADER__/g, '<strong>$1</strong>');
                 // Convert line breaks to <br> within the paragraph
                 const paraWithBreaks = processedPara.replace(/\n/g, '<br>');
-                result += `<p>${paraWithBreaks}</p>`;
+                paragraphs.push(`<p>${paraWithBreaks}</p>`);
               }
               currentParagraph = [];
             }
@@ -147,7 +148,7 @@ export const formatMessage = (text) => {
             // Regular line - add to current paragraph (preserve original line for line breaks)
             currentParagraph.push(line);
           }
-        });
+        }
         
         // Output any remaining paragraph
         if (currentParagraph.length > 0) {
@@ -157,11 +158,19 @@ export const formatMessage = (text) => {
             const processedPara = paraText.replace(/__HEADER__(.+?)__END_HEADER__/g, '<strong>$1</strong>');
             // Convert line breaks to <br> within the paragraph
             const paraWithBreaks = processedPara.replace(/\n/g, '<br>');
-            result += `<p>${paraWithBreaks}</p>`;
+            paragraphs.push(`<p>${paraWithBreaks}</p>`);
           }
         }
+        
+        partResult = paragraphs.join('');
       }
     }
+    return partResult;
+  };
+  
+  let result = '';
+  for (const part of parts) {
+    result += processTextPart(part, codeBlocks);
   }
   
   formatted = result;
