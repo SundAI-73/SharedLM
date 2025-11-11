@@ -618,6 +618,23 @@ class APIService {
     }
   }
 
+  async getApiKeyValue(userId, provider) {
+    try {
+      const response = await this.makeRequest(`${API_BASE_URL}/api-keys/${userId}/${provider}/decrypt`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Failed to fetch API key' }));
+        throw new Error(error.detail || 'Failed to fetch API key');
+      }
+      const data = await response.json();
+      return data.api_key;
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Get API key value failed:', error);
+      }
+      throw error;
+    }
+  }
+
   async saveApiKey(userId, provider, apiKey, keyName = null) {
     try {
       const response = await this.makeRequest(`${API_BASE_URL}/api-keys/${userId}`, {

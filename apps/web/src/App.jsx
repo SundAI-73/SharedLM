@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import NothingSidebar from './components/layout/Sidebar/Sidebar';
 import TitleBar from './components/common/TitleBar/TitleBar';
@@ -141,8 +141,11 @@ function AppContent() {
     }
   }, []);
 
+  // Use HashRouter in Electron, BrowserRouter in web
+  const Router = window.electron ? HashRouter : BrowserRouter;
+  
   return (
-    <BrowserRouter>
+    <Router>
       <AppLayout>
         <Routes>
           {/* Root redirect */}
@@ -224,7 +227,7 @@ function AppContent() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </AppLayout>
-    </BrowserRouter>
+    </Router>
   );
 }
 

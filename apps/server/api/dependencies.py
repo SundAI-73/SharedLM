@@ -23,7 +23,7 @@ def get_database_session():
 # USER AUTHENTICATION DEPENDENCY
 
 async def get_current_user(
-    user_id: Optional[str] = Header(None, alias="X-User-ID"),
+    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
     db: Session = Depends(get_db)
 ) -> User:
     """
@@ -32,14 +32,14 @@ async def get_current_user(
     
     Note: This is a basic implementation. For production, implement JWT token validation.
     """
-    if not user_id:
+    if not x_user_id:
         raise HTTPException(status_code=401, detail="Authentication required")
     
     # Validate user_id format (basic validation)
-    if not isinstance(user_id, str) or len(user_id) > 100:
+    if not isinstance(x_user_id, str) or len(x_user_id) > 100:
         raise HTTPException(status_code=401, detail="Invalid user ID format")
     
-    user = crud.get_user_by_id(db, user_id)
+    user = crud.get_user_by_id(db, x_user_id)
     if not user:
         raise HTTPException(status_code=401, detail="Authentication failed")
     
@@ -222,7 +222,7 @@ async def verify_api_key(
 # RATE LIMITING DEPENDENCY (Future)
 
 async def rate_limit_check(
-    user_id: Optional[str] = Header(None, alias="X-User-ID")
+    x_user_id: Optional[str] = Header(None, alias="X-User-ID")
 ):
     """
     Check rate limits for user

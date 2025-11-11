@@ -6,12 +6,13 @@ from sqlalchemy.orm import Session
 from typing import List
 from database.connection import get_db
 from database import crud
-from database.models import APIKey, User
+from database.models import APIKey, User, CustomIntegration
 from models.schemas import APIKeyCreate, APIKeyResponse
 from utils.encryption import encrypt_key, decrypt_key
 from utils.cache import clear_api_key_cache
 from api.dependencies import get_current_user, verify_user_ownership, verify_api_key_ownership
 from utils.security import validate_provider, sanitize_error_message, sanitize_request_body
+from utils.api_key_validation import validate_api_key
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api-keys", tags=["api_keys"])
@@ -66,6 +67,45 @@ async def create_api_key(
             raise HTTPException(status_code=400, detail="API key is required")
         
         api_key_value = api_key_data.api_key.strip()
+        
+        # Validate API key by making actual API call
+        # For custom integrations, we need to fetch the integration details
+        base_url = None
+        api_type = None
+        if validated_provider.startswith('custom_'):
+            # Fetch custom integration to get base_url and api_type
+            custom_integration = db.query(CustomIntegration).filter(
+                CustomIntegration.user_id == user_id,
+                CustomIntegration.provider_id == validated_provider,
+                CustomIntegration.is_active == True
+            ).first()
+            
+            if not custom_integration:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Custom integration '{validated_provider}' not found. Please create the integration first."
+                )
+            
+            base_url = custom_integration.base_url
+            api_type = custom_integration.api_type or "openai"
+        
+        # Validate the API key by making an actual API call
+        logger.info(f"Validating API key for provider: {validated_provider}")
+        is_valid, error_message = await validate_api_key(
+            validated_provider,
+            api_key_value,
+            base_url=base_url,
+            api_type=api_type
+        )
+        
+        if not is_valid:
+            logger.warning(f"API key validation failed for {validated_provider}: {error_message}")
+            raise HTTPException(
+                status_code=400,
+                detail=error_message or f"Invalid API key for {validated_provider}. Please check your API key."
+            )
+        
+        logger.info(f"API key validation successful for {validated_provider}")
         
         # Check if key already exists for this provider (active or inactive)
         existing_key = db.query(APIKey).filter(
@@ -208,7 +248,7 @@ async def test_api_key(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Test API key connection"""
+    """Test API key connection by making actual API call"""
     try:
         # Verify user ownership
         verify_user_ownership(current_user, user_id, "API keys")
@@ -218,11 +258,35 @@ async def test_api_key(
         
         decrypted_key = decrypt_key(api_key.encrypted_key)
         
-        # Validate key format
-        if provider == 'openai' and not decrypted_key.startswith('sk-'):
-            raise HTTPException(status_code=400, detail="Invalid OpenAI API key format")
-        if provider == 'anthropic' and not decrypted_key.startswith('sk-ant-'):
-            raise HTTPException(status_code=400, detail="Invalid Anthropic API key format")
+        # For custom integrations, fetch the integration details
+        base_url = None
+        api_type = None
+        if provider.startswith('custom_'):
+            custom_integration = db.query(CustomIntegration).filter(
+                CustomIntegration.user_id == user_id,
+                CustomIntegration.provider_id == provider,
+                CustomIntegration.is_active == True
+            ).first()
+            
+            if custom_integration:
+                base_url = custom_integration.base_url
+                api_type = custom_integration.api_type or "openai"
+        
+        # Validate the API key by making an actual API call
+        logger.info(f"Testing API key for provider: {provider}")
+        is_valid, error_message = await validate_api_key(
+            provider,
+            decrypted_key,
+            base_url=base_url,
+            api_type=api_type
+        )
+        
+        if not is_valid:
+            logger.warning(f"API key test failed for {provider}: {error_message}")
+            raise HTTPException(
+                status_code=400,
+                detail=error_message or f"API key test failed for {provider}"
+            )
         
         logger.info(f"API key test successful for {user_id} - {provider}")
         

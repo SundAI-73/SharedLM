@@ -123,6 +123,11 @@
   letter-spacing: 0.8px;
   text-transform: uppercase;
   font-weight: 500;
+  z-index: 1;
+}
+
+.custom-integration-item .coming-soon-badge {
+  right: 8px; /* Position in top-right when no delete button */
 }
 
 .connected-indicator {
@@ -171,6 +176,15 @@
 
 .custom-integration-item {
   position: relative;
+  cursor: pointer;
+}
+
+.custom-integration-item.inactive {
+  cursor: pointer;
+}
+
+.custom-integration-item.inactive:hover {
+  opacity: 0.7 !important;
 }
 
 .custom-integration-delete {

@@ -19,6 +19,6 @@ npm run build
 
 # Step 3: Package with Electron
 echo "🖥️ Packaging desktop app..."
-electron-builder --win --mac --linux
+node ./scripts/run-electron-builder.js --win --mac --linux
 
-echo "✅ Build complete! Check apps/desktop/ folder"
+echo "✅ Build complete! Check apps/application/ folder"

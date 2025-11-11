@@ -48,7 +48,8 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      devTools: true // Enable DevTools even in production for debugging
     },
     icon: path.join(__dirname, 'icon.png'),
     titleBarStyle: 'hidden',
@@ -57,18 +58,48 @@ function createWindow() {
     autoHideMenuBar: true
   });
 
-  const startURL = isDev
-    ? 'http://localhost:3000'
-    : `file://${path.join(__dirname, '../build/index.html')}`;
+  // In packaged app, files are in resources/app.asar or resources/app
+  // electron.js is at public/electron.js, so build is at ../build from there
+  let startURL;
+  if (isDev) {
+    startURL = 'http://localhost:3000';
+  } else {
+    // Use path.resolve for absolute path, and normalize separators
+    const indexPath = path.resolve(__dirname, '..', 'build', 'index.html');
+    startURL = `file://${indexPath.replace(/\\/g, '/')}`;
+  }
 
-  mainWindow.loadURL(startURL);
+  console.log('=== Electron Debug Info ===');
+  console.log('Loading URL:', startURL);
+  console.log('__dirname:', __dirname);
+  console.log('app.isPackaged:', app.isPackaged);
+  console.log('app.getAppPath():', app.getAppPath());
+  console.log('==========================');
+  
+  mainWindow.loadURL(startURL).catch(err => {
+    console.error('Failed to load URL:', err);
+  });
+
+  // Log when page finishes loading
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Page finished loading');
+  });
+
+  // Log any console messages from renderer
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`Renderer console [${level}]:`, message);
+  });
+
+  // Log navigation errors
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('Failed to load:', errorDescription, 'URL:', validatedURL);
+  });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     
-    if (isDev) {
-      mainWindow.webContents.openDevTools({ mode: 'detach' });
-    }
+    // Open DevTools to see console output (temporarily for debugging)
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
 
     // Send initial window state after window is ready
     if (mainWindow.isMaximized()) {

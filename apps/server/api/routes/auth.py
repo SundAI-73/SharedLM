@@ -7,6 +7,7 @@ from database import crud
 from database.models import User
 from models.schemas import UserCreate, UserLogin
 from utils.security import sanitize_error_message
+from api.dependencies import get_current_user, verify_user_ownership
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -86,7 +87,6 @@ async def change_password(
             raise HTTPException(status_code=400, detail="Missing required fields")
         
         # Verify user ownership
-        from api.dependencies import verify_user_ownership
         verify_user_ownership(current_user, user_id, "account")
         
         # Get user
@@ -120,6 +120,5 @@ async def change_password(
     except HTTPException:
         raise
     except Exception as e:
-        from utils.security import sanitize_error_message
         logger.error(f"Change password error: {e}")
         raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to change password"))

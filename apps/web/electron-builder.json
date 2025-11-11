@@ -3,7 +3,7 @@
   "productName": "SharedLM",
   "copyright": "Copyright © 2024 SharedLM",
   "directories": {
-    "output": "../desktop",
+    "output": "../application",
     "buildResources": "public"
   },
   "files": [
@@ -18,7 +18,8 @@
     "artifactName": "${productName}-${version}.${ext}"
   },
   "portable": {
-    "artifactName": "${productName}-Portable-${version}.exe"
+    "artifactName": "${productName}-Portable-${version}.exe",
+    "useZip": true
   },
   "extraMetadata": {
     "main": "public/electron.js"

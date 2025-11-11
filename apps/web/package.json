@@ -21,14 +21,15 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "cross-env GENERATE_SOURCEMAP=false react-scripts build",
+    "build:electron": "npm run build && node ./scripts/fix-electron-build.js",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "electron": "electron .",
     "electron-dev": "concurrently \"cross-env BROWSER=none npm start\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron-build": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
-    "dist": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64",
-    "dist-portable": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win portable",
-    "pack": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir"
+    "electron-build": "npm run build:electron && node ./scripts/run-electron-builder.js",
+    "dist": "npm run build:electron && node ./scripts/run-electron-builder.js --win --x64",
+    "dist-portable": "npm run build:electron && node ./scripts/run-electron-builder.js --win portable",
+    "pack": "npm run build:electron && node ./scripts/run-electron-builder.js --dir"
   },
   "eslintConfig": {
     "extends": [

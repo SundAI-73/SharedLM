@@ -336,7 +336,7 @@ function ApiKeysModal({ isOpen, onClose, onApiKeyAdded }) {
                   onClick={handleSaveApiKey}
                   disabled={!apiKeyValue.trim() || loading}
                 >
-                  {loading ? 'Saving...' : 'Add API'}
+                  {loading ? 'Validating...' : 'Add API'}
                 </button>
               </div>
             </>
