@@ -73,29 +73,23 @@ function ProjectLanding() {
   const [project, setProject] = useState(null);
   const [projectConversations, setProjectConversations] = useState([]);
 
-  const isStarred = starredProjects.some(p => p.id === parseInt(projectId));
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now - date;
+    const diffInMinutes = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMs / 3600000);
+    const diffInDays = Math.floor(diffInMs / 86400000);
 
-  // Update variant when provider changes
-  useEffect(() => {
-    const variants = modelVariants[selectedModel] || [];
-    if (variants.length > 0 && !variants.find(v => v.value === selectedModelVariant)) {
-      setSelectedModelVariant(variants[0].value);
-    }
-  }, [selectedModel, selectedModelVariant]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
-        setShowMoreMenu(false);
-      }
-      if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target)) {
-        setShowSettingsMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (diffInMinutes < 1) return 'just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+    if (diffInHours < 24) return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+    if (diffInDays === 1) return '1 day ago';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 14) return '1 week ago';
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    return date.toLocaleDateString();
+  };
 
   const loadProjectData = useCallback(async () => {
     try {
@@ -187,19 +181,29 @@ function ProjectLanding() {
     loadProjectActivity();
   }, [loadProjectData, loadProjectActivity]);
 
-  const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = (now - date) / (1000 * 60 * 60);
+  const isStarred = starredProjects.some(p => p.id === parseInt(projectId));
 
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 2) return '1 hour ago';
-    if (diffInHours < 24) return `${Math.floor(diffInHours)} hours ago`;
-    if (diffInHours < 48) return '1 day ago';
-    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)} days ago`;
-    if (diffInHours < 336) return '1 week ago';
-    return `${Math.floor(diffInHours / 168)} weeks ago`;
-  };
+  // Update variant when provider changes
+  useEffect(() => {
+    const variants = modelVariants[selectedModel] || [];
+    if (variants.length > 0 && !variants.find(v => v.value === selectedModelVariant)) {
+      setSelectedModelVariant(variants[0].value);
+    }
+  }, [selectedModel, selectedModelVariant]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+        setShowMoreMenu(false);
+      }
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target)) {
+        setShowSettingsMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   if (!project) {
     return (

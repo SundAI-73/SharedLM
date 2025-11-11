@@ -19,6 +19,24 @@ function HistoryPage() {
   const [availableProjects, setAvailableProjects] = useState([]);
   const notify = useNotification();
 
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now - date;
+    const diffInMinutes = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMs / 3600000);
+    const diffInDays = Math.floor(diffInMs / 86400000);
+
+    if (diffInMinutes < 1) return 'just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+    if (diffInHours < 24) return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+    if (diffInDays === 1) return '1 day ago';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 14) return '1 week ago';
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    return date.toLocaleDateString();
+  };
+
   const loadConversations = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -65,24 +83,6 @@ function HistoryPage() {
       setIsLoading(false);
     }
   }, [userId]);
-
-  const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMs = now - date;
-    const diffInMinutes = Math.floor(diffInMs / 60000);
-    const diffInHours = Math.floor(diffInMs / 3600000);
-    const diffInDays = Math.floor(diffInMs / 86400000);
-
-    if (diffInMinutes < 1) return 'just now';
-    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
-    if (diffInHours < 24) return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
-    if (diffInDays === 1) return '1 day ago';
-    if (diffInDays < 7) return `${diffInDays} days ago`;
-    if (diffInDays < 14) return '1 week ago';
-    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
-    return date.toLocaleDateString();
-  };
 
   const loadProjectsForFilter = useCallback(async () => {
     try {
