@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNotification } from '../../contexts/NotificationContext';
@@ -9,6 +9,7 @@ import './AddCustomIntegration.css';
 
 function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedLLMs }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const notify = useNotification();
   const { userId } = useUser();
   const [formData, setFormData] = useState({
@@ -23,6 +24,77 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
   const [apiKey, setApiKey] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [apiKeyPreview, setApiKeyPreview] = useState('');
+  const [editingApiKey, setEditingApiKey] = useState(false);
+
+  // Load existing integration if provided via location state
+  useEffect(() => {
+    const existingIntegration = location.state?.integration;
+    const isEditingApiKey = location.state?.editingApiKey;
+    
+    if (existingIntegration) {
+      // Load existing integration for editing
+      setFormData({
+        name: existingIntegration.name || '',
+        baseUrl: existingIntegration.base_url || '',
+        logoUrl: existingIntegration.logo_url || ''
+      });
+      setIntegrationId(existingIntegration.id);
+      setIntegrationCreated(true);
+      setEditingApiKey(isEditingApiKey || false);
+      // If editing API key, also allow editing the integration form
+      if (isEditingApiKey) {
+        setIsEditing(true);
+      }
+      
+      const llmData = {
+        id: existingIntegration.provider_id,
+        name: existingIntegration.name,
+        provider: 'Custom',
+        status: 'available',
+        logo: existingIntegration.logo_url,
+        isCustom: true,
+        baseUrl: existingIntegration.base_url
+      };
+      setCreatedIntegration(llmData);
+      setSelectedLLM(llmData);
+      
+      // Check if integration has API key and load preview if editing
+      checkApiKey(existingIntegration.provider_id);
+      
+      // If editing API key, load the current API key preview
+      if (isEditingApiKey) {
+        loadApiKeyPreview(existingIntegration.provider_id);
+      }
+    }
+  }, [location.state, setSelectedLLM]);
+
+  // Load API key preview for editing
+  const loadApiKeyPreview = async (providerId) => {
+    try {
+      const apiKeys = await apiService.getApiKeys(userId);
+      const existingKey = apiKeys.find(key => key.provider === providerId);
+      if (existingKey && existingKey.key_preview) {
+        setApiKeyPreview(existingKey.key_preview);
+        setApiKey(''); // Clear the input for new key
+      }
+    } catch (error) {
+      console.error('Failed to load API key preview:', error);
+    }
+  };
+
+  // Check if integration already has an API key
+  const checkApiKey = async (providerId) => {
+    try {
+      const apiKeys = await apiService.getApiKeys(userId);
+      const hasKey = apiKeys.some(key => key.provider === providerId);
+      setHasApiKey(hasKey);
+    } catch (error) {
+      console.error('Failed to check API key:', error);
+      setHasApiKey(false);
+    }
+  };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -111,6 +183,9 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
           baseUrl: integration.base_url || '',
           logoUrl: integration.logo_url || ''
         });
+        
+        // Check if integration has API key
+        checkApiKey(integration.provider_id);
       }
     } catch (error) {
       console.error('Failed to create custom integration:', error);
@@ -208,6 +283,9 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
           baseUrl: integration.base_url || '',
           logoUrl: integration.logo_url || ''
         });
+        
+        // Check if integration has API key after update
+        checkApiKey(integration.provider_id);
       }
     } catch (error) {
       console.error('Failed to update custom integration:', error);
@@ -218,31 +296,65 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
   };
 
   const handleConnect = async () => {
-    if (!createdIntegration || !apiKey.trim()) return;
+    if (!createdIntegration) return;
+
+    // If base URL is provided, API key is optional
+    // If no base URL, API key is required
+    const hasBaseUrl = formData.baseUrl.trim() || createdIntegration.baseUrl;
+    if (!hasBaseUrl && !apiKey.trim()) {
+      notify.error('API key is required when base URL is not provided');
+      return;
+    }
 
     try {
       setConnecting(true);
 
-      // Save to database
-      const result = await apiService.saveApiKey(
-        userId,
-        createdIntegration.id,
-        apiKey.trim(),
-        `${createdIntegration.name} API Key`
-      );
+      // If API key is provided, save it
+      if (apiKey.trim()) {
+        const result = await apiService.saveApiKey(
+          userId,
+          createdIntegration.id,
+          apiKey.trim(),
+          `${createdIntegration.name} API Key`
+        );
 
-      if (result.success) {
-        // Mark as connected
-        if (setConnectedLLMs) {
-          setConnectedLLMs([...connectedLLMs, createdIntegration.id]);
+        if (!result.success) {
+          notify.error(result.message || 'Failed to save API key');
+          setConnecting(false);
+          return;
         }
-        
+      }
+
+      // Mark as connected
+      if (setConnectedLLMs) {
+        const updatedConnected = [...connectedLLMs];
+        if (!updatedConnected.includes(createdIntegration.id)) {
+          updatedConnected.push(createdIntegration.id);
+        }
+        setConnectedLLMs(updatedConnected);
+      }
+      
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('apiKeysUpdated', {
+        detail: { provider: createdIntegration.id, action: 'added' }
+      }));
+      
+      if (editingApiKey) {
+        notify.success(`${createdIntegration.name} API key updated successfully`);
+        // If editing from Settings, navigate back to Settings
+        const fromSettings = location.state?.fromSettings;
+        if (fromSettings) {
+          navigate('/settings?tab=api-keys');
+        } else {
+          navigate('/integrations');
+        }
+      } else {
         notify.success(`${createdIntegration.name} connected successfully`);
         navigate('/integrations');
       }
     } catch (error) {
-      console.error('Failed to save API key:', error);
-      notify.error(error.message || 'Failed to save API key');
+      console.error('Failed to connect:', error);
+      notify.error(error.message || 'Failed to connect');
     } finally {
       setConnecting(false);
     }
@@ -459,19 +571,68 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.5 }}
               >
-                <h2 className="auth-title">CONNECT {createdIntegration.name}</h2>
-                <p className="auth-subtitle">Enter your API key to authenticate</p>
+                <h2 className="auth-title">
+                  {editingApiKey ? 'EDIT API KEY' : `CONNECT ${createdIntegration.name}`}
+                </h2>
+                <p className="auth-subtitle">
+                  {editingApiKey 
+                    ? 'Update your API key'
+                    : formData.baseUrl.trim() || createdIntegration.baseUrl 
+                      ? 'API key is optional when base URL is provided' 
+                      : 'Enter your API key to authenticate'}
+                </p>
               </motion.div>
 
               <div className="auth-content">
                 <div className="api-section">
+                  {(formData.baseUrl.trim() || createdIntegration.baseUrl) && (
+                    <motion.div
+                      className="base-url-added-message"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.6 }}
+                      style={{
+                        padding: '12px',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        border: '1px solid rgba(0, 255, 136, 0.3)',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        color: '#00ff88',
+                        fontSize: '14px',
+                        textAlign: 'center'
+                      }}
+                    >
+                      ✓ Base URL added
+                    </motion.div>
+                  )}
+
+                  {editingApiKey && apiKeyPreview && (
+                    <motion.p 
+                      className="api-key-item-description"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.4, delay: 0.6 }}
+                      style={{
+                        marginBottom: '12px',
+                        fontSize: '0.85rem',
+                        color: '#888888'
+                      }}
+                    >
+                      Current key: {apiKeyPreview}
+                    </motion.p>
+                  )}
+
                   <motion.p 
                     className="auth-description"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.4, delay: 0.6 }}
                   >
-                    Enter your {createdIntegration.name} API key to connect
+                    {editingApiKey
+                      ? `Enter new ${createdIntegration.name} API key`
+                      : formData.baseUrl.trim() || createdIntegration.baseUrl
+                        ? `Enter your ${createdIntegration.name} API key (optional)`
+                        : `Enter your ${createdIntegration.name} API key to connect`}
                   </motion.p>
 
                   <motion.div 
@@ -482,11 +643,16 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
                   >
                     <input
                       type="password"
-                      placeholder="Enter API key..."
+                      placeholder={editingApiKey 
+                        ? "Enter new API key..." 
+                        : formData.baseUrl.trim() || createdIntegration.baseUrl 
+                          ? "Enter API key (optional)..." 
+                          : "Enter API key..."}
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && apiKey.trim() && !connecting) {
+                        const hasBaseUrl = formData.baseUrl.trim() || createdIntegration.baseUrl;
+                        if (e.key === 'Enter' && (apiKey.trim() || hasBaseUrl) && !connecting) {
                           handleConnect();
                         }
                       }}
@@ -502,23 +668,27 @@ function AddCustomIntegrationPage({ setSelectedLLM, setConnectedLLMs, connectedL
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.4, delay: 0.8 }}
                   >
-                    Your API key is encrypted and stored securely in the database
+                    {formData.baseUrl.trim() || createdIntegration.baseUrl
+                      ? 'API key is optional when base URL is provided. Your API key is encrypted and stored securely.'
+                      : 'Your API key is encrypted and stored securely in the database'}
                   </motion.p>
                 </div>
               </div>
 
               <motion.button
-                className={`connect-button ${(!apiKey.trim() || connecting) ? 'disabled' : ''}`}
+                className={`connect-button ${(connecting || (!apiKey.trim() && !(formData.baseUrl.trim() || createdIntegration.baseUrl))) ? 'disabled' : ''}`}
                 onClick={handleConnect}
-                disabled={!apiKey.trim() || connecting}
+                disabled={connecting || (!apiKey.trim() && !(formData.baseUrl.trim() || createdIntegration.baseUrl))}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.9 }}
-                whileHover={(!apiKey.trim() || connecting) ? {} : { scale: 1.02, y: -2 }}
-                whileTap={(!apiKey.trim() || connecting) ? {} : { scale: 0.98 }}
+                whileHover={(connecting || (!apiKey.trim() && !(formData.baseUrl.trim() || createdIntegration.baseUrl))) ? {} : { scale: 1.02, y: -2 }}
+                whileTap={(connecting || (!apiKey.trim() && !(formData.baseUrl.trim() || createdIntegration.baseUrl))) ? {} : { scale: 0.98 }}
               >
                 {connecting ? (
                   <span>CONNECTING...</span>
+                ) : editingApiKey ? (
+                  <span>UPDATE API KEY</span>
                 ) : (
                   <span>CONNECT {createdIntegration.name}</span>
                 )}

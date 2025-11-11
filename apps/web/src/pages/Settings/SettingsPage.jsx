@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Settings, User, BarChart3, Brain, Link, RefreshCw, Zap, Eye, EyeOff, Trash2, Plus } from 'lucide-react';
+import { Settings, User, BarChart3, Brain, Link, RefreshCw, Zap, Eye, EyeOff, Trash2, Plus, Edit2, Check, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
 import ConnectorsModal from '../../components/ConnectorsModal/ConnectorsModal';
@@ -73,6 +73,10 @@ function SettingsPage() {
   const [loadingConnectors, setLoadingConnectors] = useState(false);
   const [showConnectorsModal, setShowConnectorsModal] = useState(false);
   const [showApiKeysModal, setShowApiKeysModal] = useState(false);
+  const [editingKey, setEditingKey] = useState(null);
+  const [editKeyValue, setEditKeyValue] = useState('');
+  const [visibleKeys, setVisibleKeys] = useState({});
+  const [fullApiKeys, setFullApiKeys] = useState({});
 
   const settingsTabs = [
     { id: 'general', label: 'General', icon: <Settings size={18} /> },
@@ -591,6 +595,90 @@ function SettingsPage() {
       } catch (error) {
         notify.error(error.message || 'Failed to remove API key');
       }
+    }
+  };
+
+  const handleEditApiKey = (provider) => {
+    const isCustom = provider.startsWith('custom_');
+    
+    if (isCustom) {
+      // For custom integrations, navigate to edit page with integration data
+      const customIntegration = customIntegrations.find(int => int.provider_id === provider);
+      if (customIntegration) {
+        navigate('/add-custom-integration', {
+          state: { 
+            integration: customIntegration,
+            editingApiKey: true,
+            fromSettings: true
+          }
+        });
+      }
+    } else {
+      // For standard API keys, show edit modal/form
+      setEditingKey(provider);
+      setEditKeyValue('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingKey(null);
+    setEditKeyValue('');
+    // Hide any visible keys when canceling edit
+    setVisibleKeys({});
+  };
+
+  const handleSaveEditApiKey = async (provider) => {
+    const key = editKeyValue.trim();
+    
+    if (!key) {
+      notify.error('API key cannot be empty');
+      return;
+    }
+
+    // Validate key format
+    if (provider === 'openai' && !key.startsWith('sk-')) {
+      notify.error('Invalid OpenAI API key format (must start with sk-)');
+      return;
+    }
+    if (provider === 'anthropic' && !key.startsWith('sk-ant-')) {
+      notify.error('Invalid Anthropic API key format (must start with sk-ant-)');
+      return;
+    }
+
+    try {
+      // Save to database (this will update the existing key)
+      const result = await apiService.saveApiKey(
+        userId,
+        provider,
+        key,
+        `${provider.toUpperCase()} API Key`
+      );
+
+      if (result.success) {
+        // Log API key update event
+        logEvent(EventType.API_KEY_SAVED, LogLevel.INFO, 'API key updated', {
+          userId,
+          provider
+        });
+        
+        // Reload keys to get updated state
+        await loadApiKeys();
+        
+        // Clear edit state
+        setEditingKey(null);
+        setEditKeyValue('');
+
+        // Dispatch event to notify other components
+        window.dispatchEvent(new CustomEvent('apiKeysUpdated', {
+          detail: { provider, action: 'updated' }
+        }));
+
+        const customIntegration = customIntegrations.find(int => int.provider_id === provider);
+        const providerName = customIntegration ? customIntegration.name : provider.toUpperCase();
+        notify.success(`${providerName} API key updated successfully`);
+      }
+    } catch (error) {
+      notify.error(error.message || 'Failed to update API key');
     }
   };
 
@@ -1207,33 +1295,278 @@ function SettingsPage() {
                           );
                         }
 
+                          // Separate standard and custom keys
+                          const standardKeys = savedKeys.filter(key => !key.provider.startsWith('custom_'));
+                          const customKeys = savedKeys.filter(key => key.provider.startsWith('custom_'));
+                          
                           return (
                           <div className="api-keys-list">
-                            {savedKeys.map((key) => (
+                            {/* Standard API Keys */}
+                            {standardKeys.map((key) => {
+                              const isEditing = editingKey === key.provider;
+                              
+                              return (
                               <div key={key.provider} className="api-key-item">
                                 <div className="api-key-item-info">
-                                  <h4 className="api-key-item-name">{key.name}</h4>
-                                  <p className="api-key-item-description">
-                                    Saved key: {key.preview}
-                                  </p>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <h4 className="api-key-item-name">{key.name}</h4>
+                                  </div>
+                                  {isEditing ? (
+                                    <div style={{ marginTop: '12px' }}>
+                                      <p className="api-key-item-description" style={{ marginBottom: '8px' }}>
+                                        Current key: {key.preview}
+                                      </p>
+                                      <input
+                                        type="password"
+                                        value={editKeyValue}
+                                        onChange={(e) => setEditKeyValue(e.target.value)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' && editKeyValue.trim()) {
+                                            handleSaveEditApiKey(key.provider);
+                                          } else if (e.key === 'Escape') {
+                                            handleCancelEdit();
+                                          }
+                                        }}
+                                        placeholder="Enter new API key..."
+                                        className="input-base"
+                                        style={{ marginBottom: '8px' }}
+                                        autoFocus
+                                      />
+                                      <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button
+                                          className="button-base button-primary"
+                                          onClick={() => handleSaveEditApiKey(key.provider)}
+                                          style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                                        >
+                                          <Check size={14} style={{ marginRight: '4px' }} />
+                                          Save
+                                        </button>
+                                        <button
+                                          className="button-base button-secondary"
+                                          onClick={handleCancelEdit}
+                                          style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                                        >
+                                          <X size={14} style={{ marginRight: '4px' }} />
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <p className="api-key-item-description" style={{ margin: 0 }}>
+                                        Saved key: {visibleKeys[key.provider] ? (fullApiKeys[key.provider] || key.preview) : key.preview}
+                                      </p>
+                                      <button
+                                        onClick={async () => {
+                                          if (!visibleKeys[key.provider]) {
+                                            // Show the key - need to fetch it
+                                            try {
+                                              const fullKey = await apiService.getApiKeyValue(userId, key.provider);
+                                              setFullApiKeys(prev => ({ ...prev, [key.provider]: fullKey }));
+                                              setVisibleKeys(prev => ({ ...prev, [key.provider]: true }));
+                                            } catch (error) {
+                                              notify.error(error.message || 'Failed to retrieve API key');
+                                            }
+                                          } else {
+                                            // Hide the key
+                                            setVisibleKeys(prev => ({ ...prev, [key.provider]: false }));
+                                          }
+                                        }}
+                                        style={{
+                                          background: 'transparent',
+                                          border: 'none',
+                                          cursor: 'pointer',
+                                          padding: '4px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          color: '#888888',
+                                          transition: 'color 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.color = '#FFFFFF'}
+                                        onMouseLeave={(e) => e.target.style.color = '#888888'}
+                                        title={visibleKeys[key.provider] ? 'Hide API key' : 'Show API key'}
+                                      >
+                                        {visibleKeys[key.provider] ? (
+                                          <EyeOff size={16} />
+                                        ) : (
+                                          <Eye size={16} />
+                                        )}
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="api-key-item-actions">
-                                  <button 
-                                    className="button-base button-secondary api-key-item-btn"
-                                    onClick={() => handleTestConnection(key.provider)}
+                                {!isEditing && (
+                                  <div className="api-key-item-actions">
+                                    <button 
+                                      className="button-base button-secondary api-key-item-btn"
+                                      onClick={() => handleTestConnection(key.provider)}
                                     >
                                       TEST
                                     </button>
                                     <button 
-                                    className="button-base button-danger api-key-item-btn"
-                                    onClick={() => handleRemoveApiKey(key.provider)}
+                                      className="button-base button-secondary api-key-item-btn"
+                                      onClick={() => handleEditApiKey(key.provider)}
+                                      style={{ marginRight: '8px' }}
                                     >
-                                    <Trash2 size={16} />
-                                    Remove
+                                      <Edit2 size={16} />
+                                      Edit
                                     </button>
+                                    <button 
+                                      className="button-base button-danger api-key-item-btn"
+                                      onClick={() => handleRemoveApiKey(key.provider)}
+                                    >
+                                      <Trash2 size={16} />
+                                      Remove
+                                    </button>
+                                  </div>
+                                )}
                               </div>
-                              </div>
-                            ))}
+                              );
+                            })}
+                            
+                            {/* Custom Integrations Section */}
+                            {customKeys.length > 0 && (
+                              <>
+                                <div style={{
+                                  marginTop: standardKeys.length > 0 ? '32px' : '0',
+                                  marginBottom: '16px',
+                                  paddingBottom: '8px',
+                                  borderBottom: '1px solid #1F1F1F'
+                                }}>
+                                  <h3 style={{
+                                    fontSize: '0.85rem',
+                                    color: '#888888',
+                                    fontWeight: 400,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '2px',
+                                    margin: 0
+                                  }}>
+                                    CUSTOM
+                                  </h3>
+                                </div>
+                                {customKeys.map((key) => {
+                                  const isEditing = editingKey === key.provider;
+                                  
+                                  return (
+                                  <div key={key.provider} className="api-key-item">
+                                    <div className="api-key-item-info">
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <h4 className="api-key-item-name">{key.name}</h4>
+                                      </div>
+                                      {isEditing ? (
+                                        <div style={{ marginTop: '12px' }}>
+                                          <p className="api-key-item-description" style={{ marginBottom: '8px' }}>
+                                            Current key: {key.preview}
+                                          </p>
+                                          <input
+                                            type="password"
+                                            value={editKeyValue}
+                                            onChange={(e) => setEditKeyValue(e.target.value)}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter' && editKeyValue.trim()) {
+                                                handleSaveEditApiKey(key.provider);
+                                              } else if (e.key === 'Escape') {
+                                                handleCancelEdit();
+                                              }
+                                            }}
+                                            placeholder="Enter new API key..."
+                                            className="input-base"
+                                            style={{ marginBottom: '8px' }}
+                                            autoFocus
+                                          />
+                                          <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button
+                                              className="button-base button-primary"
+                                              onClick={() => handleSaveEditApiKey(key.provider)}
+                                              style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                                            >
+                                              <Check size={14} style={{ marginRight: '4px' }} />
+                                              Save
+                                            </button>
+                                            <button
+                                              className="button-base button-secondary"
+                                              onClick={handleCancelEdit}
+                                              style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                                            >
+                                              <X size={14} style={{ marginRight: '4px' }} />
+                                              Cancel
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <p className="api-key-item-description" style={{ margin: 0 }}>
+                                            Saved key: {visibleKeys[key.provider] ? (fullApiKeys[key.provider] || key.preview) : key.preview}
+                                          </p>
+                                          <button
+                                            onClick={async () => {
+                                              if (!visibleKeys[key.provider]) {
+                                                // Show the key - need to fetch it
+                                                try {
+                                                  const fullKey = await apiService.getApiKeyValue(userId, key.provider);
+                                                  setFullApiKeys(prev => ({ ...prev, [key.provider]: fullKey }));
+                                                  setVisibleKeys(prev => ({ ...prev, [key.provider]: true }));
+                                                } catch (error) {
+                                                  notify.error(error.message || 'Failed to retrieve API key');
+                                                }
+                                              } else {
+                                                // Hide the key
+                                                setVisibleKeys(prev => ({ ...prev, [key.provider]: false }));
+                                              }
+                                            }}
+                                            style={{
+                                              background: 'transparent',
+                                              border: 'none',
+                                              cursor: 'pointer',
+                                              padding: '4px',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              color: '#888888',
+                                              transition: 'color 0.2s ease'
+                                            }}
+                                            onMouseEnter={(e) => e.target.style.color = '#FFFFFF'}
+                                            onMouseLeave={(e) => e.target.style.color = '#888888'}
+                                            title={visibleKeys[key.provider] ? 'Hide API key' : 'Show API key'}
+                                          >
+                                            {visibleKeys[key.provider] ? (
+                                              <EyeOff size={16} />
+                                            ) : (
+                                              <Eye size={16} />
+                                            )}
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                    {!isEditing && (
+                                      <div className="api-key-item-actions">
+                                        <button 
+                                          className="button-base button-secondary api-key-item-btn"
+                                          onClick={() => handleTestConnection(key.provider)}
+                                        >
+                                          TEST
+                                        </button>
+                                        <button 
+                                          className="button-base button-secondary api-key-item-btn"
+                                          onClick={() => handleEditApiKey(key.provider)}
+                                          style={{ marginRight: '8px' }}
+                                        >
+                                          <Edit2 size={16} />
+                                          Edit
+                                        </button>
+                                        <button 
+                                          className="button-base button-danger api-key-item-btn"
+                                          onClick={() => handleRemoveApiKey(key.provider)}
+                                        >
+                                          <Trash2 size={16} />
+                                          Remove
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                  );
+                                })}
+                              </>
+                            )}
                             </div>
                           );
                       })()}

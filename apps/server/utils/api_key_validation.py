@@ -171,9 +171,15 @@ async def validate_api_key(
         # Inception keys don't have a specific prefix
         return await validate_inception_key(api_key)
     elif provider.startswith('custom_'):
-        if not base_url:
-            return False, "Base URL is required for custom integrations"
-        return await validate_custom_integration_key(api_key, base_url, api_type or "openai")
+        # For custom integrations, base_url is optional
+        # If base_url is provided, validate the API key
+        # If base_url is not provided, we can't validate but still allow saving the key
+        if base_url:
+            return await validate_custom_integration_key(api_key, base_url, api_type or "openai")
+        else:
+            # No base URL provided - skip validation but allow the key
+            # This allows users to save API keys without base URL
+            return True, ""
     else:
         return False, f"Unknown provider: {provider}"
 

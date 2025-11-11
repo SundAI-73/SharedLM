@@ -18,6 +18,7 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
 
   const [customIntegrations, setCustomIntegrations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [apiKeys, setApiKeys] = useState([]);
 
   const defaultLLMs = [
     { 
@@ -81,11 +82,12 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
       setIsLoading(true);
       // Fetch API keys from database
       // Backend already filters for is_active == True, so all returned keys are active
-      const apiKeys = await apiService.getApiKeys(userId);
-      console.log('[IntegrationsPage] Loaded API keys:', apiKeys);
+      const fetchedApiKeys = await apiService.getApiKeys(userId);
+      console.log('[IntegrationsPage] Loaded API keys:', fetchedApiKeys);
+      setApiKeys(fetchedApiKeys || []);
       
       // Backend returns only active keys, so we can use all of them
-      const connectedFromKeys = (apiKeys || []).map(key => key.provider);
+      const connectedFromKeys = (fetchedApiKeys || []).map(key => key.provider);
       
       console.log('[IntegrationsPage] Connected from keys:', connectedFromKeys);
       
@@ -94,9 +96,14 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
       console.log('[IntegrationsPage] Loaded custom integrations:', integrations);
       setCustomIntegrations(integrations || []);
       
-      // Filter for active custom integrations (backend might return all, so filter here)
+      // Filter for active custom integrations - only include those with API key or base URL
       const connectedFromIntegrations = (integrations || [])
-        .filter(int => int.is_active === true)
+        .filter(int => {
+          // Integration is active if it has either base URL or API key
+          const hasBaseUrl = !!int.base_url;
+          const hasKey = fetchedApiKeys.some(key => key.provider === int.provider_id);
+          return hasBaseUrl || hasKey;
+        })
         .map(int => int.provider_id);
       
       console.log('[IntegrationsPage] Connected from integrations:', connectedFromIntegrations);
@@ -161,6 +168,13 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
 
   const handleCustomIntegrationClick = () => {
     navigate('/add-custom-integration');
+  };
+
+  const handleCustomIntegrationEdit = (integration) => {
+    // Navigate to edit page with integration data
+    navigate('/add-custom-integration', {
+      state: { integration }
+    });
   };
 
 
@@ -275,26 +289,36 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
                   transition={{ duration: 0.4 }}
                 >
                   {customIntegrations.map((integration, index) => {
-                    const isCustomConnected = Array.isArray(connectedLLMs) && connectedLLMs.includes(integration.provider_id);
+                    // Check if integration has API key
+                    const hasApiKey = apiKeys.some(key => key.provider === integration.provider_id);
+                    // Integration is active if it has either base URL OR API key
+                    const isActive = integration.base_url || hasApiKey;
+                    // Integration is inactive if it has neither base URL nor API key
+                    const isInactive = !integration.base_url && !hasApiKey;
+                    // Only show as connected if it's actually active (has base URL or API key)
+                    const isCustomConnected = isActive && Array.isArray(connectedLLMs) && connectedLLMs.includes(integration.provider_id);
+                    
                     return (
                     <motion.div 
                       key={integration.id} 
-                      className={`card-base integration-card custom-integration-item ${isCustomConnected ? 'connected' : ''}`}
+                      className={`card-base integration-card custom-integration-item ${isCustomConnected ? 'connected' : ''} ${isInactive ? 'inactive' : ''}`}
                       initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
+                      animate={{ opacity: isInactive ? 0.5 : 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.9 }}
                       transition={{ duration: 0.4, delay: index * 0.05 }}
-                      whileHover={{ y: -4, scale: 1.02 }}
+                      whileHover={isInactive ? { y: -4, scale: 1.02 } : { y: -4, scale: 1.02 }}
+                      onClick={() => {
+                        if (isInactive) {
+                          handleCustomIntegrationEdit(integration);
+                        }
+                      }}
+                      style={{
+                        cursor: isInactive ? 'pointer' : (isCustomConnected ? 'default' : 'pointer')
+                      }}
                     >
-                      <motion.button
-                        className="custom-integration-delete"
-                        onClick={() => handleDeleteCustomIntegration(integration.id, integration.name)}
-                        title="Delete integration"
-                        whileHover={{ scale: 1.1, rotate: 90 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <X size={16} />
-                      </motion.button>
+                      {isInactive && (
+                        <div className="coming-soon-badge">INACTIVE</div>
+                      )}
                       
                       <div className="integration-content">
                         <div className="integration-icon-placeholder">
