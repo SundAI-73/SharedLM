@@ -1,376 +1,378 @@
-# SharedLM 🤖
+# SharedLM
 
-<div align="center">
-
-![SharedLM Banner](https://img.shields.io/badge/SharedLM-Multi--LLM_Chat_Interface-B94539?style=for-the-badge&logo=robot&logoColor=white)
+A unified chat interface that enables seamless conversations across multiple LLMs with persistent shared memory. Built with a distinctive monochromatic design system featuring LED-style typography.
 
 [![Frontend Deploy](https://img.shields.io/badge/Frontend-Vercel-black?style=flat-square&logo=vercel)](https://shared-lm.vercel.app)
 [![Backend Deploy](https://img.shields.io/badge/Backend-Render-46E3B7?style=flat-square&logo=render)](https://sharedlm.onrender.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
-### Tech Stack
+## Table of Contents
 
-![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688?style=flat-square&logo=fastapi&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)
+- [About The Project](#about-the-project)
+  - [Built With](#built-with)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Development](#development)
+- [Deployment](#deployment)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Contributors](#contributors)
+- [License](#license)
+- [Contact](#contact)
 
-### AI Models
+## About The Project
 
-![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4-412991?style=flat-square&logo=openai&logoColor=white)
-![Anthropic](https://img.shields.io/badge/Anthropic-Claude--3-6B5B95?style=flat-square&logo=anthropic&logoColor=white)
-![Mem0](https://img.shields.io/badge/Memory-Mem0-FF6B6B?style=flat-square&logo=memory&logoColor=white)
+SharedLM is a comprehensive multi-LLM chat interface that solves the problem of fragmented AI conversations. Instead of switching between different AI platforms, SharedLM provides a unified interface where you can seamlessly switch between OpenAI, Anthropic, Mistral, and custom LLM providers while maintaining persistent memory across all conversations.
 
-### Status
+### Key Benefits
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen?style=flat-square)
-![Uptime](https://img.shields.io/badge/uptime-99.9%25-brightgreen?style=flat-square)
-![Response Time](https://img.shields.io/badge/response-<2s-brightgreen?style=flat-square)
-![Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen?style=flat-square)
-
-</div>
-
----
-
-<div align="center">
-  <h3>A unified chat interface that enables seamless conversations across multiple LLMs with persistent shared memory</h3>
-  <p>Built with a distinctive monochromatic design system featuring LED-style typography</p>
-</div>
-
----
-
-## ✨ Features
-
-<table>
-<tr>
-<td>
-
-### 🧠 Unified Memory System
-- **Cross-Model Memory**: Conversations persist across different AI models using Mem0
+- **Unified Interface**: One platform for all your AI conversations
+- **Persistent Memory**: Conversations persist across different AI models
 - **Context Awareness**: Each AI model can access and build upon previous conversations
-- **Smart Retrieval**: Automatic context retrieval based on conversation relevance
+- **Flexible Integration**: Add custom LLM providers with compatible APIs
+- **Secure Storage**: API keys encrypted at rest with industry-standard encryption
+- **Cross-Platform**: Web application and desktop application for Windows, macOS, and Linux
 
-</td>
-<td>
+## Built With
 
-### 🎨 Minimalist Design
-- **Monochromatic UI**: Clean black, white, and gray aesthetic
-- **LED Typography**: Distinctive dot-matrix style typography
-- **Glyph Elements**: Minimalist design with red accent indicators
-- **Smooth Animations**: Fluid transitions and micro-interactions
+This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
 
-</td>
-</tr>
-</table>
+- [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+- [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+- [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+- [![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+- [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+- [![Electron](https://img.shields.io/badge/Electron-2B2E3A?style=for-the-badge&logo=electron&logoColor=9FEAF9)](https://www.electronjs.org/)
 
-### 🔌 Multi-LLM Support
+[(back to top)](#sharedlm)
 
-![Models](https://img.shields.io/badge/Models-OpenAI%20%7C%20Anthropic-4A90E2?style=for-the-badge)
-![Switching](https://img.shields.io/badge/Feature-Seamless%20Model%20Switching-00C851?style=for-the-badge)
-![Memory](https://img.shields.io/badge/Memory-Persistent%20Across%20Models-FF6B6B?style=for-the-badge)
-
-## 🚀 Live Demo
-
-<div align="center">
-
-[![Live Demo](https://img.shields.io/badge/Demo-Live%20on%20Vercel-000000?style=for-the-badge&logo=vercel)](https://shared-lm.vercel.app)
-[![API Docs](https://img.shields.io/badge/API-Documentation-009688?style=for-the-badge&logo=fastapi)](https://sharedlm.onrender.com/docs)
-
-</div>
-
-## 🛠️ Technology Stack
-
-<div align="center">
-
-### Frontend
-![React](https://img.shields.io/badge/React-19.2.0-61DAFB?style=flat-square&logo=react)
-![React Router](https://img.shields.io/badge/React_Router-7.9.4-CA4245?style=flat-square&logo=react-router)
-![CSS3](https://img.shields.io/badge/CSS3-Custom-1572B6?style=flat-square&logo=css3)
-![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?style=flat-square&logo=vercel)
-
-### Backend
-![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688?style=flat-square&logo=fastapi)
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python)
-![Uvicorn](https://img.shields.io/badge/Uvicorn-0.24.0-4051B5?style=flat-square)
-![Render](https://img.shields.io/badge/Deployed_on-Render-46E3B7?style=flat-square&logo=render)
-
-### AI & Memory
-![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4-412991?style=flat-square&logo=openai)
-![Anthropic](https://img.shields.io/badge/Anthropic-Claude--3-6B5B95?style=flat-square)
-![Mem0](https://img.shields.io/badge/Mem0-0.0.12-FF6B6B?style=flat-square)
-
-</div>
-
-## 📦 Installation
+## Getting Started
 
 ### Prerequisites
 
-![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js)
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python)
-![npm](https://img.shields.io/badge/npm-10+-CB3837?style=flat-square&logo=npm)
+- Node.js 18+ and npm 10+
+- Python 3.11+
+- Git for version control
 
 ### Required API Keys
 
-[![OpenAI](https://img.shields.io/badge/Get-OpenAI_API_Key-412991?style=flat-square)](https://platform.openai.com/api-keys)
-[![Anthropic](https://img.shields.io/badge/Get-Anthropic_API_Key-6B5B95?style=flat-square)](https://console.anthropic.com/)
-[![Mem0](https://img.shields.io/badge/Get-Mem0_API_Key-FF6B6B?style=flat-square)](https://app.mem0.ai/)
+- [OpenAI API Key](https://platform.openai.com/api-keys)
+- [Anthropic API Key](https://console.anthropic.com/)
+- [Mistral API Key](https://console.mistral.ai/) (optional)
+- [Mem0 API Key](https://app.mem0.ai/) (optional, but recommended for memory features)
 
-### Frontend Setup
+### Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/sharedlm.git
-cd sharedlm/apps/web
+1. Clone the repository
+   ```bash
+   git clone https://github.com/yourusername/sharedlm.git
+   cd sharedlm
+   ```
 
-# Install dependencies
-npm install
+2. Install all dependencies
+   ```bash
+   npm run install:all
+   ```
 
-# Create environment file
-cp .env.example .env.local
+3. Set up backend
+   ```bash
+   cd apps/server
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
 
-# Add your environment variables
-# REACT_APP_API_URL=http://localhost:8000 (for development)
-# REACT_APP_API_URL=https://sharedlm.onrender.com (for production)
+4. Set up frontend
+   ```bash
+   cd apps/web
+   npm install
+   ```
 
-# Start development server
-npm start
+5. Create environment files
+
+   Backend (.env in apps/server):
+   ```env
+   DATABASE_URL=sqlite:///./sharedlm.db
+   OPENAI_API_KEY=your_openai_api_key
+   ANTHROPIC_API_KEY=your_anthropic_api_key
+   MEM0_API_KEY=your_mem0_api_key
+   ENCRYPTION_KEY=your_32_character_encryption_key
+   ENVIRONMENT=development
+   ```
+
+   Frontend (.env.local in apps/web):
+   ```env
+   REACT_APP_API_URL=http://localhost:8000
+   ```
+
+6. Run database migrations
+   ```bash
+   cd packages/database/migration
+   python init_sqlite_database.py
+   ```
+
+7. Start the backend server
+   ```bash
+   cd apps/server
+   uvicorn app:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+8. Start the frontend development server
+   ```bash
+   cd apps/web
+   npm start
+   ```
+
+The frontend will be available at `http://localhost:3000` and the backend API at `http://localhost:8000`. API documentation will be available at `http://localhost:8000/docs`.
+
+## Configuration
+
+### Environment Variables
+
+#### Backend (.env)
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| DATABASE_URL | Database connection string | Yes |
+| OPENAI_API_KEY | OpenAI API key | No* |
+| ANTHROPIC_API_KEY | Anthropic API key | No* |
+| MEM0_API_KEY | Mem0 API key | No* |
+| ENCRYPTION_KEY | 32-character encryption key | Yes |
+| ENVIRONMENT | Environment (development/production) | No |
+
+*API keys can be set globally or per-user via the UI. Per-user keys take precedence.
+
+#### Frontend (.env.local)
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| REACT_APP_API_URL | Backend API URL | Yes |
+
+### Generating Encryption Key
+
+```python
+import secrets
+encryption_key = secrets.token_urlsafe(32)
+print(encryption_key)
 ```
 
-![Local Frontend](https://img.shields.io/badge/Frontend-http://localhost:3000-61DAFB?style=flat-square)
+## Usage
 
-### Backend Setup
+### Web Application
 
-```bash
-# Navigate to backend directory
-cd sharedlm/apps/server
+1. Start the backend and frontend servers (see Installation)
+2. Open `http://localhost:3000` in your browser
+3. Create an account or login
+4. Add your API keys in the Integrations page
+5. Start chatting with AI models
+6. Organize conversations into projects
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+### Desktop Application
 
-# Install dependencies
-pip install -r requirements.txt
+1. Build the desktop application
+   ```bash
+   cd apps/web
+   npm run build:electron
+   npm run electron
+   ```
 
-# Create .env file
-cat > .env << EOL
-MEM0_API_KEY=your_mem0_api_key
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-DEFAULT_MODEL_OPENAI=gpt-4o-mini
-DEFAULT_MODEL_ANTHROPIC=claude-3-haiku-20240307
-DEFAULT_TOP_K=5
-EOL
+2. For production builds:
+   ```bash
+   # Windows
+   npm run dist
+   
+   # macOS
+   npm run dist -- --mac
+   
+   # Linux
+   npm run dist -- --linux
+   ```
 
-# Run the server
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
-```
+## API Documentation
 
-![Local Backend](https://img.shields.io/badge/Backend-http://localhost:8000-009688?style=flat-square)
+### Base URL
 
-## 🚢 Deployment
+- Development: `http://localhost:8000`
+- Production: `https://sharedlm.onrender.com`
+
+### Interactive API Documentation
+
+- Swagger UI: `https://sharedlm.onrender.com/docs`
+- ReDoc: `https://sharedlm.onrender.com/redoc`
+
+### Authentication
+
+All API endpoints (except `/health` and `/auth/*`) require authentication via the `X-User-ID` header.
+
+For detailed API documentation, please visit the interactive API documentation at `/docs` endpoint.
+
+## Development
+
+### Development Workflow
+
+1. Start Backend:
+   ```bash
+   cd apps/server
+   python -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   uvicorn app:app --reload
+   ```
+
+2. Start Frontend:
+   ```bash
+   cd apps/web
+   npm install
+   npm start
+   ```
+
+3. Run Both (from root):
+   ```bash
+   npm run dev:server  # Terminal 1
+   npm run dev:web     # Terminal 2
+   ```
+
+### Code Style
+
+- Python: Follow PEP 8, use type hints
+- JavaScript: Follow ESLint rules, use modern ES6+ syntax
+- CSS: Use consistent naming conventions
+
+## Deployment
 
 ### Deploy Frontend to Vercel
 
-[![Deploy with Vercel](https://img.shields.io/badge/Deploy%20to-Vercel-000000?style=for-the-badge&logo=vercel)](https://vercel.com/new)
+1. Install Vercel CLI:
+   ```bash
+   npm i -g vercel
+   ```
 
-```bash
-# Install Vercel CLI
-npm i -g vercel
+2. Deploy:
+   ```bash
+   cd apps/web
+   vercel
+   ```
 
-# Deploy
-vercel
-
-# Set environment variables in Vercel dashboard
-# REACT_APP_API_URL = https://your-backend-url.onrender.com
-```
+3. Set Environment Variables in Vercel dashboard:
+   - `REACT_APP_API_URL`: `https://your-backend-url.onrender.com`
 
 ### Deploy Backend to Render
 
-[![Deploy to Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7?style=for-the-badge&logo=render)](https://render.com)
-
 1. Create a new Web Service on [Render](https://render.com)
+
 2. Connect your GitHub repository
+
 3. Configure build settings:
-   - **Root Directory**: `apps/server`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `python3 -m uvicorn app:app --host 0.0.0.0 --port $PORT`
-4. Add environment variables
+   - Root Directory: `apps/server`
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `python3 -m uvicorn app:app --host 0.0.0.0 --port $PORT`
 
-## 📡 API Endpoints
+4. Add Environment Variables:
+   - `DATABASE_URL`: Your PostgreSQL connection string
+   - `OPENAI_API_KEY`: Your OpenAI API key
+   - `ANTHROPIC_API_KEY`: Your Anthropic API key
+   - `MEM0_API_KEY`: Your Mem0 API key
+   - `ENCRYPTION_KEY`: Your 32-character encryption key
+   - `ENVIRONMENT`: `production`
 
-<div align="center">
+5. Deploy: Render will automatically deploy on every push to main branch
 
-![API Version](https://img.shields.io/badge/API-v1.0.0-009688?style=flat-square)
-![REST](https://img.shields.io/badge/Type-RESTful-4CAF50?style=flat-square)
-![JSON](https://img.shields.io/badge/Format-JSON-FFA726?style=flat-square)
+### Deploy Desktop Application
 
-</div>
+1. Build for Windows:
+   ```bash
+   cd apps/web
+   npm run dist
+   ```
 
-### Core Endpoints
+2. Build for macOS:
+   ```bash
+   npm run dist -- --mac
+   ```
 
-| Method | Endpoint | Description | Status |
-|--------|----------|-------------|--------|
-| ![GET](https://img.shields.io/badge/GET-4CAF50?style=flat-square) | `/health` | Health check | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
-| ![GET](https://img.shields.io/badge/GET-4CAF50?style=flat-square) | `/models` | Get available models | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
-| ![POST](https://img.shields.io/badge/POST-2196F3?style=flat-square) | `/chat` | Send message and get response | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
-| ![POST](https://img.shields.io/badge/POST-2196F3?style=flat-square) | `/memory/search` | Search user memories | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
-| ![GET](https://img.shields.io/badge/GET-4CAF50?style=flat-square) | `/memory/debug/{user_id}` | Debug user memories | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
+3. Build for Linux:
+   ```bash
+   npm run dist -- --linux
+   ```
 
-### Example Request
+## Roadmap
 
-```json
-{
-  "user_id": "user_abc123",
-  "message": "Tell me about quantum computing",
-  "model_choice": "openai"
-}
-```
+- [x] User Authentication
+- [x] API Key Management
+- [x] Custom Integrations
+- [x] Projects & Conversations
+- [x] Desktop Application
+- [ ] Additional LLM Support
+  - [ ] Llama
+  - [ ] Gemini
+- [ ] Voice Input/Output
+- [ ] Collaborative Chat Rooms
+- [ ] Enhanced Analytics
+- [ ] Mobile App
+- [ ] Export Functionality
+- [ ] Plugin System
+- [ ] Multi-language Support
+  - [ ] Chinese
+  - [ ] Spanish
+- [ ] Advanced Search
+- [ ] Theme Customization
 
-## 🎯 Architecture
+See the [open issues](https://github.com/yourusername/sharedlm/issues) for a full list of proposed features (and known issues).
 
-<div align="center">
+[(back to top)](#sharedlm)
 
-```mermaid
-graph LR
-    A[User Message] --> B[Memory Search]
-    B --> C[Context Enhancement]
-    C --> D[LLM Processing]
-    D --> E[Response]
-    E --> F[Memory Storage]
-```
+## Contributing
 
-</div>
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
 
-## 🎨 Design System
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement". Don't forget to give the project a star! Thanks again!
 
-<div align="center">
-
-![Design](https://img.shields.io/badge/Design-Minimalist%20Monochrome-000000?style=for-the-badge)
-![Colors](https://img.shields.io/badge/Theme-Monochromatic-2E2E2E?style=for-the-badge)
-![Typography](https://img.shields.io/badge/Font-Courier%20New-4A4A4A?style=for-the-badge)
-
-</div>
-
-### Color Palette
-
-![#000000](https://img.shields.io/badge/Pure%20Black-%23000000-000000?style=flat-square)
-![#0A0A0A](https://img.shields.io/badge/Black-%230A0A0A-0A0A0A?style=flat-square)
-![#1F1F1F](https://img.shields.io/badge/Dark%20Gray-%231F1F1F-1F1F1F?style=flat-square)
-![#2A2A2A](https://img.shields.io/badge/Medium%20Gray-%232A2A2A-2A2A2A?style=flat-square)
-![#B94539](https://img.shields.io/badge/Accent%20Red-%23B94539-B94539?style=flat-square)
-
-## 📱 Pages & Routes
-
-| Route | Page | Description | Status |
-|-------|------|-------------|--------|
-| `/` | Redirect | Redirects to `/chat` | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
-| `/chat` | Chat Interface | Main conversation interface | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
-| `/integrations` | Multi LM | Connect and manage AI models | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
-| `/projects` | Projects | Organize conversations | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
-| `/history` | Chat History | View past conversations | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
-| `/analytics` | Analytics | Usage statistics and insights | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
-| `/settings` | Settings | Configure preferences | ![Active](https://img.shields.io/badge/Active-brightgreen?style=flat-square) |
-
-## 🐛 Troubleshooting
-
-<details>
-<summary><b>Backend Connection Issues</b></summary>
-
-```bash
-# Check if backend is running
-curl http://localhost:8000/health
-
-# Check CORS settings in app.py
-# Ensure your frontend URL is in allowed_origins
-```
-</details>
-
-<details>
-<summary><b>Memory Not Persisting</b></summary>
-
-```bash
-# Verify Mem0 API key
-# Check /memory/debug/{user_id} endpoint
-# Ensure user_id is consistent across sessions
-```
-</details>
-
-<details>
-<summary><b>Model API Errors</b></summary>
-
-```bash
-# Verify API keys are correctly set
-# Check API rate limits
-# Ensure model names are correct in config
-```
-</details>
-
-## 🤝 Contributing
-
-![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen?style=for-the-badge)
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📊 Project Stats
+### Contribution Guidelines
 
-![GitHub Stars](https://img.shields.io/github/stars/yourusername/sharedlm?style=social)
-![GitHub Forks](https://img.shields.io/github/forks/yourusername/sharedlm?style=social)
-![GitHub Issues](https://img.shields.io/github/issues/yourusername/sharedlm?style=flat-square)
-![GitHub Pull Requests](https://img.shields.io/github/issues-pr/yourusername/sharedlm?style=flat-square)
+- Follow the existing code style
+- Write clear commit messages
+- Add tests for new features
+- Update documentation as needed
+- Ensure all tests pass
 
-## 📄 License
+## Contributors
 
-![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+Thanks to all the people who contribute to SharedLM!
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+<!-- This will be automatically updated by GitHub -->
+<a href="https://github.com/yourusername/sharedlm/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=yourusername/sharedlm" />
+</a>
 
-## 🙏 Acknowledgments
+Made with [contributors-img](https://contrib.rocks).
 
-- **Design Philosophy**: Minimalist monochromatic interface design
-- **Memory System**: [Mem0](https://mem0.ai/) for persistent memory
-- **LLM Providers**: [OpenAI](https://openai.com/) and [Anthropic](https://anthropic.com/)
-- **Deployment**: [Vercel](https://vercel.com/) and [Render](https://render.com/)
+## License
 
-## 📞 Contact & Support
+Distributed under the MIT License. See `LICENSE` for more information.
 
-<div align="center">
+## Contact
 
-[![GitHub](https://img.shields.io/badge/GitHub-yourusername-181717?style=flat-square&logo=github)](https://github.com/yourusername)
-[![Email](https://img.shields.io/badge/Email-Contact-D14836?style=flat-square&logo=gmail)](mailto:your-email@example.com)
-[![Twitter](https://img.shields.io/badge/Twitter-@yourhandle-1DA1F2?style=flat-square&logo=twitter)](https://twitter.com/yourhandle)
-[![Discord](https://img.shields.io/badge/Discord-Join%20Server-7289DA?style=flat-square&logo=discord)](https://discord.gg/yourserver)
+- GitHub Issues: [Report bugs or request features](https://github.com/yourusername/sharedlm/issues)
+- API Documentation: [Interactive API docs](https://sharedlm.onrender.com/docs)
 
-</div>
+## Acknowledgments
 
-## 🚀 Roadmap
-
-![Roadmap](https://img.shields.io/badge/Roadmap-2024--2025-FF6B6B?style=for-the-badge)
-
-- [ ] ![Planned](https://img.shields.io/badge/Status-Planned-yellow?style=flat-square) Add support for more LLMs (Llama, Mistral, Gemini)
-- [ ] ![Planned](https://img.shields.io/badge/Status-Planned-yellow?style=flat-square) Implement voice input/output
-- [ ] ![In Progress](https://img.shields.io/badge/Status-In%20Progress-orange?style=flat-square) Add collaborative chat rooms
-- [ ] ![Planned](https://img.shields.io/badge/Status-Planned-yellow?style=flat-square) Enhanced analytics dashboard
-- [ ] ![Planned](https://img.shields.io/badge/Status-Planned-yellow?style=flat-square) Mobile app (React Native)
-- [ ] ![Planned](https://img.shields.io/badge/Status-Planned-yellow?style=flat-square) Export conversations in multiple formats
-- [ ] ![Research](https://img.shields.io/badge/Status-Research-blue?style=flat-square) Custom model fine-tuning support
+- [Mem0](https://mem0.ai/) for persistent memory
+- [OpenAI](https://openai.com/) for GPT models
+- [Anthropic](https://anthropic.com/) for Claude models
+- [Mistral AI](https://mistral.ai/) for Mistral models
 
 ---
 
-<div align="center">
-
-### Built with ❤️ using
-
-![React](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
-![Mem0](https://img.shields.io/badge/Mem0-FF6B6B?style=flat-square&logoColor=white)
-
-<br>
-
-[![Star this repo](https://img.shields.io/badge/Star%20this%20repo-⭐-yellow?style=for-the-badge)](https://github.com/yourusername/sharedlm)
-
-</div>
+[Back to Top](#sharedlm)
