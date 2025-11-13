@@ -12,8 +12,10 @@ from database import models
 # Import route modules
 from api.routes import health, auth, chat, projects, conversations, api_keys
 
-# Create tables
-models.Base.metadata.create_all(bind=engine)
+# Create tables (skip in test environment)
+import os
+if os.getenv("ENVIRONMENT") != "test":
+    models.Base.metadata.create_all(bind=engine)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

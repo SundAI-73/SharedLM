@@ -1,13 +1,13 @@
 # This workflow is kept for reference but not used for PRs
 # PRs use ci-complete.yml instead
-name: Backend CI
+name: Test CI
 
 on:
   workflow_dispatch:
 
 jobs:
-  check:
-    name: Check Backend
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -30,24 +30,20 @@ jobs:
           pip install -r requirements.txt
         working-directory: apps/server
       
-      - name: Check for dependency conflicts
-        run: pip check
-        working-directory: apps/server
-      
-      - name: Verify app imports
+      - name: Run tests with coverage
         run: |
-          python -c "from app import app; print('✓ FastAPI app imports successfully')"
+          PYTHONPATH=../.. python -m pytest ../../test/server -v --tb=short --cov=apps/server --cov-report=term-missing --cov-report=xml
         working-directory: apps/server
-        continue-on-error: true
+        env:
+          ENCRYPTION_KEY: ${{ secrets.TEST_ENCRYPTION_KEY || 'dGVzdF9lbmNyeXB0aW9uX2tleV8xMjM0NTY3ODkwMTIzNDU2Nzg=' }}
+          DATABASE_URL: sqlite:///:memory:
+          ENVIRONMENT: test
       
-      - name: Check database models
-        run: |
-          python -c "from database import models; print('✓ Database models import successfully')"
-        working-directory: apps/server
-        continue-on-error: true
-      
-      - name: Validate configuration
-        run: |
-          python -c "from config import settings; print('✓ Settings loaded successfully')"
-        working-directory: apps/server
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./test/coverage.xml
+          flags: tests
+          name: test-coverage
+          fail_ci_if_error: false
 

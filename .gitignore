@@ -16,12 +16,24 @@
 *$py.class
 *.so
 .Python
-apps/server/.pytest_cache/
-apps/server/venv/
-apps/server/env/
 *.egg-info/
 dist/
 build/
+
+# Python virtual environments (both .venv and venv)
+**/.venv/
+**/venv/
+apps/server/.venv/
+apps/server/venv/
+
+# Pytest cache
+.pytest_cache/
+**/.pytest_cache/
+apps/server/.pytest_cache/
+
+# Python build artifacts
+*.spec
+*.pyo
 
 # Node
 apps/web/node_modules/
@@ -42,10 +54,27 @@ apps/web/*.snap
 apps/web/.cache
 
 # IDE
-.vscode/
+.vscode/settings.json.local
+.vscode/tasks.json.local
+.vscode/launch.json.local
 .idea/
 *.swp
 *.swo
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.pyproj.user
+*.pyproj.user
+*.suo
+*.user
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
 
 # OS
 .DS_Store
@@ -59,10 +88,33 @@ yarn-error.log*
 
 # Testing
 /coverage
+**/coverage/
+**/coverage_html/
+**/coverage.xml
+*.cover
 .pytest_cache/
-apps/server/sharedlm.db-shm
-apps/server/sharedlm.db
-apps/server/sharedlm.db-wal
-apps/desktop/
+**/.pytest_cache/
 
+# Database files
+*.db
+*.db-shm
+*.db-wal
+**/sharedlm.db*
+apps/server/sharedlm.db*
+
+# Uploaded files
+apps/server/uploads/*
+!apps/server/uploads/.gitkeep
+
+# Backups and temporary files
+*_backup.py
+*.backup
+streamlit_backup.py
+
+# Build artifacts
+*.exe
+*.spec
+backend.spec
+
+apps/desktop/
 apps/application

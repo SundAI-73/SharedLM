@@ -1,0 +1,61 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Current Test File",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}",
+        "ENCRYPTION_KEY": "dGVzdF9lbmNyeXB0aW9uX2tleV8xMjM0NTY3ODkwMTIzNDU2Nzg=",
+        "DATABASE_URL": "sqlite:///:memory:",
+        "ENVIRONMENT": "test"
+      },
+      "cwd": "${workspaceFolder}/apps/server"
+    },
+    {
+      "name": "Python: Pytest - Current File",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "${file}",
+        "-v",
+        "--tb=short"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}",
+        "ENCRYPTION_KEY": "dGVzdF9lbmNyeXB0aW9uX2tleV8xMjM0NTY3ODkwMTIzNDU2Nzg=",
+        "DATABASE_URL": "sqlite:///:memory:",
+        "ENVIRONMENT": "test"
+      },
+      "cwd": "${workspaceFolder}/apps/server"
+    },
+    {
+      "name": "Python: Pytest - All Tests",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "../../test/server",
+        "-v",
+        "--tb=short"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}",
+        "ENCRYPTION_KEY": "dGVzdF9lbmNyeXB0aW9uX2tleV8xMjM0NTY3ODkwMTIzNDU2Nzg=",
+        "DATABASE_URL": "sqlite:///:memory:",
+        "ENVIRONMENT": "test"
+      },
+      "cwd": "${workspaceFolder}/apps/server"
+    }
+  ]
+}
+

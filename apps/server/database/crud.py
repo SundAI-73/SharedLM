@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import List, Optional
-from database.models import User, APIKey, Project, Conversation, Message, ProjectFile, CustomIntegration
+from database.models import User, APIKey, Project, Conversation, Message, ProjectFile, CustomIntegration, PasswordResetToken
 import bcrypt
 from datetime import datetime
 
@@ -223,7 +223,7 @@ def create_project_file(db: Session, project_id: int, filename: str, file_size: 
         project_id=project_id,
         filename=filename,
         file_size=file_size,
-        storage_url=storage_url
+        storage_path=storage_url  # Model uses storage_path, not storage_url
     )
     db.add(file)
     db.commit()
@@ -239,3 +239,38 @@ def delete_project_file(db: Session, file_id: int):
         db.delete(file)
         db.commit()
     return True
+
+def create_password_reset_token(db: Session, user_id: str, token: str, expires_at: datetime):
+    """Create a password reset token"""
+    # Invalidate any existing unused tokens for this user
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user_id,
+        PasswordResetToken.used == False
+    ).update({"used": True})
+    db.commit()
+    
+    reset_token = PasswordResetToken(
+        user_id=user_id,
+        token=token,
+        expires_at=expires_at
+    )
+    db.add(reset_token)
+    db.commit()
+    db.refresh(reset_token)
+    return reset_token
+
+def get_password_reset_token(db: Session, token: str):
+    """Get a password reset token by token string"""
+    return db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == token,
+        PasswordResetToken.used == False
+    ).first()
+
+def mark_password_reset_token_used(db: Session, token_id: int):
+    """Mark a password reset token as used"""
+    token = db.query(PasswordResetToken).filter(PasswordResetToken.id == token_id).first()
+    if token:
+        token.used = True
+        db.commit()
+        db.refresh(token)
+    return token

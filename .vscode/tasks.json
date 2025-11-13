@@ -1,0 +1,201 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🔧 Setup Virtual Environment",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "-m",
+        "venv",
+        ".venv"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/server"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": false,
+        "echo": true,
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "windows": {
+        "options": {
+          "shell": {
+            "executable": "powershell.exe",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-Command"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "label": "📥 Setup & Install Dependencies",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/setup_venv.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": true,
+        "echo": true,
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "🔍 Verify Server Build",
+      "type": "shell",
+      "command": "${workspaceFolder}/apps/server/.venv/Scripts/python.exe",
+      "args": [
+        "${workspaceFolder}/apps/server/build.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/server",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}"
+        }
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": false,
+        "echo": true,
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "🧪 Run All Tests",
+      "type": "shell",
+      "command": "${workspaceFolder}/apps/server/.venv/Scripts/python.exe",
+      "args": [
+        "-m",
+        "pytest",
+        "../../test/server",
+        "-v",
+        "--tb=long",
+        "--showlocals",
+        "--durations=10"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/server",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}",
+          "ENCRYPTION_KEY": "dGVzdF9lbmNyeXB0aW9uX2tleV8xMjM0NTY3ODkwMTIzNDU2Nzg=",
+          "DATABASE_URL": "sqlite:///:memory:",
+          "ENVIRONMENT": "test"
+        }
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": false,
+        "echo": true,
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "group": "test"
+    },
+    {
+      "label": "🧪 Run Tests with Coverage",
+      "type": "shell",
+      "command": "${workspaceFolder}/apps/server/.venv/Scripts/python.exe",
+      "args": [
+        "-m",
+        "pytest",
+        "../../test/server",
+        "-v",
+        "--tb=long",
+        "--showlocals",
+        "--durations=10",
+        "--cov=apps/server",
+        "--cov-report=term-missing",
+        "--cov-report=html"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/server",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}",
+          "ENCRYPTION_KEY": "dGVzdF9lbmNyeXB0aW9uX2tleV8xMjM0NTY3ODkwMTIzNDU2Nzg=",
+          "DATABASE_URL": "sqlite:///:memory:",
+          "ENVIRONMENT": "test"
+        }
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": false,
+        "echo": true,
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "group": "test"
+    },
+    {
+      "label": "✅ Build & Test (Pre-Commit)",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "🔍 Verify Server Build",
+        "🧪 Run All Tests"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": false,
+        "echo": true,
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "📦 Check Dependencies",
+      "type": "shell",
+      "command": "${workspaceFolder}/apps/server/.venv/Scripts/pip.exe",
+      "args": [
+        "check"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/apps/server"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": false,
+        "echo": true,
+        "showReuseMessage": true,
+        "clear": false
+      }
+    }
+  ]
+}
+

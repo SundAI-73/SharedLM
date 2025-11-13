@@ -213,13 +213,56 @@ For detailed API documentation, please visit the interactive API documentation a
 
 ## Development
 
-### Development Workflow
+### Development Workflow in VS Code
+
+**Recommended**: Use VS Code with the provided configuration for the best development experience.
+
+#### Quick Start
+
+1. **Open VS Code** in the project root
+2. **Install Python extension** (if prompted)
+3. **Select Python interpreter**:
+   - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
+   - Type "Python: Select Interpreter"
+   - Choose your Python 3.11+ interpreter
+
+#### Daily Workflow
+
+1. **Build/Verify Solution**:
+   - Press `Ctrl+Shift+B` (or `Cmd+Shift+B` on Mac)
+   - This verifies all imports and dependencies
+
+2. **View Tests in Test Explorer**:
+   - Open Test Explorer panel (beaker icon in sidebar)
+   - All tests auto-discover on save
+   - See test results inline
+
+3. **Run Tests**:
+   - Click "Run All" button in Test Explorer
+   - Or run specific test/file by clicking play icon
+   - Or use task: `Ctrl+Shift+P` → "Tasks: Run Task" → "🧪 Run All Tests"
+
+4. **Before Committing**:
+   - Run build: `Ctrl+Shift+B`
+   - Run all tests: Use Test Explorer or task
+   - Only commit if everything passes ✅
+
+#### VS Code Tasks
+
+- `Ctrl+Shift+B` - **🔍 Verify Server Build** (default build task)
+- `Ctrl+Shift+P` → "Tasks: Run Task" → **✅ Build & Test (Pre-Commit)** - Runs build + all tests
+- `Ctrl+Shift+P` → "Tasks: Run Task" → **🧪 Run All Tests** - Run all tests
+- `Ctrl+Shift+P` → "Tasks: Run Task" → **🧪 Run Tests with Coverage** - Run tests with coverage
+
+See `.vscode/DEVELOPMENT.md` for detailed VS Code workflow guide.
+
+### Development Workflow (Command Line)
 
 1. Start Backend:
    ```bash
    cd apps/server
    python -m venv venv
-   source venv/bin/activate
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -r requirements.txt
    uvicorn app:app --reload
    ```
@@ -237,11 +280,42 @@ For detailed API documentation, please visit the interactive API documentation a
    npm run dev:web     # Terminal 2
    ```
 
+### Testing
+
+#### Run Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run with coverage
+npm run test:coverage
+
+# Run specific test file
+cd apps/server
+PYTHONPATH=../.. python -m pytest ../../test/server/test_health.py -v
+```
+
+#### VS Code Test Explorer
+
+- Tests are automatically discovered
+- View all tests in Test Explorer panel
+- Run tests with one click
+- See results inline
+- Debug tests directly from Test Explorer
+
 ### Code Style
 
 - Python: Follow PEP 8, use type hints
 - JavaScript: Follow ESLint rules, use modern ES6+ syntax
 - CSS: Use consistent naming conventions
+
+### Before Committing
+
+1. **Build/Verify**: `Ctrl+Shift+B` (VS Code) or `npm run verify`
+2. **Run Tests**: Use Test Explorer or `npm test`
+3. **Check Results**: All tests should pass ✅
+4. **Commit**: Only commit if everything passes
 
 ## Deployment
 
@@ -330,13 +404,50 @@ See the [open issues](https://github.com/yourusername/sharedlm/issues) for a ful
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement". Don't forget to give the project a star! Thanks again!
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### Quick Start for Contributors
+
+1. **Fork the Project**
+2. **Clone your fork**:
+   ```bash
+   git clone https://github.com/yourusername/sharedlm.git
+   cd sharedlm
+   ```
+
+3. **Setup Development Environment**:
+   - Install dependencies: `npm run install:all`
+   - Setup Python environment: See Installation section
+   - Open in VS Code: Install recommended extensions
+
+4. **Create Feature Branch**:
+   ```bash
+   git checkout -b feature/AmazingFeature
+   ```
+
+5. **Make Your Changes**:
+   - Write code
+   - Write tests
+   - Update documentation
+
+6. **Before Committing**:
+   - **Build/Verify**: `Ctrl+Shift+B` (VS Code) or `npm run verify`
+   - **Run Tests**: Use Test Explorer or `npm test`
+   - **Check Results**: All tests must pass ✅
+   - **Only commit if everything passes**
+
+7. **Commit Your Changes**:
+   ```bash
+   git add .
+   git commit -m 'Add some AmazingFeature'
+   ```
+
+8. **Push to Your Branch**:
+   ```bash
+   git push origin feature/AmazingFeature
+   ```
+
+9. **Open a Pull Request**
 
 ### Contribution Guidelines
 
@@ -344,7 +455,8 @@ If you have a suggestion that would make this better, please fork the repo and c
 - Write clear commit messages
 - Add tests for new features
 - Update documentation as needed
-- Ensure all tests pass
+- **Always build and test before committing**
+- Ensure all tests pass before opening PR
 
 ## Contributors
 

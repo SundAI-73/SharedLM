@@ -24,6 +24,7 @@ const SettingsPage = lazy(() => import('./pages/Settings/SettingsPage'));
 const LoginPage = lazy(() => import('./pages/Login/LoginPage'));
 const SignupPage = lazy(() => import('./pages/Signup/SignupPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/Auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/Auth/ResetPasswordPage'));
 const GitHubCallback = lazy(() => import('./pages/Auth/GitHubCallback'));
 
 // Loading component
@@ -48,7 +49,7 @@ function AppLayout({ children }) {
   const [platform, setPlatform] = useState(null);
   
   // Pages that should NOT show the sidebar
-  const noSidebarRoutes = ['/login', '/signup', '/forgot-password', '/auth/github/callback'];
+  const noSidebarRoutes = ['/login', '/signup', '/forgot-password', '/reset-password', '/auth/github/callback'];
   const shouldShowSidebar = !noSidebarRoutes.includes(location.pathname);
   
   // Check if running in Electron and get platform
@@ -155,6 +156,7 @@ function AppContent() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/auth/github/callback" element={<GitHubCallback />} />
           
           {/* Main app routes - Protected */}

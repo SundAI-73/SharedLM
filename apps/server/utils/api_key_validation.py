@@ -8,7 +8,6 @@ from typing import Optional
 import openai
 from anthropic import Anthropic
 from mistralai.client import MistralClient
-from mistralai.models import chat_completion
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +72,7 @@ async def validate_mistral_key(api_key: str) -> tuple[bool, str]:
         response = await asyncio.to_thread(
             client.chat,
             model="mistral-small-latest",
-            messages=[chat_completion.ChatMessage(role="user", content="test")]
+            messages=[{"role": "user", "content": "test"}]
         )
         # If we get a response, the key is valid
         return True, ""

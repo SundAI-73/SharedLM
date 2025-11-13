@@ -110,3 +110,16 @@ class ProjectFile(Base):
     uploaded_at = Column(TIMESTAMP, server_default=func.now())
     
     project = relationship("Project", back_populates="files")
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(255), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String(255), unique=True, nullable=False)
+    expires_at = Column(TIMESTAMP, nullable=False)
+    used = Column(Boolean, default=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    user = relationship("User")

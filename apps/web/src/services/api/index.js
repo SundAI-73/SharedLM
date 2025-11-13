@@ -245,6 +245,82 @@ class APIService {
     }
   }
 
+  async forgotPassword(email) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    
+    try {
+      const endpoint = '/auth/forgot-password';
+      const rateLimit = rateLimiter.checkLimit(endpoint);
+      
+      if (!rateLimit.allowed) {
+        clearTimeout(timeoutId);
+        const resetIn = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
+        throw new Error(`Rate limit exceeded. Please try again in ${resetIn} seconds.`);
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Failed to send reset email' }));
+        throw new Error(error.detail || 'Failed to send reset email');
+      }
+
+      return await response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please try again.');
+      }
+      throw error;
+    }
+  }
+
+  async resetPassword(token, newPassword) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    
+    try {
+      const endpoint = '/auth/reset-password';
+      const rateLimit = rateLimiter.checkLimit(endpoint);
+      
+      if (!rateLimit.allowed) {
+        clearTimeout(timeoutId);
+        const resetIn = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
+        throw new Error(`Rate limit exceeded. Please try again in ${resetIn} seconds.`);
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, new_password: newPassword }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Failed to reset password' }));
+        throw new Error(error.detail || 'Failed to reset password');
+      }
+
+      return await response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please try again.');
+      }
+      throw error;
+    }
+  }
+
   async checkHealth() {
     try {
       const response = await fetch(`${API_BASE_URL}/health`, {
