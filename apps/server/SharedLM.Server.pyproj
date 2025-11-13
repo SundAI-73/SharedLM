@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{A1B2C3D4-E5F6-4A5B-8C7D-9E0F1A2B3C4D}</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>app.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>SharedLM.Server</Name>
+    <RootNamespace>SharedLM.Server</RootNamespace>
+    <DefaultClientStartupArguments></DefaultClientStartupArguments>
+    <StartupArguments></StartupArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="app.py" />
+    <Compile Include="__init__.py" />
+    <Compile Include="verify_build.py" />
+    <Compile Include="api\**\*.py" />
+    <Compile Include="config\**\*.py" />
+    <Compile Include="database\**\*.py" />
+    <Compile Include="models\**\*.py" />
+    <Compile Include="services\**\*.py" />
+    <Compile Include="utils\**\*.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Interpreter Include=".venv\Scripts\python.exe" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="api\" />
+    <Folder Include="config\" />
+    <Folder Include="database\" />
+    <Folder Include="models\" />
+    <Folder Include="services\" />
+    <Folder Include="utils\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="requirements.txt" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>
+

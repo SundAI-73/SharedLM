@@ -1,47 +1,69 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Mail, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { Lock, Eye, EyeOff, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
 import logo from '../../assets/images/logo main.svg';
 import apiService from '../../services/api';
 import '../Login/Login.css';
 
-function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
+function ResetPasswordPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+  
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      setError('Invalid reset token');
+    }
+  }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!email) {
-      setError('Please enter your email address');
+    if (!password || !confirmPassword) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await apiService.forgotPassword(email);
+      const response = await apiService.resetPassword(token, password);
       
       if (response.success) {
-        setSent(true);
-      } else {
-        setError(response.message || 'Failed to send reset email');
+        setSuccess(true);
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
       }
     } catch (err) {
-      setError(err.message || 'Failed to send reset email. Please try again.');
+      setError(err.message || 'Failed to reset password. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (sent) {
+  if (success) {
     return (
       <div className="auth-page-container">
         <div className="auth-two-column">
-          {/* Left Column - Branding */}
           <div className="auth-left-column">
             <div className="auth-branding">
               <img src={logo} alt="SharedLM Logo" className="auth-logo-large" />
@@ -49,37 +71,20 @@ function ForgotPasswordPage() {
               <p className="auth-brand-subtitle">UNIFIED AI INTERFACE</p>
             </div>
           </div>
-
-          {/* Right Column - Success Message */}
           <div className="auth-right-column">
             <div className="auth-form-container">
               <div className="auth-success-icon">
                 <CheckCircle size={60} color="#00ff88" />
               </div>
-              
               <div className="auth-form-header">
-                <h2 className="auth-form-title">CHECK YOUR EMAIL</h2>
-                <p className="auth-form-subtitle">
-                  We've sent a password reset link to <strong>{email}</strong>
-                </p>
+                <h2 className="auth-form-title">PASSWORD RESET</h2>
+                <p className="auth-form-subtitle">Your password has been reset successfully!</p>
+                <p className="auth-form-subtitle">Redirecting to login...</p>
               </div>
-
-              <div className="auth-success-instructions">
-                <p>Click the link in the email to reset your password.</p>
-                <p>Didn't receive the email? Check your spam folder or request a new link.</p>
-              </div>
-
-              <div className="auth-form" style={{ gap: '15px' }}>
-                <button
-                  onClick={() => setSent(false)}
-                  className="auth-social-btn"
-                >
-                  <span>Resend Email</span>
-                </button>
-
+              <div className="auth-form" style={{ gap: '15px', marginTop: '20px' }}>
                 <Link to="/login" className="auth-submit-btn" style={{ textDecoration: 'none' }}>
                   <ArrowLeft size={18} />
-                  <span>BACK TO LOGIN</span>
+                  <span>GO TO LOGIN</span>
                 </Link>
               </div>
             </div>
@@ -92,7 +97,6 @@ function ForgotPasswordPage() {
   return (
     <div className="auth-page-container">
       <div className="auth-two-column">
-        {/* Left Column - Branding */}
         <div className="auth-left-column">
           <div className="auth-branding">
             <img src={logo} alt="SharedLM Logo" className="auth-logo-large" />
@@ -100,8 +104,6 @@ function ForgotPasswordPage() {
             <p className="auth-brand-subtitle">UNIFIED AI INTERFACE</p>
           </div>
         </div>
-
-        {/* Right Column - Form */}
         <div className="auth-right-column">
           <div className="auth-form-container">
             <Link to="/login" className="auth-back-link">
@@ -111,40 +113,58 @@ function ForgotPasswordPage() {
 
             <div className="auth-form-header">
               <h2 className="auth-form-title">RESET PASSWORD</h2>
-              <p className="auth-form-subtitle">
-                Enter your email and we'll send you a reset link
-              </p>
+              <p className="auth-form-subtitle">Enter your new password</p>
             </div>
 
             <form onSubmit={handleSubmit} className="auth-form">
-              {/* Email Input */}
               <div className="auth-input-group">
-                <label className="auth-label">EMAIL ADDRESS</label>
+                <label className="auth-label">NEW PASSWORD</label>
                 <div className="auth-input-wrapper">
-                  <Mail size={18} className="auth-input-icon" />
+                  <Lock size={18} className="auth-input-icon" />
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter new password"
                     className="auth-input"
                     required
                     autoFocus
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="auth-password-toggle"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 10px' }}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 
-              {/* Error Message */}
+              <div className="auth-input-group">
+                <label className="auth-label">CONFIRM PASSWORD</label>
+                <div className="auth-input-wrapper">
+                  <Lock size={18} className="auth-input-icon" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    className="auth-input"
+                    required
+                  />
+                </div>
+              </div>
+
               {error && (
                 <div className="auth-error">
                   <span>{error}</span>
                 </div>
               )}
 
-              {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading || !email}
+                disabled={loading || !token}
                 className={`auth-submit-btn ${loading ? 'loading' : ''}`}
               >
                 {loading ? (
@@ -153,14 +173,13 @@ function ForgotPasswordPage() {
                   </span>
                 ) : (
                   <>
-                    <span>SEND RESET LINK</span>
+                    <span>RESET PASSWORD</span>
                     <ArrowRight size={18} />
                   </>
                 )}
               </button>
             </form>
 
-            {/* Footer */}
             <div className="auth-footer">
               <span className="auth-footer-text">Remember your password?</span>
               <Link to="/login" className="auth-footer-link">
@@ -174,4 +193,5 @@ function ForgotPasswordPage() {
   );
 }
 
-export default ForgotPasswordPage;
+export default ResetPasswordPage;
+

@@ -56,6 +56,13 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 class UserResponse(BaseModel):
     id: str
     email: str

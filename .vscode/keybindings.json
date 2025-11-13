@@ -1,0 +1,12 @@
+[
+  {
+    "key": "ctrl+shift+t",
+    "command": "workbench.action.tasks.test"
+  },
+  {
+    "key": "ctrl+shift+b",
+    "command": "workbench.action.tasks.build",
+    "when": "!inDebugMode"
+  }
+]
+
