@@ -37,7 +37,9 @@ class TestCustomIntegrations:
             },
             headers=auth_headers
         )
+        # The endpoint validates URL and raises HTTPException with 400
         assert response.status_code == 400
+        assert "invalid" in response.json()["detail"].lower() or "format" in response.json()["detail"].lower()
     
     def test_create_custom_integration_missing_name(self, client: TestClient, test_user, auth_headers):
         """Test creating custom integration without name"""
@@ -49,7 +51,7 @@ class TestCustomIntegrations:
             },
             headers=auth_headers
         )
-        assert response.status_code == 400
+        assert response.status_code == 422  # FastAPI returns 422 for validation errors
     
     def test_get_custom_integrations_success(self, client: TestClient, test_user, auth_headers, test_db):
         """Test getting user custom integrations"""

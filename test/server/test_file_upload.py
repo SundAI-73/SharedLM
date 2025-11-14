@@ -68,21 +68,15 @@ class TestFileUpload:
     def test_upload_file_missing_filename(self, client: TestClient, test_user, auth_headers):
         """Test uploading file without filename"""
         file_content = b"Test content"
-        file_data = BytesIO(file_content)
-        
-        # Create a file-like object without filename
-        class FileWithoutName:
-            def read(self):
-                return file_content
-            filename = None
-            content_type = "text/plain"
-        
+        # Create a fresh BytesIO that can be read - the endpoint checks filename before reading
+        # So even if the stream is consumed, the check happens first
         response = client.post(
             "/upload",
-            files={"file": ("", file_data, "text/plain")},
+            files={"file": ("", BytesIO(file_content), "text/plain")},
             data={"user_id": test_user.id},
             headers=auth_headers
         )
+        # The endpoint should check filename first and return 400 before reading
         assert response.status_code == 400
     
     def test_upload_file_too_large(self, client: TestClient, test_user, auth_headers):

@@ -13,24 +13,36 @@ from utils.api_key_validation import (
 class TestAPIKeyValidation:
     """Test API key validation utilities"""
     
+    @patch('utils.api_key_validation.asyncio.to_thread')
     @patch('utils.api_key_validation.openai.OpenAI')
     @pytest.mark.asyncio
-    async def test_validate_openai_key_success(self, mock_openai):
+    async def test_validate_openai_key_success(self, mock_openai, mock_to_thread):
         """Test successful OpenAI key validation"""
         mock_client = MagicMock()
-        mock_client.models.list.return_value = [MagicMock()]
+        mock_to_thread.return_value = [MagicMock()]
         mock_openai.return_value = mock_client
         
         is_valid, error = await validate_openai_key("sk-test123456789")
         assert is_valid is True
         assert error == ""
     
+    @patch('utils.api_key_validation.asyncio.to_thread')
     @patch('utils.api_key_validation.openai.OpenAI')
     @pytest.mark.asyncio
-    async def test_validate_openai_key_invalid(self, mock_openai):
+    async def test_validate_openai_key_invalid(self, mock_openai, mock_to_thread):
         """Test invalid OpenAI key validation"""
         import openai
-        mock_openai.side_effect = openai.AuthenticationError("Invalid API key")
+        from unittest.mock import Mock
+        # Mock the exception being raised from asyncio.to_thread
+        mock_response = Mock()
+        mock_response.request = Mock()
+        mock_to_thread.side_effect = openai.AuthenticationError(
+            message="Invalid API key",
+            response=mock_response,
+            body=None
+        )
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
         
         is_valid, error = await validate_openai_key("sk-invalid")
         assert is_valid is False
