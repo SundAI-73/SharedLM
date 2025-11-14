@@ -67,8 +67,14 @@ class TestEmailUtility:
             
             assert result is True
             sent_message = mock_server.send_message.call_args[0][0]
-            # Check that reset link contains the token
-            assert "test_token_12345" in str(sent_message.get_payload())
+            payload = sent_message.get_payload()
+            # Get the HTML part content
+            html_content = ""
+            for part in payload:
+                if part.get_content_type() == "text/html":
+                    html_content = part.get_payload()
+                    break
+            assert "test_token_12345" in html_content
     
     def test_send_password_reset_email_no_smtp_config(self):
         """Test email sending when SMTP is not configured"""

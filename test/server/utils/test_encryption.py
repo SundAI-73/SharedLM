@@ -50,7 +50,14 @@ class TestEncryption:
         monkeypatch.delenv("ENCRYPTION_KEY", raising=False)
         
         from utils.encryption import get_cipher
+        from config.settings import settings
+        # Also clear from settings object
+        original_key = settings.encryption_key
+        settings.encryption_key = ""
         
-        with pytest.raises(ValueError, match="ENCRYPTION_KEY"):
-            get_cipher()
+        try:
+            with pytest.raises(ValueError, match="ENCRYPTION_KEY"):
+                get_cipher()
+        finally:
+            settings.encryption_key = original_key
 

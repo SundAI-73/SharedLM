@@ -64,8 +64,14 @@ def validate_url(url: str, field_name: str = "URL") -> str:
             detail=f"Invalid {field_name} format"
         )
     
-    # Check scheme
-    if parsed.scheme and parsed.scheme.lower() not in ALLOWED_URL_SCHEMES:
+    # Check scheme - require a scheme for URLs
+    if not parsed.scheme:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid {field_name} format: URL must include a scheme (http:// or https://)"
+        )
+    
+    if parsed.scheme.lower() not in ALLOWED_URL_SCHEMES:
         raise HTTPException(
             status_code=400,
             detail=f"{field_name} must use http or https protocol"

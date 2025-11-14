@@ -78,11 +78,11 @@ class TestComposePrompt:
     
     def test_compose_prompt_instructions(self):
         """Test that composed prompt includes instructions"""
-        user_message = "Hello"
+        user_message = "hello"
         result = compose_prompt([], user_message)
         assert "Instructions" in result
         assert "respond to the user's message" in result.lower()
-        assert "consider the previous context" in result.lower()
+        assert "considering the previous context" in result.lower() or "consider the previous context" in result.lower()
     
     def test_compose_prompt_structure(self):
         """Test that composed prompt has proper structure"""

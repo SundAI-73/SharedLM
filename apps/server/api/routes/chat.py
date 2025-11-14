@@ -2,7 +2,7 @@ import logging
 import os
 import uuid
 import asyncio
-from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, BackgroundTasks, Form
 from sqlalchemy.orm import Session
 from database.connection import get_db
 from database import crud
@@ -240,8 +240,8 @@ async def chat(
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    user_id: str = None,
-    conversation_id: int = None,
+    user_id: str = Form(None),
+    conversation_id: int = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -251,8 +251,8 @@ async def upload_file(
         if user_id:
             verify_user_ownership(current_user, user_id, "files")
         
-        # Validate file
-        if not file.filename:
+        # Validate file - check filename first before reading
+        if not file.filename or not file.filename.strip():
             raise HTTPException(status_code=400, detail="Filename is required")
         
         # Read file content to get size

@@ -9,6 +9,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 from typing import Generator
+import traceback
+from _pytest.terminal import TerminalReporter
+from _pytest.reports import TestReport
 
 # Add test root and apps/server to Python path
 test_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -215,6 +218,11 @@ def setup_test_env(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "test")
     # Mock Mem0 API key for tests (prevents real API calls)
     monkeypatch.setenv("mem0_api_key", "test_mem0_key")
+    
+    # Force reload settings to pick up the new encryption key
+    # Settings object is created at import time, so we need to update it directly
+    from config.settings import settings
+    settings.encryption_key = TEST_ENCRYPTION_KEY
 
 
 @pytest.fixture
@@ -301,4 +309,137 @@ def test_message(test_db, test_conversation):
     )
     
     return message
+
+
+# Custom pytest plugin for custom output formatting
+class CustomTestReporter:
+    """Custom test reporter that shows minimal output for passed tests and detailed output for failed tests"""
+    
+    def __init__(self, config):
+        self.config = config
+        self.passed_tests = []
+        self.failed_tests = []
+        self.total_tests = 0
+        self.current_test = None
+        self.test_info = {}  # Store test info by nodeid
+    
+    def pytest_runtest_logstart(self, nodeid, location):
+        """Called when a test starts"""
+        test_name = self._get_test_name(nodeid)
+        self.current_test = nodeid
+        self.test_info[nodeid] = {
+            'nodeid': nodeid,
+            'location': location,
+            'name': test_name
+        }
+        # Show minimal info while test is running
+        print(f"Running: {test_name}...", end="", flush=True)
+    
+    def pytest_runtest_logreport(self, report: TestReport):
+        """Called when a test report is generated"""
+        if report.when == "call":  # Only process the actual test call, not setup/teardown
+            nodeid = report.nodeid
+            test_info = self.test_info.get(nodeid, {
+                'nodeid': nodeid,
+                'location': ('', 0),
+                'name': self._get_test_name(nodeid)
+            })
+            
+            self.total_tests += 1
+            
+            if report.outcome == "passed":
+                # Clear the "Running..." line and show passed (no file path, just test name)
+                print(f"\r✓ {test_info['name']} passed")
+                self.passed_tests.append({
+                    'name': test_info['name'],
+                    'nodeid': test_info['nodeid'],
+                    'location': test_info['location']
+                })
+            elif report.outcome == "failed":
+                # Show failure immediately with details
+                print(f"\r✗ {test_info['name']} FAILED")
+                print(f"  File: {test_info['location'][0]}:{test_info['location'][1]}")
+                print(f"  Test: {test_info['name']}")
+                
+                # Get detailed error information
+                longrepr = ""
+                if hasattr(report, 'longreprtext') and report.longreprtext:
+                    longrepr = report.longreprtext
+                elif report.longrepr:
+                    longrepr = str(report.longrepr)
+                
+                if longrepr:
+                    print("\n  Error Details:")
+                    for line in longrepr.split('\n'):
+                        if line.strip():
+                            print(f"  {line}")
+                
+                print()  # Empty line after failure
+                
+                self.failed_tests.append({
+                    'name': test_info['name'],
+                    'nodeid': test_info['nodeid'],
+                    'location': test_info['location'],
+                    'longrepr': longrepr
+                })
+            elif report.outcome == "skipped":
+                print(f"\r⊘ {test_info['name']} skipped")
+    
+    def pytest_sessionfinish(self, session, exitstatus):
+        """Called when test session finishes"""
+        print("\n" + "="*80)
+        print("TEST SUMMARY")
+        print("="*80)
+        print(f"Total Tests: {self.total_tests}")
+        print(f"Passed: {len(self.passed_tests)}")
+        print(f"Failed: {len(self.failed_tests)}")
+        skipped = self.total_tests - len(self.passed_tests) - len(self.failed_tests)
+        if skipped > 0:
+            print(f"Skipped: {skipped}")
+        print("="*80)
+        
+        # Show all failed tests with details at the end
+        if self.failed_tests:
+            print("\n" + "="*80)
+            print("FAILED TESTS DETAILS")
+            print("="*80)
+            for i, test in enumerate(self.failed_tests, 1):
+                print(f"\n[{i}] {test['name']}")
+                print(f"    File: {test['location'][0]}:{test['location'][1]}")
+                print(f"    Node ID: {test['nodeid']}")
+                
+                if test['longrepr']:
+                    print("\n    Error Details:")
+                    for line in test['longrepr'].split('\n'):
+                        if line.strip():
+                            print(f"    {line}")
+                print("-" * 80)
+        else:
+            print("\n✓ All tests passed!")
+    
+    def _get_test_name(self, nodeid):
+        """Extract a readable test name from nodeid"""
+        # nodeid format: test/server/test_file.py::TestClass::test_method
+        parts = nodeid.split("::")
+        if len(parts) > 1:
+            # Return class and method name if available
+            if len(parts) > 2:
+                return f"{parts[-2]}::{parts[-1]}"
+            return parts[-1]  # Return the test method name
+        return nodeid.split("/")[-1]  # Fallback to filename
+
+
+# Register the plugin
+custom_reporter_instance = None
+
+def pytest_configure(config):
+    """Register custom plugin and set quiet mode"""
+    global custom_reporter_instance
+    custom_reporter_instance = CustomTestReporter(config)
+    config.pluginmanager.register(custom_reporter_instance)
+    
+    # Force quiet mode to suppress default verbose output
+    config.option.verbose = 0
+    config.option.quiet = True
+
 

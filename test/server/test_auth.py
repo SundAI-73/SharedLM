@@ -171,7 +171,7 @@ class TestAuth:
             email_sent.append({"email": email, "token": token})
             return True
         
-        # Mock the email sending function at the route level
+        # Mock the email sending function where it's imported in the route module
         from api.routes import auth
         monkeypatch.setattr(auth, "send_password_reset_email", mock_send_email)
         

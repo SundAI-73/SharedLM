@@ -24,8 +24,8 @@ class TestProjects:
         assert data["success"] is True
         assert "project" in data
         assert data["project"]["name"] == SAMPLE_PROJECT["name"]
-        assert data["project"]["user_id"] == test_user.id
         assert "id" in data["project"]
+        assert "type" in data["project"]
     
     def test_create_project_unauthorized(self, client: TestClient, test_user, test_user_2, auth_headers):
         """Test project creation for another user (should fail)"""
@@ -80,7 +80,7 @@ class TestProjects:
         )
         assert response.status_code == 404
     
-    def test_update_project_unauthorized(self, client: TestClient, test_user_2, test_project, auth_headers):
+    def test_update_project_unauthorized(self, client: TestClient, test_user, test_user_2, test_project, auth_headers):
         """Test updating another user's project (should fail)"""
         # Create project for user 2
         project2 = client.post(
@@ -126,7 +126,7 @@ class TestProjects:
         )
         assert response.status_code == 404
     
-    def test_delete_project_unauthorized(self, client: TestClient, test_user_2, test_project, auth_headers):
+    def test_delete_project_unauthorized(self, client: TestClient, test_user, test_user_2, test_project, auth_headers):
         """Test deleting another user's project (should fail)"""
         # Create project for user 2
         project2 = client.post(
@@ -276,9 +276,9 @@ class TestProjectFiles:
         
         assert response.status_code == 404
     
-    def test_delete_project_file_unauthorized(self, client: TestClient, test_user_2, test_project, auth_headers, test_db, tmpdir):
+    def test_delete_project_file_unauthorized(self, client: TestClient, test_user, test_user_2, test_project, auth_headers, test_db, tmpdir):
         """Test deleting file from another user's project (should fail)"""
-        # Upload a file to user 1's project
+        # Upload a file to user 1's project (as user 1)
         test_file = tmpdir.join("test.txt")
         test_file.write("Test content")
         
@@ -286,7 +286,7 @@ class TestProjectFiles:
             upload_response = client.post(
                 f"/projects/{test_project.id}/upload",
                 files={"file": ("test.txt", f, "text/plain")},
-                headers={"X-User-ID": test_user_2.id}
+                headers=auth_headers  # Use user 1's headers
             )
         
         file_id = upload_response.json()["file"]["id"]

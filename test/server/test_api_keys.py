@@ -182,4 +182,4 @@ class TestAPIKeys:
             json={"provider": "openai"},
             headers=auth_headers
         )
-        assert response.status_code == 400
+        assert response.status_code == 422  # FastAPI returns 422 for validation errors
