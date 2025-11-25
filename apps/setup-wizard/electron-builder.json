@@ -1,0 +1,44 @@
+{
+  "appId": "com.sharedlm.setup",
+  "productName": "SharedLM Setup",
+  "copyright": "Copyright © 2024 SharedLM",
+  "directories": {
+    "output": "../application/setup",
+    "buildResources": "public"
+  },
+  "files": [
+    "build/**/*",
+    "public/electron.js",
+    "public/preload.js",
+    "node_modules/**/*",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "public/icon.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "allowElevation": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "SharedLM",
+    "installerIcon": "public/icon.png",
+    "uninstallerIcon": "public/icon.png",
+    "installerHeaderIcon": "public/icon.png",
+    "deleteAppDataOnUninstall": true,
+    "runAfterFinish": false,
+    "menuCategory": "Development",
+    "include": "installer.nsh"
+  },
+  "extraMetadata": {
+    "main": "public/electron.js"
+  }
+}
+

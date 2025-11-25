@@ -1,0 +1,107 @@
+.location-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  padding: 40px;
+  overflow: hidden;
+}
+
+.location-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.location-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.location-description {
+  color: #cccccc;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.path-input-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.path-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.browse-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.validation-status {
+  padding: 12px;
+  background: #0a0a0a;
+  border: 1px solid #333333;
+  border-radius: 4px;
+}
+
+.status-text {
+  color: #888888;
+  font-size: 14px;
+}
+
+.disk-info {
+  padding: 16px;
+  background: #0a0a0a;
+  border: 1px solid #333333;
+  border-radius: 4px;
+}
+
+.disk-space {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.disk-label {
+  color: #cccccc;
+  font-size: 14px;
+}
+
+.disk-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.disk-value.valid {
+  color: #00ff00;
+}
+
+.disk-value.invalid {
+  color: #ff0000;
+}
+
+.disk-warning {
+  color: #ffaa00;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.location-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #333333;
+}
+

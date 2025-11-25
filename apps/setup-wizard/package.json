@@ -1,0 +1,56 @@
+{
+  "name": "sharedlm-setup-wizard",
+  "version": "1.0.0",
+  "description": "SharedLM Setup Wizard - Installation and Configuration",
+  "author": "SharedLM Team",
+  "license": "MIT",
+  "main": "public/electron.js",
+  "homepage": "./",
+  "private": true,
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "motion": "^12.23.24",
+    "lucide-react": "^0.546.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "cross-env GENERATE_SOURCEMAP=false react-scripts build",
+    "build:electron": "npm run build && node ./scripts/fix-electron-build.js",
+    "test": "react-scripts test",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"cross-env BROWSER=none npm start\" \"wait-on http://localhost:3000 && electron .\"",
+    "dist": "npm run build:electron && node ./scripts/run-electron-builder.js --win --x64",
+    "dist-installer": "npm run build:electron && node ./scripts/run-electron-builder.js --win --x64 --config.nsis.oneClick=false"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3",
+    "electron-is-dev": "^2.0.0",
+    "react-scripts": "5.0.1",
+    "wait-on": "^7.2.0"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.3%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "build": {
+    "extends": "./electron-builder.json"
+  }
+}
+

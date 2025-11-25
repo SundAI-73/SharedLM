@@ -212,3 +212,43 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
     except Exception as e:
         logger.error(f"Reset password error: {e}")
         raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to reset password"))
+
+@router.post("/delete-account")
+async def delete_account(
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete user account and all associated data"""
+    try:
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Missing user_id")
+        
+        # Verify user ownership
+        verify_user_ownership(current_user, user_id, "account")
+        
+        # Get user to verify existence
+        user = crud.get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Delete user (cascade deletes will handle all related data)
+        deleted = crud.delete_user(db, user_id)
+        
+        if not deleted:
+            raise HTTPException(status_code=500, detail="Failed to delete account")
+        
+        logger.info(f"Account deleted for user {user_id}")
+        
+        return {
+            "success": True,
+            "message": "Account deleted successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Delete account error: {e}")
+        raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to delete account"))

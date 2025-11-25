@@ -1,0 +1,195 @@
+.completion-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  padding: 40px;
+  overflow-y: auto;
+}
+
+.completion-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.completion-icon {
+  animation: scaleIn 0.5s ease-out;
+}
+
+.success-icon {
+  color: #00ff00;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.completion-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.completion-message {
+  font-size: 16px;
+  color: #cccccc;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.installation-details {
+  width: 100%;
+  padding: 20px;
+  background: #0a0a0a;
+  border: 1px solid #333333;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  color: #888888;
+  font-size: 14px;
+}
+
+.detail-value {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: right;
+  word-break: break-all;
+}
+
+.background-download-info {
+  width: 100%;
+  padding: 20px;
+  background: #0a0a0a;
+  border: 1px solid #333333;
+  border-radius: 4px;
+  text-align: left;
+}
+
+.download-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 12px 0;
+}
+
+.download-description {
+  color: #cccccc;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+}
+
+.download-models-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.download-models-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  border-radius: 4px;
+}
+
+.model-name {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.download-status {
+  color: #ffaa00;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.download-note {
+  color: #888888;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+  font-style: italic;
+}
+
+.launch-options {
+  width: 100%;
+  padding: 16px;
+  background: #0a0a0a;
+  border: 1px solid #333333;
+  border-radius: 4px;
+}
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: #cccccc;
+  font-size: 14px;
+}
+
+.checkbox-option input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #ff0000;
+}
+
+.completion-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #333333;
+}
+
+.finish-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+  justify-content: center;
+}
+

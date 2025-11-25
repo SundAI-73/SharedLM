@@ -90,8 +90,9 @@ function SignupPage() {
     setLoading(true);
 
     try {
+      const normalizedEmail = formData.email.trim().toLowerCase();
       const response = await apiService.signup(
-        formData.email.trim(),
+        normalizedEmail,
         formData.password,
         formData.name.trim()
       );

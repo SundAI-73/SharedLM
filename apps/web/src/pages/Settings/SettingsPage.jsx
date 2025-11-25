@@ -442,6 +442,36 @@ function SettingsPage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmed = await notify.confirm({
+      title: 'Delete Account',
+      message: 'Are you sure you want to delete your account? This action cannot be undone. All your data, including conversations, projects, and API keys, will be permanently deleted.',
+      confirmText: 'Delete Account',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+
+    if (confirmed) {
+      try {
+        // Log account deletion event
+        logEvent(EventType.ACCOUNT_DELETED, LogLevel.INFO, 'User account deletion initiated', { userId });
+        
+        await apiService.deleteAccount(userId);
+        
+        // Clear all auth data
+        clearAuth();
+        
+        notify.success('Your account has been deleted successfully');
+        
+        // Navigate to login page
+        navigate('/login');
+      } catch (error) {
+        console.error('Failed to delete account:', error);
+        notify.error(error.message || 'Failed to delete account. Please try again.');
+      }
+    }
+  };
+
   // Check if name fields have changed
   useEffect(() => {
     const hasChanges = fullName !== originalFullName || claudeCallName !== originalCallName;
@@ -817,11 +847,17 @@ function SettingsPage() {
                     </button>
                   </div>
 
-                  <div className="setting-item">
+                  <div className="setting-item no-divider">
                     <div className="setting-info">
                       <label className="setting-label">Delete account</label>
-                      <p className="setting-description">Please contact your administrator to deprovision your account.</p>
+                      <p className="setting-description">Permanently delete your account and all associated data. This action cannot be undone.</p>
                     </div>
+                    <button 
+                      className="button-base button-danger account-action-btn"
+                      onClick={handleDeleteAccount}
+                    >
+                      Delete Account
+                    </button>
                   </div>
                 </motion.div>
               )}

@@ -177,8 +177,13 @@ const getTimeBasedGreeting = () => {
 
 // Get user's display name
 const getUserDisplayName = () => {
-  const name = localStorage.getItem('sharedlm_user_name') || localStorage.getItem('sharedlm_user_email')?.split('@')[0] || 'there';
-  return name.split(' ')[0]; // Get first name only
+  const nickname = (localStorage.getItem('sharedlm_user_name') || '').trim();
+  const fullName = (localStorage.getItem('sharedlm_full_name') || '').trim();
+  const email = localStorage.getItem('sharedlm_user_email');
+
+  const fallback = email ? email.split('@')[0] : 'there';
+  const nameSource = nickname || fullName || fallback;
+  return nameSource.split(' ')[0]; // Get first name only
 };
 
 function ChatPage({ backendStatus }) {
@@ -202,6 +207,9 @@ function ChatPage({ backendStatus }) {
   const [showHistoryMenu, setShowHistoryMenu] = useState(false);
   const [showConnectorsModal, setShowConnectorsModal] = useState(false);
   const [customIntegrations, setCustomIntegrations] = useState([]);
+  const [extendedThinkingEnabled, setExtendedThinkingEnabled] = useState(() => localStorage.getItem('sharedlm_toggle_extended') === 'true');
+  const [researchEnabled, setResearchEnabled] = useState(() => localStorage.getItem('sharedlm_toggle_research') === 'true');
+  const [webSearchEnabled, setWebSearchEnabled] = useState(() => localStorage.getItem('sharedlm_toggle_web_search') === 'true');
   
   // Initialize with empty arrays - will be populated based on available models
   const [modelProviders, setModelProviders] = useState([]);
@@ -288,6 +296,18 @@ function ChatPage({ backendStatus }) {
       loadCustomIntegrations();
     }
   }, [userId, availableModels]);
+
+  useEffect(() => {
+    localStorage.setItem('sharedlm_toggle_extended', JSON.stringify(extendedThinkingEnabled));
+  }, [extendedThinkingEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('sharedlm_toggle_research', JSON.stringify(researchEnabled));
+  }, [researchEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('sharedlm_toggle_web_search', JSON.stringify(webSearchEnabled));
+  }, [webSearchEnabled]);
 
   useEffect(() => {
     const variants = modelVariants[currentModel] || [];
@@ -1305,7 +1325,11 @@ function ChatPage({ backendStatus }) {
                   <span>Extended thinking</span>
                 </div>
                 <label className="toggle-switch-small">
-                  <input type="checkbox" defaultChecked />
+                  <input 
+                    type="checkbox" 
+                    checked={extendedThinkingEnabled}
+                    onChange={(e) => setExtendedThinkingEnabled(e.target.checked)}
+                  />
                   <span className="toggle-slider-small"></span>
                 </label>
               </div>
@@ -1315,7 +1339,11 @@ function ChatPage({ backendStatus }) {
                   <span>Research</span>
                 </div>
                 <label className="toggle-switch-small">
-                  <input type="checkbox" defaultChecked />
+                  <input 
+                    type="checkbox" 
+                    checked={researchEnabled}
+                    onChange={(e) => setResearchEnabled(e.target.checked)}
+                  />
                   <span className="toggle-slider-small"></span>
                 </label>
               </div>
@@ -1325,7 +1353,11 @@ function ChatPage({ backendStatus }) {
                   <span>Web search</span>
                 </div>
                 <label className="toggle-switch-small">
-                  <input type="checkbox" defaultChecked />
+                  <input 
+                    type="checkbox" 
+                    checked={webSearchEnabled}
+                    onChange={(e) => setWebSearchEnabled(e.target.checked)}
+                  />
                   <span className="toggle-slider-small"></span>
                 </label>
               </div>

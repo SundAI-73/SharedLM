@@ -25,6 +25,7 @@ export const EventType = {
   LOGIN_FAILED: 'login_failed',
   SIGNUP: 'signup',
   PASSWORD_CHANGE: 'password_change',
+  ACCOUNT_DELETED: 'account_deleted',
   API_KEY_SAVED: 'api_key_saved',
   API_KEY_DELETED: 'api_key_deleted',
   FILE_UPLOAD: 'file_upload',

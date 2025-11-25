@@ -1,18 +1,27 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, text
 from typing import List, Optional
 from database.models import User, APIKey, Project, Conversation, Message, ProjectFile, CustomIntegration, PasswordResetToken
 import bcrypt
 from datetime import datetime
 
+
+def _normalize_email(email: str) -> str:
+    """Normalize emails so lookups are case-insensitive and whitespace-safe."""
+    if not email:
+        return email
+    return email.strip().lower()
+
+
 def create_user(db: Session, user_id: str, email: str, password: str, display_name: str = None):
+    normalized_email = _normalize_email(email)
     password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     
     user = User(
         id=user_id,
-        email=email,
+        email=normalized_email,
         password_hash=password_hash,
-        display_name=display_name or email.split('@')[0]
+        display_name=display_name or normalized_email.split('@')[0]
     )
     db.add(user)
     db.commit()
@@ -20,7 +29,8 @@ def create_user(db: Session, user_id: str, email: str, password: str, display_na
     return user
 
 def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email).first()
+    normalized_email = _normalize_email(email)
+    return db.query(User).filter(User.email == normalized_email).first()
 
 def get_user_by_id(db: Session, user_id: str):
     return db.query(User).filter(User.id == user_id).first()
@@ -274,3 +284,90 @@ def mark_password_reset_token_used(db: Session, token_id: int):
         db.commit()
         db.refresh(token)
     return token
+
+def delete_user(db: Session, user_id: str):
+    """Delete a user and all associated data (cascade deletes handle related records)"""
+    try:
+        # Ensure foreign keys are enabled for this connection (SQLite)
+        if hasattr(db.bind, 'url') and db.bind.url.drivername == 'sqlite':
+            db.execute(text("PRAGMA foreign_keys=ON"))
+        
+        # Get user
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return False
+        
+        # Delete related records explicitly in the correct order using raw SQL
+        # This avoids model/database schema mismatches and ensures proper deletion
+        
+        # 1. Get conversation IDs first (without loading full objects)
+        conversation_ids_result = db.execute(
+            text("SELECT id FROM conversations WHERE user_id = :user_id"),
+            {"user_id": user_id}
+        )
+        conversation_ids = [row[0] for row in conversation_ids_result]
+        
+        # 2. Delete messages (via conversations) using raw SQL
+        if conversation_ids:
+            # Use SQLAlchemy's in_() method which handles the IN clause properly
+            db.query(Message).filter(Message.conversation_id.in_(conversation_ids)).delete(synchronize_session=False)
+        
+        # 3. Delete conversations using raw SQL
+        db.execute(
+            text("DELETE FROM conversations WHERE user_id = :user_id"),
+            {"user_id": user_id}
+        )
+        
+        # 4. Get project IDs first (without loading full objects)
+        project_ids_result = db.execute(
+            text("SELECT id FROM projects WHERE user_id = :user_id"),
+            {"user_id": user_id}
+        )
+        project_ids = [row[0] for row in project_ids_result]
+        
+        # 5. Delete project files (via projects) using raw SQL to avoid schema mismatch
+        # Use raw SQL to avoid loading ProjectFile model which has schema mismatches
+        if project_ids:
+            # Build parameterized query
+            placeholders = ','.join([f':pid{i}' for i in range(len(project_ids))])
+            params = {f'pid{i}': pid for i, pid in enumerate(project_ids)}
+            db.execute(
+                text(f"DELETE FROM project_files WHERE project_id IN ({placeholders})"),
+                params
+            )
+        
+        # 6. Delete projects using raw SQL
+        db.execute(
+            text("DELETE FROM projects WHERE user_id = :user_id"),
+            {"user_id": user_id}
+        )
+        
+        # 7. Delete password reset tokens using raw SQL
+        db.execute(
+            text("DELETE FROM password_reset_tokens WHERE user_id = :user_id"),
+            {"user_id": user_id}
+        )
+        
+        # 8. Delete custom integrations using raw SQL
+        db.execute(
+            text("DELETE FROM custom_integrations WHERE user_id = :user_id"),
+            {"user_id": user_id}
+        )
+        
+        # 9. Delete API keys using raw SQL
+        db.execute(
+            text("DELETE FROM api_keys WHERE user_id = :user_id"),
+            {"user_id": user_id}
+        )
+        
+        # 10. Finally, delete the user using raw SQL
+        db.execute(
+            text("DELETE FROM users WHERE id = :user_id"),
+            {"user_id": user_id}
+        )
+        
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        raise e
