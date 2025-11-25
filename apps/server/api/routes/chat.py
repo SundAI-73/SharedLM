@@ -12,6 +12,7 @@ from models.schemas import ChatRequest, ChatResponse
 from services.mem0_client import mem0_client
 from services.llm_router import route_chat
 from utils.prompt import compose_prompt
+from utils.file_extractor import extract_text_from_file
 from utils.encryption import decrypt_key
 from utils.security import validate_file_upload, sanitize_error_message, validate_message
 from utils.cache import get_cached_api_key, set_cached_api_key, clear_api_key_cache
@@ -28,7 +29,7 @@ VALID_MISTRAL_MODELS = [
     'open-mixtral-8x7b'
 ]
 
-def _add_memory_background(user_id: str, user_message: str, assistant_message: str):
+def _add_memory_background(user_id: str, user_message: str, assistant_message: str, project_id: int = None):
     """Background task to add memory to Mem0 (non-blocking)"""
     try:
         mem0_client.add_memory(
@@ -36,7 +37,8 @@ def _add_memory_background(user_id: str, user_message: str, assistant_message: s
             messages=[
                 {"role": "user", "content": user_message},
                 {"role": "assistant", "content": assistant_message}
-            ]
+            ],
+            project_id=project_id
         )
     except Exception as e:
         logger.error(f"Failed to add memory in background: {e}")
@@ -146,10 +148,49 @@ async def chat(
         db.commit()
         db.refresh(user_message_obj)
         
-        # 5. Compose prompt with memories
-        prompt = compose_prompt(memories, validated_message)
+        # 5. Fetch and extract content from project files (if project_id exists)
+        project_files_content = []
+        if conversation.project_id:
+            project_files = crud.get_project_files(db, conversation.project_id)
+            if project_files:
+                logger.info(f"Found {len(project_files)} project files for project {conversation.project_id}")
+                for project_file in project_files:
+                    try:
+                        extracted_text = extract_text_from_file(project_file.storage_path, project_file.file_type)
+                        if extracted_text:
+                            project_files_content.append({
+                                "filename": project_file.filename,
+                                "content": extracted_text
+                            })
+                            logger.info(f"Extracted {len(extracted_text)} characters from project file {project_file.filename}")
+                        else:
+                            logger.warning(f"Could not extract text from project file {project_file.filename}")
+                    except Exception as e:
+                        logger.error(f"Error extracting content from project file {project_file.filename}: {e}")
         
-        # 6. Validate model choice for Mistral (skip for custom integrations)
+        # 6. Fetch and extract content from chat attached files
+        chat_files_content = []
+        chat_files = crud.get_chat_files(db, conversation.id)
+        if chat_files:
+            logger.info(f"Found {len(chat_files)} attached files for conversation {conversation.id}")
+            for chat_file in chat_files:
+                try:
+                    extracted_text = extract_text_from_file(chat_file.storage_path, chat_file.file_type)
+                    if extracted_text:
+                        chat_files_content.append({
+                            "filename": chat_file.filename,
+                            "content": extracted_text
+                        })
+                        logger.info(f"Extracted {len(extracted_text)} characters from chat file {chat_file.filename}")
+                    else:
+                        logger.warning(f"Could not extract text from chat file {chat_file.filename}")
+                except Exception as e:
+                    logger.error(f"Error extracting content from chat file {chat_file.filename}: {e}")
+        
+        # 7. Compose prompt with memories, project files, and chat files
+        prompt = compose_prompt(memories, validated_message, project_files_content, chat_files_content)
+        
+        # 8. Validate model choice for Mistral (skip for custom integrations)
         if request.model_provider == "mistral" and not custom_integration:
             if request.model_choice not in VALID_MISTRAL_MODELS:
                 logger.warning(f"Invalid Mistral model: {request.model_choice}. Valid models: {VALID_MISTRAL_MODELS}")
@@ -159,7 +200,7 @@ async def chat(
                 )
             logger.info(f"Using Mistral model: {request.model_choice}")
         
-        # 7. Route to LLM with user's API key (this is the slowest operation)
+        # 9. Route to LLM with user's API key (this is the slowest operation)
         try:
             if custom_integration:
                 reply, used_model = await route_chat(
@@ -192,7 +233,7 @@ async def chat(
                 detail=f"Error calling {request.model_provider} API ({model_name}): {str(e)}"
             )
         
-        # 8. Save assistant message and update conversation in single transaction
+        # 10. Save assistant message and update conversation in single transaction
         assistant_message_obj = Message(
             conversation_id=conversation.id,
             role="assistant",
@@ -213,16 +254,17 @@ async def chat(
         db.commit()
         db.refresh(assistant_message_obj)
         
-        # 9. Add memory to Mem0 in background (non-blocking, fire and forget)
+        # 11. Add memory to Mem0 in background (non-blocking, fire and forget)
         # This doesn't block the response to the user
         background_tasks.add_task(
             _add_memory_background,
             request.user_id,
             validated_message,
-            reply
+            reply,
+            conversation.project_id
         )
         
-        # 10. Return response immediately (memory addition happens in background)
+        # 12. Return response immediately (memory addition happens in background)
         return ChatResponse(
             reply=reply,
             used_model=used_model,
@@ -275,16 +317,39 @@ async def upload_file(
         with open(file_path, "wb") as buffer:
             buffer.write(content)
         
-        logger.info(f"File uploaded: {file.filename} -> {unique_filename}")
+        # Save file info to database if conversation_id is provided
+        chat_file = None
+        if conversation_id:
+            # Verify conversation belongs to user
+            conversation = crud.get_conversation(db, conversation_id)
+            if not conversation:
+                raise HTTPException(status_code=404, detail="Conversation not found")
+            if conversation.user_id != current_user.id:
+                raise HTTPException(status_code=403, detail="You don't have permission to add files to this conversation")
+            
+            # Create chat file record
+            chat_file = crud.create_chat_file(
+                db,
+                conversation_id=conversation_id,
+                filename=file.filename,
+                file_size=file_size,
+                storage_path=file_path,
+                file_type=file.content_type
+            )
+            logger.info(f"File uploaded and saved to database: {file.filename} -> {unique_filename} (conversation_id: {conversation_id})")
+        else:
+            logger.info(f"File uploaded: {file.filename} -> {unique_filename} (no conversation_id provided)")
         
         return {
             "success": True,
             "file": {
+                "id": chat_file.id if chat_file else None,
                 "filename": file.filename,
                 "stored_name": unique_filename,
                 "size": file_size,
                 "content_type": file.content_type,
-                "path": file_path
+                "path": file_path,
+                "conversation_id": conversation_id
             }
         }
     except HTTPException:

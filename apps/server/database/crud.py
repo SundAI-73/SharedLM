@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, text
 from typing import List, Optional
-from database.models import User, APIKey, Project, Conversation, Message, ProjectFile, CustomIntegration, PasswordResetToken
+from database.models import User, APIKey, Project, Conversation, Message, ProjectFile, ChatFile, CustomIntegration, PasswordResetToken
 import bcrypt
 from datetime import datetime
 
@@ -247,6 +247,25 @@ def delete_project_file(db: Session, file_id: int):
     file = db.query(ProjectFile).filter(ProjectFile.id == file_id).first()
     if file:
         db.delete(file)
+        db.commit()
+        return True
+    return False
+
+def create_chat_file(db: Session, conversation_id: int, filename: str, file_size: int, storage_path: str, file_type: str = None):
+    file = ChatFile(
+        conversation_id=conversation_id,
+        filename=filename,
+        file_size=file_size,
+        storage_path=storage_path,
+        file_type=file_type
+    )
+    db.add(file)
+    db.commit()
+    db.refresh(file)
+    return file
+
+def get_chat_files(db: Session, conversation_id: int):
+    return db.query(ChatFile).filter(ChatFile.conversation_id == conversation_id).all()
         db.commit()
     return True
 
