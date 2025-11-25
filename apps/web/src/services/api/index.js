@@ -321,6 +321,29 @@ class APIService {
     }
   }
 
+  async deleteAccount(userId) {
+    try {
+      const response = await this.makeRequest(`${API_BASE_URL}/auth/delete-account`, {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: userId
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Failed to delete account' }));
+        throw new Error(error.detail || 'Failed to delete account');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Delete account failed:', error);
+      }
+      throw error;
+    }
+  }
+
   async checkHealth() {
     try {
       const response = await fetch(`${API_BASE_URL}/health`, {

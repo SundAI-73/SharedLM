@@ -23,7 +23,8 @@ function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await apiService.login(email, password);
+      const normalizedEmail = email.trim().toLowerCase();
+      const response = await apiService.login(normalizedEmail, password);
       
       if (response.success) {
         // Store user info using auth utility
