@@ -42,20 +42,62 @@ class Mem0Client:
             logger.error(f"Error searching memories: {e}")
             return []
     
-    def add_memory(self, user_id: str, messages: List[Dict[str, str]]) -> bool:
-        """Add new conversation to memory"""
+    def add_memory(self, user_id: str, messages: List[Dict[str, str]], project_id: int = None) -> bool:
+        """Add new conversation to memory
+        
+        Args:
+            user_id: User ID
+            messages: List of message dicts with role and content
+            project_id: Optional project ID to store project-specific memory
+        """
         try:
+            # Store general user memory
             self.client.add(
                 messages=messages,
                 user_id=user_id,
                 version="v2"
             )
             logger.info(f"Added memory for user {user_id}")
+            
+            # Also store project-specific memory if project_id is provided
+            if project_id:
+                project_user_id = f"{user_id}_project_{project_id}"
+                self.client.add(
+                    messages=messages,
+                    user_id=project_user_id,
+                    version="v2"
+                )
+                logger.info(f"Added project memory for user {user_id}, project {project_id}")
+            
             return True
             
         except Exception as e:
             logger.error(f"Error adding memory: {e}")
             return False
+    
+    def search_project_memories(self, user_id: str, project_id: int, query: str = "", limit: int = 20) -> List[str]:
+        """Search for memories specific to a project"""
+        try:
+            project_user_id = f"{user_id}_project_{project_id}"
+            results = self.client.search(
+                query=query or "project context and conversations",
+                user_id=project_user_id,
+                limit=limit,
+                version="v2"
+            )
+            
+            # Fix: Handle both list and dict responses
+            if isinstance(results, list):
+                memories = [result["memory"] for result in results]
+            else:
+                memories = [result["memory"] for result in results.get("results", [])]
+            
+            logger.info(f"Retrieved {len(memories)} project memories for user {user_id}, project {project_id}")
+            return memories
+            
+        except Exception as e:
+            logger.error(f"Error searching project memories: {e}")
+            return []
     
     def search_memories_debug(self, user_id: str, query: str, limit: int = 5) -> Dict[str, Any]:
         """Debug version that returns full results"""

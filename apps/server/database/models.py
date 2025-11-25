@@ -83,6 +83,7 @@ class Conversation(Base):
     user = relationship("User", back_populates="conversations")
     project = relationship("Project", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+    files = relationship("ChatFile", back_populates="conversation", cascade="all, delete-orphan")
 
 
 class Message(Base):
@@ -96,6 +97,20 @@ class Message(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     conversation = relationship("Conversation", back_populates="messages")
+
+
+class ChatFile(Base):
+    __tablename__ = "chat_files"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
+    filename = Column(String(255), nullable=False)
+    file_type = Column(String(50))
+    file_size = Column(Integer)
+    storage_path = Column(String(500))
+    uploaded_at = Column(TIMESTAMP, server_default=func.now())
+    
+    conversation = relationship("Conversation", back_populates="files")
 
 
 class ProjectFile(Base):

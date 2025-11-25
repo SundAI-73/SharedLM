@@ -563,6 +563,19 @@ class APIService {
     }
   }
 
+  async getProjectMemories(projectId) {
+    try {
+      const response = await this.makeRequest(`${API_BASE_URL}/projects/${projectId}/memories`);
+      if (!response.ok) throw new Error('Failed to fetch project memories');
+      return await response.json();
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Get project memories failed:', error);
+      }
+      return { memories: [], count: 0 };
+    }
+  }
+
   async getProjectFiles(projectId) {
     try {
       const response = await this.makeRequest(`${API_BASE_URL}/projects/${projectId}/files`);
