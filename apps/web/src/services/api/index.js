@@ -115,7 +115,11 @@ class APIService {
         
         const { clearAuth } = await import('../../utils/auth');
         clearAuth();
-        window.location.href = '/login?expired=true';
+        // Use a small delay to ensure state cleanup happens before redirect
+        // This prevents rendering issues that could cause a black screen
+        setTimeout(() => {
+          window.location.href = '/login?expired=true';
+        }, 100);
         throw new Error('Authentication required');
       }
 
@@ -377,6 +381,37 @@ class APIService {
 
   async sendMessage(userId, message, modelChoice, sessionId = null, projectId = null, specificModel = null) {
     try {
+      // Check if it's a custom integration with localhost URL - handle client-side in Electron
+      let shouldHandleClientSide = false;
+      
+      if (modelChoice && modelChoice.startsWith('custom_')) {
+        // Get integration to check URL
+        const integrations = await this.getCustomIntegrations(userId);
+        const integration = integrations.find(int => int.provider_id === modelChoice);
+        
+        if (integration && integration.base_url) {
+          // Check if URL is localhost (localhost, 127.0.0.1, 0.0.0.0)
+          const isLocalhost = /localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(integration.base_url);
+          
+          // Only handle client-side if: localhost URL AND in Electron app
+          shouldHandleClientSide = isLocalhost && window.electron;
+          
+          // If localhost in web, reject early with clear error
+          if (isLocalhost && !window.electron) {
+            throw new Error('Localhost LLMs can only be used in the desktop application. Please use the Electron app to access local LLMs.');
+          }
+        }
+      }
+      
+      if (shouldHandleClientSide) {
+        // Handle localhost LLM entirely client-side (Electron only)
+        return await this.sendLocalLLMMessage(userId, message, modelChoice, sessionId, projectId, specificModel);
+      }
+      
+      // Everything else goes through backend:
+      // - Cloud providers (OpenAI, Anthropic, Mistral, etc.)
+      // - Custom integrations with non-localhost URLs (user's own server)
+      
       // Check if it's a standard provider or custom integration
       // Custom integrations have provider_id like "custom_inception_labs" or start with "custom_"
       let modelProvider;
@@ -435,6 +470,107 @@ class APIService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Send message to local LLM entirely client-side
+   * @private
+   */
+  async sendLocalLLMMessage(userId, message, modelChoice, sessionId, projectId, specificModel) {
+    const { callLocalOllama } = await import('../utils/localLLMHandler');
+    const { 
+      getLocalMemories, 
+      searchLocalMemories, 
+      addLocalMemory,
+      saveLocalChat 
+    } = await import('../utils/localStorage');
+    
+    // Get custom integration details
+    const integrations = await this.getCustomIntegrations(userId);
+    const integration = integrations.find(int => int.provider_id === modelChoice);
+    
+    if (!integration) {
+      throw new Error(`Local LLM integration not found: ${modelChoice}`);
+    }
+    
+    // Extract model name from provider_id or use specificModel
+    // For Ollama integrations, provider_id might be like "custom_local_gemma3"
+    // For other localhost integrations, use the model name from the integration or specificModel
+    let actualModel = specificModel;
+    if (!actualModel) {
+      if (modelChoice.startsWith('custom_local_')) {
+        // Extract from provider_id (e.g., custom_local_gemma3 -> gemma3)
+        actualModel = modelChoice.replace('custom_local_', '').replace(/_/g, '.');
+      } else {
+        // For other localhost integrations, try to extract from integration name
+        // Remove "Local" prefix if present, convert to lowercase
+        actualModel = integration.name?.replace(/^Local\s+/i, '').toLowerCase() || 'default';
+      }
+    }
+    
+    // Parse fallback URLs
+    let fallbackUrls = [];
+    if (integration.fallback_urls) {
+      try {
+        const fallbacks = JSON.parse(integration.fallback_urls);
+        if (Array.isArray(fallbacks)) {
+          fallbackUrls = fallbacks.map(fb => fb.url).filter(Boolean);
+        }
+      } catch (e) {
+        console.warn('Failed to parse fallback URLs:', e);
+      }
+    }
+    
+    // Search local memories
+    const localMemories = searchLocalMemories(message, userId, 5);
+    
+    // Compose prompt with memories
+    let prompt = message;
+    if (localMemories.length > 0) {
+      const memoryContext = localMemories.map((mem, idx) => `Memory ${idx + 1}: ${mem}`).join('\n');
+      prompt = `Relevant context from past conversations:\n${memoryContext}\n\nUser question: ${message}`;
+    }
+    
+    // Call local Ollama
+    const reply = await callLocalOllama(
+      integration.base_url,
+      actualModel,
+      prompt,
+      fallbackUrls
+    );
+    
+    // Save to local storage
+    const conversationId = sessionId || `local_${Date.now()}`;
+    const chatData = {
+      id: conversationId,
+      user_id: userId,
+      title: message.substring(0, 50),
+      messages: [
+        { role: 'user', content: message, timestamp: new Date().toISOString() },
+        { role: 'assistant', content: reply, model: actualModel, timestamp: new Date().toISOString() }
+      ],
+      model_used: actualModel,
+      project_id: projectId,
+      created_at: new Date().toISOString()
+    };
+    saveLocalChat(chatData);
+    
+    // Add to local memory
+    addLocalMemory({
+      user_id: userId,
+      messages: [
+        { role: 'user', content: message },
+        { role: 'assistant', content: reply }
+      ],
+      project_id: projectId
+    });
+    
+    return {
+      reply: reply,
+      used_model: integration.name || actualModel,
+      memories: localMemories,
+      conversation_id: parseInt(conversationId) || conversationId
+    };
   }
 
   async uploadFile(file, userId, conversationId = null) {
@@ -835,6 +971,10 @@ class APIService {
       if (!response.ok) throw new Error('Failed to fetch custom integrations');
       return await response.json();
     } catch (error) {
+      // If it's an authentication error, let it propagate so the redirect can happen
+      if (error.message === 'Authentication required' || error.message.includes('Session expired')) {
+        throw error;
+      }
       if (process.env.NODE_ENV !== 'production') {
         console.error('Get custom integrations failed:', error);
       }

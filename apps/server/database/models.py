@@ -44,6 +44,9 @@ class CustomIntegration(Base):
     base_url = Column(String(500))
     api_type = Column(String(50), default="openai")
     logo_url = Column(String(500))
+    # Fallback URLs and API keys for local LLMs (stored as JSON)
+    # Format: [{"url": "http://localhost:11434/v1", "api_key": "ollama"}, ...]
+    fallback_urls = Column(Text)  # JSON string of fallback URLs and keys
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

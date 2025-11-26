@@ -73,7 +73,8 @@ def create_custom_integration(
     provider_id: str,
     base_url: str = None,
     api_type: str = "openai",
-    logo_url: str = None
+    logo_url: str = None,
+    fallback_urls: str = None
 ):
     integration = CustomIntegration(
         user_id=user_id,
@@ -81,7 +82,8 @@ def create_custom_integration(
         provider_id=provider_id,
         base_url=base_url,
         api_type=api_type,
-        logo_url=logo_url
+        logo_url=logo_url,
+        fallback_urls=fallback_urls
     )
     db.add(integration)
     db.commit()

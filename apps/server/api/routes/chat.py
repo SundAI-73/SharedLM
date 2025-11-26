@@ -85,16 +85,10 @@ async def chat(
                 project_id=request.project_id  
             )
         
-        # 2. Start memory search early (external API call, can run in parallel)
-        # This runs concurrently while we do database operations
-        memories_task = asyncio.create_task(asyncio.to_thread(
-            mem0_client.search_memories,
-            request.user_id,
-            validated_message
-        ))
-        
-        # 3. Fetch API key and custom integration (database operations, sequential)
+        # 2. Fetch API key and custom integration (database operations, sequential)
         custom_integration = None
+        is_localhost_url = False
+        
         if request.model_provider and request.model_provider.startswith("custom_"):
             custom_integration = crud.get_custom_integration_by_provider_id(db, request.user_id, request.model_provider)
             if not custom_integration:
@@ -103,6 +97,34 @@ async def chat(
                     detail=f"Custom integration '{request.model_provider}' not found"
                 )
             logger.info(f"Using custom integration: {custom_integration.name} (provider_id: {request.model_provider})")
+            
+            # Check if this is a localhost URL and we're on cloud - reject it
+            # Non-localhost custom URLs (user's own server) are allowed through backend
+            is_cloud = os.getenv("RENDER") or os.getenv("DYNO") or os.getenv("VERCEL") or os.getenv("RAILWAY_ENVIRONMENT")
+            if custom_integration.base_url:
+                is_localhost_url = any(
+                    localhost in custom_integration.base_url.lower() 
+                    for localhost in ["localhost", "127.0.0.1", "0.0.0.0"]
+                )
+                if is_localhost_url and is_cloud:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Localhost LLMs cannot be used on cloud server. Please use the desktop application for localhost LLM support."
+                    )
+        
+        # 3. Start memory search early (external API call, can run in parallel)
+        # For localhost URLs, skip cloud memory search (will use local storage client-side)
+        # Non-localhost custom URLs and cloud providers use cloud memory
+        if not is_localhost_url:
+            # Search cloud memories for non-localhost integrations and cloud providers
+            memories_task = asyncio.create_task(asyncio.to_thread(
+                mem0_client.search_memories,
+                request.user_id,
+                validated_message
+            ))
+        else:
+            # For localhost URLs, return empty memories (will be handled client-side)
+            memories_task = asyncio.create_task(asyncio.to_thread(lambda: []))
         
         # Check cache first to avoid database query and decryption
         api_key = get_cached_api_key(request.user_id, request.model_provider)
@@ -278,14 +300,17 @@ async def chat(
         db.refresh(assistant_message_obj)
         
         # 11. Add memory to Mem0 in background (non-blocking, fire and forget)
-        # This doesn't block the response to the user
-        background_tasks.add_task(
-            _add_memory_background,
-            request.user_id,
-            validated_message,
-            reply,
-            conversation.project_id
-        )
+        # For localhost URLs, skip cloud memory storage (will be stored locally client-side)
+        # Non-localhost custom URLs and cloud providers use cloud memory
+        if not is_localhost_url:
+            # Only store in cloud for non-localhost integrations and cloud providers
+            background_tasks.add_task(
+                _add_memory_background,
+                request.user_id,
+                validated_message,
+                reply,
+                conversation.project_id
+            )
         
         # 12. Return response immediately (memory addition happens in background)
         return ChatResponse(

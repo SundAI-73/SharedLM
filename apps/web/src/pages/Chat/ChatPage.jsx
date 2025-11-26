@@ -230,6 +230,8 @@ function ChatPage({ backendStatus }) {
   // Use a ref to track if we've loaded once to prevent flickering
   const customIntegrationsLoadedRef = useRef(false);
   const loadCustomIntegrationsTimeoutRef = useRef(null);
+  const isLoadingCustomIntegrationsRef = useRef(false);
+  const lastAvailableModelsRef = useRef(null);
   
   useEffect(() => {
     // Clear any pending timeout
@@ -243,9 +245,33 @@ function ChatPage({ backendStatus }) {
       return;
     }
     
+    // Check if availableModels actually changed (prevent unnecessary reloads)
+    const availableModelsStr = JSON.stringify(availableModels);
+    if (lastAvailableModelsRef.current === availableModelsStr && customIntegrationsLoadedRef.current) {
+      // No change and already loaded, skip
+      return;
+    }
+    lastAvailableModelsRef.current = availableModelsStr;
+    
+    // Prevent concurrent loads
+    if (isLoadingCustomIntegrationsRef.current) {
+      return;
+    }
+    
     // Debounce the loading to prevent flickering when availableModels changes rapidly
     loadCustomIntegrationsTimeoutRef.current = setTimeout(async () => {
+      if (isLoadingCustomIntegrationsRef.current) {
+        return; // Already loading
+      }
+      
+      isLoadingCustomIntegrationsRef.current = true;
       if (!userId) {
+        return;
+      }
+
+      // Double-check authentication before making API calls
+      const { isAuthenticated } = await import('../../utils/auth');
+      if (!isAuthenticated()) {
         return;
       }
 
@@ -274,19 +300,11 @@ function ChatPage({ backendStatus }) {
         // Store custom integrations for logo access
         setCustomIntegrations(uniqueIntegrations || []);
 
-        // Load Ollama models for custom_local_ollama integration
-        let ollamaModels = [];
-        const ollamaIntegration = uniqueIntegrations?.find(int => int.provider_id === 'custom_local_ollama');
-        if (ollamaIntegration) {
-          try {
-            const ollamaData = await apiService.getOllamaModels();
-            ollamaModels = ollamaData.installed_models || [];
-          } catch (error) {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('[ChatPage] Failed to load Ollama models:', error);
-            }
-          }
-        }
+        // Find all local LLM integrations (each model has its own integration)
+        // Local LLM integrations have provider_id starting with "custom_local_"
+        const localLLMIntegrations = uniqueIntegrations.filter(
+          int => int.provider_id.startsWith('custom_local_') && int.provider_id !== 'custom_local_ollama'
+        );
 
         // Only add custom integrations that are in availableModels (have API keys)
         // But don't remove them immediately if availableModels is temporarily empty
@@ -318,40 +336,15 @@ function ChatPage({ backendStatus }) {
             });
 
             // Add custom integrations to variants
-            // For Ollama, add installed models as variants with proper labels
+            // For local LLMs, each model is its own integration (no variants needed)
             setModelVariants(prev => {
               const customVariants = {};
               uniqueIntegrations
                 .filter(int => availableModels.includes(int.provider_id))
                 .forEach(int => {
-                  if (int.provider_id === 'custom_local_ollama' && ollamaModels.length > 0) {
-                    // Add Ollama models as variants - use model name as both value and label
-                    // Only update if models have changed to prevent unnecessary re-renders
-                    const existingVariants = prev[int.provider_id] || [];
-                    const existingModelNames = existingVariants.map(v => v.value);
-                    const newModels = ollamaModels.filter(m => !existingModelNames.includes(m));
-                    
-                    if (newModels.length > 0 || existingVariants.length === 0) {
-                      customVariants[int.provider_id] = ollamaModels.map(model => ({
-                        value: model,
-                        label: model // Show actual model name (e.g., "gemma3", "llama3.2")
-                      }));
-                      
-                      // If user is currently on Ollama and no variant is selected, select the first model
-                      if (currentModel === 'custom_local_ollama' && (!selectedModelVariant || !ollamaModels.includes(selectedModelVariant))) {
-                        setSelectedModelVariant(ollamaModels[0]);
-                      }
-                    } else {
-                      // Keep existing variants if models haven't changed
-                      customVariants[int.provider_id] = existingVariants;
-                    }
-                  } else if (int.provider_id === 'custom_local_ollama') {
-                    // Ollama integration exists but no models yet - keep empty array
-                    customVariants[int.provider_id] = prev[int.provider_id] || [];
-                  } else {
-                    // Other custom integrations don't have variants
-                    customVariants[int.provider_id] = prev[int.provider_id] || [];
-                  }
+                  // Local LLM integrations don't need variants - they're already model-specific
+                  // Other custom integrations also don't have variants
+                  customVariants[int.provider_id] = prev[int.provider_id] || [];
                 });
               // Merge: preserve standard variants, update/add custom variants
               return { ...prev, ...customVariants };
@@ -359,8 +352,8 @@ function ChatPage({ backendStatus }) {
             
             customIntegrationsLoadedRef.current = true;
           }
-        } else if (customIntegrationsLoadedRef.current) {
-          // Only remove custom integrations if we've loaded them before
+        } else if (customIntegrationsLoadedRef.current && availableModels && availableModels.length === 0) {
+          // Only remove if availableModels is explicitly empty (not just undefined)
           // This prevents flickering when availableModels is temporarily empty during initial load
           setModelProviders(prev => prev.filter(p => !p.isCustom));
           setModelVariants(prev => {
@@ -375,11 +368,18 @@ function ChatPage({ backendStatus }) {
         }
 
       } catch (error) {
+        // If it's an authentication error, don't process further - redirect will happen
+        if (error.message === 'Authentication required' || error.message.includes('Session expired')) {
+          // The makeRequest will handle the redirect, just stop processing
+          return;
+        }
         console.error('[ChatPage] Failed to load custom integrations:', error);
         // On error, remove custom integrations from providers
         setModelProviders(prev => prev.filter(p => !p.isCustom));
+      } finally {
+        isLoadingCustomIntegrationsRef.current = false;
       }
-    }, 300); // 300ms debounce to prevent flickering
+    }, 500); // 500ms debounce to prevent flickering (increased from 300ms)
     
     // Cleanup timeout on unmount
     return () => {
@@ -387,7 +387,7 @@ function ChatPage({ backendStatus }) {
         clearTimeout(loadCustomIntegrationsTimeoutRef.current);
       }
     };
-  }, [userId, availableModels, currentModel, selectedModelVariant]);
+  }, [userId, availableModels]); // Removed currentModel and selectedModelVariant - they shouldn't trigger reload
 
   // Monitor Ollama model installation from setup wizard
   useEffect(() => {
@@ -446,8 +446,9 @@ function ChatPage({ backendStatus }) {
           if (modelsToMonitor.length === 0) {
             // All models already installed
             notify.success('All Ollama models are installed and ready to use!');
-            // Reload models to refresh UI
-            if (availableModels.includes('custom_local_ollama')) {
+            // Reload models to refresh UI - check for any local LLM integration
+            const hasLocalLLM = availableModels.some(m => m.startsWith('custom_local_'));
+            if (hasLocalLLM) {
               loadAvailableModels();
             }
             return;
@@ -458,7 +459,8 @@ function ChatPage({ backendStatus }) {
             modelsToMonitor,
             (modelId, installed) => {
               // Model installed - reload available models
-              if (installed && availableModels.includes('custom_local_ollama')) {
+              const hasLocalLLM = availableModels.some(m => m.startsWith('custom_local_'));
+              if (installed && hasLocalLLM) {
                 // Reload models after a short delay
                 setTimeout(() => {
                   loadAvailableModels();
@@ -469,7 +471,8 @@ function ChatPage({ backendStatus }) {
               // All models installed
               notify.success(`All ${installedModels.length} Ollama model(s) installed! They're now available in chat.`);
               // Reload models to refresh UI
-              if (availableModels.includes('custom_local_ollama')) {
+              const hasLocalLLM = availableModels.some(m => m.startsWith('custom_local_'));
+              if (hasLocalLLM) {
                 setTimeout(() => {
                   loadAvailableModels();
                 }, 1000);
@@ -1027,21 +1030,16 @@ function ChatPage({ backendStatus }) {
         displayModelName = modelVariantToUse;
         setSelectedModelVariant(modelVariantToUse);
       } else {
-        // For custom integrations with no variants, use 'default' as model name for API
-        // but use integration name for display
-        // Exception: For Ollama (custom_local_ollama), try to get the first available model
+        // For custom integrations with no variants
         if (isCustomIntegration) {
           const provider = modelProviders.find(p => p.value === modelToUse);
-          // For Ollama, check if we have models available
-          if (modelToUse === 'custom_local_ollama') {
-            const ollamaVariants = modelVariants['custom_local_ollama'] || [];
-            if (ollamaVariants.length > 0) {
-              modelVariantToUse = ollamaVariants[0].value;
-              displayModelName = modelVariantToUse;
-            } else {
-              modelVariantToUse = 'default';
-              displayModelName = provider ? provider.label : 'Local Ollama';
-            }
+          // For local LLM integrations, extract model name from provider_id
+          // e.g., "custom_local_gemma3" -> "gemma3"
+          if (modelToUse.startsWith('custom_local_')) {
+            // Extract model name from provider_id (remove "custom_local_" prefix)
+            const modelName = modelToUse.replace('custom_local_', '').replace(/_/g, '.');
+            modelVariantToUse = modelName; // Use the actual model name
+            displayModelName = provider ? provider.label : modelName;
           } else {
             modelVariantToUse = 'default'; // API expects a model name
             displayModelName = provider ? provider.label : modelToUse.replace('custom_', '').replace(/_/g, ' ').toUpperCase();
@@ -1059,9 +1057,17 @@ function ChatPage({ backendStatus }) {
       // If it's a mistral variant, it means we switched from mistral to custom integration
       if (modelVariantToUse.includes('mistral') || modelVariantToUse.includes('gpt') || modelVariantToUse.includes('claude')) {
         // This is a standard model variant, not for custom integration
-        const provider = modelProviders.find(p => p.value === modelToUse);
-        modelVariantToUse = 'default'; // Use default for API
-        displayModelName = provider ? provider.label : modelToUse.replace('custom_', '').replace(/_/g, ' ').toUpperCase();
+        if (modelToUse.startsWith('custom_local_')) {
+          // For local LLM, extract model name from provider_id
+          const modelName = modelToUse.replace('custom_local_', '').replace(/_/g, '.');
+          modelVariantToUse = modelName;
+          const provider = modelProviders.find(p => p.value === modelToUse);
+          displayModelName = provider ? provider.label : modelName;
+        } else {
+          const provider = modelProviders.find(p => p.value === modelToUse);
+          modelVariantToUse = 'default'; // Use default for API
+          displayModelName = provider ? provider.label : modelToUse.replace('custom_', '').replace(/_/g, ' ').toUpperCase();
+        }
         setSelectedModelVariant(''); // Clear the incorrect variant
       } else {
         // Valid custom integration variant

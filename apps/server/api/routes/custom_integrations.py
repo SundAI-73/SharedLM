@@ -20,6 +20,7 @@ class CustomIntegrationCreate(BaseModel):
     base_url: Optional[str] = None
     api_type: Optional[str] = "openai"
     logo_url: Optional[str] = None
+    fallback_urls: Optional[str] = None  # JSON string: [{"url": "...", "api_key": "..."}, ...]
 
 
 class CustomIntegrationResponse(BaseModel):
@@ -29,6 +30,7 @@ class CustomIntegrationResponse(BaseModel):
     base_url: Optional[str] = None
     api_type: str
     logo_url: Optional[str] = None
+    fallback_urls: Optional[str] = None
     is_active: bool
     created_at: str
     updated_at: str
@@ -61,7 +63,8 @@ async def update_custom_integration(
             "name": validated_name,
             "base_url": validated_base_url,
             "logo_url": validated_logo_url,
-            "api_type": integration_data.api_type or "openai"
+            "api_type": integration_data.api_type or "openai",
+            "fallback_urls": integration_data.fallback_urls
         }
         
         # Only update provider_id if name changed
@@ -87,6 +90,7 @@ async def update_custom_integration(
                     base_url=updated_integration.base_url,
                     api_type=updated_integration.api_type or "openai",
                     logo_url=updated_integration.logo_url,
+                    fallback_urls=getattr(updated_integration, 'fallback_urls', None),
                     is_active=updated_integration.is_active,
                     created_at=str(updated_integration.created_at),
                     updated_at=str(updated_integration.updated_at)
@@ -149,6 +153,7 @@ async def get_custom_integrations(
                 base_url=integration.base_url,
                 api_type=integration.api_type or "openai",
                 logo_url=integration.logo_url,
+                fallback_urls=getattr(integration, 'fallback_urls', None),
                 is_active=integration.is_active,
                 created_at=str(integration.created_at),
                 updated_at=str(integration.updated_at)
@@ -204,9 +209,10 @@ async def create_custom_integration(
                     base_url=existing.base_url,
                     api_type=existing.api_type or "openai",
                     logo_url=existing.logo_url,
+                    fallback_urls=getattr(existing, 'fallback_urls', None),
                     is_active=existing.is_active,
-                    created_at=existing.created_at,
-                    updated_at=existing.updated_at
+                    created_at=str(existing.created_at),
+                    updated_at=str(existing.updated_at)
                 )
             }
         
@@ -217,7 +223,8 @@ async def create_custom_integration(
             provider_id=provider_id,
             base_url=validated_base_url,
             api_type=integration_data.api_type or "openai",
-            logo_url=validated_logo_url
+            logo_url=validated_logo_url,
+            fallback_urls=integration_data.fallback_urls
         )
         
         logger.info(f"Created custom integration for user {user_id}: {validated_name}")
@@ -232,6 +239,7 @@ async def create_custom_integration(
                 base_url=integration.base_url,
                 api_type=integration.api_type or "openai",
                 logo_url=integration.logo_url,
+                fallback_urls=getattr(integration, 'fallback_urls', None),
                 is_active=integration.is_active,
                 created_at=str(integration.created_at),
                 updated_at=str(integration.updated_at)

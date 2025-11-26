@@ -32,17 +32,24 @@ async def get_current_user(
     
     Note: This is a basic implementation. For production, implement JWT token validation.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if not x_user_id:
+        logger.warning("401 Unauthorized: X-User-ID header missing")
         raise HTTPException(status_code=401, detail="Authentication required")
     
     # Validate user_id format (basic validation)
     if not isinstance(x_user_id, str) or len(x_user_id) > 100:
+        logger.warning(f"401 Unauthorized: Invalid user ID format: {x_user_id}")
         raise HTTPException(status_code=401, detail="Invalid user ID format")
     
     user = crud.get_user_by_id(db, x_user_id)
     if not user:
+        logger.warning(f"401 Unauthorized: User not found: {x_user_id}")
         raise HTTPException(status_code=401, detail="Authentication failed")
     
+    logger.debug(f"Authenticated user: {user.id}")
     return user
 
 
@@ -60,10 +67,25 @@ def verify_user_ownership(user: User, resource_user_id: str, resource_type: str 
     Raises:
         HTTPException: If user doesn't own the resource
     """
-    if user.id != resource_user_id:
+    # Convert both to strings for comparison to handle type mismatches
+    user_id_str = str(user.id) if user.id is not None else None
+    resource_id_str = str(resource_user_id) if resource_user_id is not None else None
+    
+    # Log for debugging (only in development)
+    import logging
+    logger = logging.getLogger(__name__)
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"Verifying ownership: user.id={user_id_str}, resource_user_id={resource_id_str}")
+    
+    if user_id_str != resource_id_str:
+        error_msg = (
+            f"You don't have permission to access this {resource_type}. "
+            f"User ID mismatch: authenticated={user_id_str}, requested={resource_id_str}"
+        )
+        logger.warning(f"403 Forbidden: {error_msg}")
         raise HTTPException(
             status_code=403,
-            detail=f"You don't have permission to access this {resource_type}"
+            detail=error_msg
         )
 
 

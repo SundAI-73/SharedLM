@@ -704,7 +704,12 @@ ipcMain.handle('install-sharedlm', async (event, installPath, selectedModels, mo
           baseUrl: "http://localhost:11434/v1",
           apiType: "openai",
           providerId: "custom_local_ollama",
-          apiKey: "ollama" // Placeholder - Ollama doesn't require real API key
+          apiKey: "ollama", // Placeholder - Ollama doesn't require real API key
+          fallbackUrls: [
+            { url: "http://localhost:11435/v1", api_key: "ollama" },
+            { url: "http://127.0.0.1:11434/v1", api_key: "ollama" },
+            { url: "http://127.0.0.1:11435/v1", api_key: "ollama" }
+          ]
         }
       };
       await fs.writeFile(configPath, JSON.stringify(config, null, 2));
