@@ -1,20 +1,9 @@
+# This workflow is kept for reference but not used for PRs
+# PRs use ci-complete.yml instead
 name: Backend CI
 
 on:
-  pull_request:
-    branches:
-      - main
-      - gagan
-      - nwl
-    paths:
-      - 'apps/server/**'
-      - '.github/workflows/backend-ci.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'apps/server/**'
-      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
 
 jobs:
   check:
@@ -61,5 +50,4 @@ jobs:
         run: |
           python -c "from config import settings; print('✓ Settings loaded successfully')"
         working-directory: apps/server
-        continue-on-error: true
 

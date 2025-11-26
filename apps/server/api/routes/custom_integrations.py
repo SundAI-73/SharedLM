@@ -189,6 +189,27 @@ async def create_custom_integration(
         sanitized_name = ''.join(c for c in sanitized_name if c.isalnum() or c in ('_', '-'))
         provider_id = f"custom_{sanitized_name}"
         
+        # Check if integration with this provider_id already exists
+        existing = crud.get_custom_integration_by_provider_id(db, user_id, provider_id)
+        if existing:
+            # Return existing integration instead of creating duplicate
+            logger.info(f"Custom integration '{provider_id}' already exists for user {user_id}, returning existing")
+            return {
+                "success": True,
+                "message": "Custom integration already exists",
+                "integration": CustomIntegrationResponse(
+                    id=existing.id,
+                    name=existing.name,
+                    provider_id=existing.provider_id,
+                    base_url=existing.base_url,
+                    api_type=existing.api_type or "openai",
+                    logo_url=existing.logo_url,
+                    is_active=existing.is_active,
+                    created_at=existing.created_at,
+                    updated_at=existing.updated_at
+                )
+            }
+        
         integration = crud.create_custom_integration(
             db,
             user_id=user_id,

@@ -9,7 +9,6 @@ if TYPE_CHECKING:
 import openai
 from anthropic import Anthropic
 from mistralai.client import MistralClient
-from mistralai.models import chat_completion
 from llama_api_client import LlamaAPIClient
 from dotenv import load_dotenv
 
@@ -83,7 +82,7 @@ async def call_mistral(prompt: str, model: str = None, api_key: str = None) -> s
         response = await asyncio.to_thread(
             client.chat,
             model=model,
-            messages=[chat_completion.ChatMessage(role="user", content=prompt)],
+            messages=[{"role": "user", "content": prompt}],
         )
 
         reply = response.choices[0].message.content
@@ -157,11 +156,13 @@ async def call_custom_integration(
 ) -> str:
     """Call custom integration API (OpenAI-compatible)"""
     try:
-        if not api_key:
-            raise ValueError("API key is required for custom integration")
-        
         if not base_url:
             raise ValueError("Base URL is required for custom integration")
+        
+        # API key is optional for custom integrations with base_url
+        # Use placeholder if not provided (for services like Ollama that don't require real keys)
+        if not api_key:
+            api_key = "ollama"  # Placeholder for services that don't require real API keys
         
         # Use OpenAI client with custom base URL for OpenAI-compatible APIs
         if api_type == "openai" or api_type is None:

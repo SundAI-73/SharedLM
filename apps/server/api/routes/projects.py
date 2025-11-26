@@ -8,6 +8,7 @@ from database.models import User
 from api.dependencies import get_current_user, verify_user_ownership, verify_project_ownership
 from utils.security import validate_name, validate_file_upload, sanitize_error_message
 from models.schemas import ProjectCreate, ProjectUpdate, ProjectResponse
+from services.mem0_client import mem0_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -208,6 +209,41 @@ async def get_project_files(
     except Exception as e:
         logger.error(f"Get project files error: {e}")
         raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to retrieve files"))
+
+@router.get("/{project_id}/memories")
+async def get_project_memories(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all memories for a project"""
+    try:
+        # Verify project ownership
+        await verify_project_ownership(current_user, project_id, db)
+        
+        # Get project to verify it exists
+        from database.models import Project
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Search for project-specific memories
+        memories = mem0_client.search_project_memories(
+            user_id=current_user.id,
+            project_id=project_id,
+            query="",
+            limit=50
+        )
+        
+        return {
+            "memories": memories,
+            "count": len(memories)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get project memories error: {e}")
+        raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to retrieve project memories"))
 
 @router.delete("/files/{file_id}")
 async def delete_project_file(

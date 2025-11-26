@@ -1,0 +1,172 @@
+name: Complete CI Check
+
+on:
+  pull_request:
+    # Only run CI on PRs TO nwl (from any branch like gagan)
+    # PRs to main are manually merged after nwl testing
+    branches:
+      - nwl
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+    paths:
+      - 'apps/**'
+      - 'test/**'
+      - 'package.json'
+      - '.github/workflows/ci-complete.yml'
+  workflow_dispatch:
+
+jobs:
+  # Run backend, frontend, and tests in parallel
+  backend-check:
+    name: Backend Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: apps/server/requirements.txt
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        working-directory: apps/server
+      
+      - name: Check for dependency conflicts
+        run: pip check
+        working-directory: apps/server
+      
+      - name: Verify app imports
+        run: |
+          python -c "from app import app; print('✓ FastAPI app imports successfully')"
+        working-directory: apps/server
+      
+      - name: Check database models
+        run: |
+          python -c "from database import models; print('✓ Database models import successfully')"
+        working-directory: apps/server
+      
+      - name: Build backend
+        run: |
+          python -c "from app import app; from database import models; from database import crud; from utils import encryption, security, cache, prompt, email; from services import llm_router, mem0_client; print('✅ Backend build successful')"
+        working-directory: apps/server
+      
+      - name: Validate configuration
+        run: |
+          python -c "from config import settings; print('✓ Settings loaded successfully')"
+        working-directory: apps/server
+
+  frontend-check:
+    name: Frontend Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+      
+      - name: Install root dependencies
+        run: npm install
+      
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: apps/web
+      
+      - name: Build check
+        run: npm run build
+        working-directory: apps/web
+        env:
+          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL || 'https://sharedlm.onrender.com' }}
+      
+      - name: Check build output
+        run: |
+          if [ ! -d "build" ]; then
+            echo "Build directory not found!"
+            exit 1
+          fi
+          echo "✓ Build successful"
+        working-directory: apps/web
+
+  test-suite:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: apps/server/requirements.txt
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        working-directory: apps/server
+      
+      - name: Run tests with coverage
+        run: |
+          PYTHONPATH=../.. python -m pytest ../../test/server -v --tb=short --cov=apps/server --cov-report=term-missing --cov-report=xml
+        working-directory: apps/server
+        env:
+          ENCRYPTION_KEY: ${{ secrets.TEST_ENCRYPTION_KEY || 'dGVzdF9lbmNyeXB0aW9uX2tleV8xMjM0NTY3ODkwMTIzNDU2Nzg=' }}
+          DATABASE_URL: sqlite:///:memory:
+          ENVIRONMENT: test
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./test/coverage.xml
+          flags: tests
+          name: test-coverage
+          fail_ci_if_error: false
+
+  # Combined check - only passes if all above pass
+  all-checks-passed:
+    name: All Checks Passed
+    needs: [backend-check, frontend-check, test-suite]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Check all jobs status
+        run: |
+          if [[ "${{ needs.backend-check.result }}" != "success" ]] || \
+             [[ "${{ needs.frontend-check.result }}" != "success" ]] || \
+             [[ "${{ needs.test-suite.result }}" != "success" ]]; then
+            echo "::error::❌ One or more checks failed"
+            echo "Backend: ${{ needs.backend-check.result }}"
+            echo "Frontend: ${{ needs.frontend-check.result }}"
+            echo "Tests: ${{ needs.test-suite.result }}"
+            exit 1
+          fi
+          echo "::notice::✅ All checks passed!"
+          echo "Backend: ${{ needs.backend-check.result }}"
+          echo "Frontend: ${{ needs.frontend-check.result }}"
+          echo "Tests: ${{ needs.test-suite.result }}"
+

@@ -1,0 +1,35 @@
+{
+  "appId": "com.sharedlm.setup",
+  "productName": "SharedLM Setup",
+  "copyright": "Copyright © 2024 SharedLM",
+  "directories": {
+    "output": "../application/setup",
+    "buildResources": "public"
+  },
+  "files": [
+    "build/**/*",
+    "public/electron.js",
+    "public/preload.js",
+    "node_modules/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "../application",
+      "to": "application",
+      "filter": ["SharedLM-Portable-*.exe"]
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ]
+  },
+  "extraMetadata": {
+    "main": "public/electron.js"
+  }
+}
+

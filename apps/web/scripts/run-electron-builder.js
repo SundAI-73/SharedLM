@@ -15,14 +15,38 @@ try {
   process.exit(1);
 }
 
+// Read electron version from package.json
+const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
+let electronVersion = null;
+try {
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const electronDep = packageJson.devDependencies?.electron || packageJson.dependencies?.electron;
+  if (electronDep) {
+    // Extract version number (remove ^, ~, etc.)
+    electronVersion = electronDep.replace(/^[\^~]/, '');
+    // If it's a range, get the base version
+    if (electronVersion.includes('-')) {
+      electronVersion = electronVersion.split('-')[0];
+    }
+  }
+} catch (error) {
+  console.warn('⚠ Could not read electron version from package.json:', error.message);
+}
+
 const electronBuilderArgs = [
   `--config.directories.output=${outputDir}`,
   ...builderArgs,
 ];
 
-// Resolve local electron-builder binary to avoid PATH/npx issues on Windows
+// Add electron version if we found it
+if (electronVersion) {
+  electronBuilderArgs.unshift(`--config.electronVersion=${electronVersion}`);
+}
+
+// Resolve electron-builder binary to avoid PATH/npx issues on Windows
+// Check both local node_modules (apps/web/node_modules) and root node_modules (for workspace hoisting)
 // __dirname is apps/web/scripts, so go up one level to apps/web/node_modules
-const electronBuilderBin = path.resolve(
+const localBin = path.resolve(
   __dirname,
   '..',
   'node_modules',
@@ -30,11 +54,71 @@ const electronBuilderBin = path.resolve(
   process.platform === 'win32' ? 'electron-builder.cmd' : 'electron-builder'
 );
 
-if (!fs.existsSync(electronBuilderBin)) {
-  console.error('electron-builder binary not found at:', electronBuilderBin);
-  console.error('Ensure devDependencies are installed (npm install) in apps/web.');
+// Check root node_modules (for npm workspaces hoisting)
+// From apps/web/scripts, go up 3 levels to root, then to node_modules
+const rootBin = path.resolve(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'node_modules',
+  '.bin',
+  process.platform === 'win32' ? 'electron-builder.cmd' : 'electron-builder'
+);
+
+// Try local first, then root (workspace hoisting)
+let electronBuilderBin = null;
+if (fs.existsSync(localBin)) {
+  electronBuilderBin = localBin;
+} else if (fs.existsSync(rootBin)) {
+  electronBuilderBin = rootBin;
+}
+
+if (!electronBuilderBin) {
+  console.error('electron-builder binary not found.');
+  console.error('Checked locations:');
+  console.error('  -', localBin);
+  console.error('  -', rootBin);
+  console.error('Ensure devDependencies are installed (npm install) in apps/web or at root.');
   process.exit(1);
 }
+
+// Find root node_modules path for electron (workspace hoisting)
+const rootNodeModules = path.resolve(__dirname, '..', '..', '..', 'node_modules');
+const localNodeModules = path.resolve(__dirname, '..', 'node_modules');
+const rootElectron = path.join(rootNodeModules, 'electron');
+const localElectron = path.join(localNodeModules, 'electron');
+
+// Create symlink to hoisted electron if it doesn't exist locally
+// This helps electron-builder find electron in workspace setups
+if (!fs.existsSync(localElectron) && fs.existsSync(rootElectron)) {
+  try {
+    // Ensure local node_modules exists
+    if (!fs.existsSync(localNodeModules)) {
+      fs.mkdirSync(localNodeModules, { recursive: true });
+    }
+    
+    // Create symlink (junction on Windows, symlink on Unix)
+    if (process.platform === 'win32') {
+      // Use junction on Windows (works for directories)
+      const { execSync } = require('child_process');
+      execSync(`mklink /J "${localElectron}" "${rootElectron}"`, { stdio: 'ignore' });
+    } else {
+      fs.symlinkSync(rootElectron, localElectron, 'dir');
+    }
+    console.log('✓ Created symlink to electron for electron-builder');
+  } catch (error) {
+    // If symlink creation fails, continue anyway - electron-builder might still work
+    console.warn('⚠ Could not create electron symlink:', error.message);
+  }
+}
+
+// Set NODE_PATH to help electron-builder find electron in hoisted location
+const nodePath = [
+  localNodeModules,
+  rootNodeModules,
+  process.env.NODE_PATH || ''
+].filter(Boolean).join(path.delimiter);
 
 let child;
 if (process.platform === 'win32') {
@@ -48,6 +132,7 @@ if (process.platform === 'win32') {
       windowsVerbatimArguments: false,
       env: {
         ...process.env,
+        NODE_PATH: nodePath,
         CSC_IDENTITY_AUTO_DISCOVERY: 'false',
       },
     }
@@ -58,6 +143,7 @@ if (process.platform === 'win32') {
     cwd: process.cwd(),
     env: {
       ...process.env,
+      NODE_PATH: nodePath,
       CSC_IDENTITY_AUTO_DISCOVERY: 'false',
     },
   });

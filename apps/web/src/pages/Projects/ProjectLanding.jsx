@@ -98,7 +98,10 @@ function ProjectLanding() {
       const foundProject = projects.find(p => p.id === parseInt(projectId));
       
       if (foundProject) {
-        const files = await apiService.getProjectFiles(foundProject.id);
+        const [files, memoriesData] = await Promise.all([
+          apiService.getProjectFiles(foundProject.id),
+          apiService.getProjectMemories(foundProject.id)
+        ]);
         
         setProject({
           id: foundProject.id,
@@ -108,7 +111,7 @@ function ProjectLanding() {
           createdAt: formatTime(foundProject.created_at),
           storageUsed: 0,
           storageTotal: 10,
-          memory: [],
+          memory: memoriesData.memories || [],
           instructions: '',
           files: files || [],
           isStarred: foundProject.is_starred

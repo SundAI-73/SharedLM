@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     # Encryption (NEW)
     encryption_key: str = ""
     
+    # Email Configuration
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    frontend_url: str = "http://localhost:3000"
+    
     # Model Defaults
     default_model_openai: str = "gpt-4o-mini"
     default_model_anthropic: str = "claude-3-5-sonnet-20241022"

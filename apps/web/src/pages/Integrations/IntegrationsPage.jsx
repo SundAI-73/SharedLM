@@ -90,8 +90,12 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
       
       // Fetch custom integrations
       const integrations = await apiService.getCustomIntegrations(userId);
-      console.log('[IntegrationsPage] Loaded custom integrations:', integrations);
-      setCustomIntegrations(integrations || []);
+      // Filter out duplicates by provider_id (keep first occurrence)
+      const uniqueIntegrations = integrations.filter((int, index, self) =>
+        index === self.findIndex(i => i.provider_id === int.provider_id)
+      );
+      console.log('[IntegrationsPage] Loaded custom integrations:', uniqueIntegrations);
+      setCustomIntegrations(uniqueIntegrations || []);
       
       // Filter for active custom integrations - only include those with API key or base URL
       const connectedFromIntegrations = (integrations || [])

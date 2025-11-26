@@ -24,7 +24,12 @@ export const createSession = (userData) => {
     localStorage.setItem('sharedlm_user_email', userData.email);
   }
   if (userData.display_name || userData.name) {
-    localStorage.setItem('sharedlm_user_name', userData.display_name || userData.name);
+    const fullName = userData.display_name || userData.name;
+    localStorage.setItem('sharedlm_full_name', fullName);
+    // Preserve existing nickname if the user already set one; otherwise keep it empty
+    if (!localStorage.getItem('sharedlm_user_name')) {
+      localStorage.setItem('sharedlm_user_name', '');
+    }
   }
   
   // Store token if provided (for JWT)
@@ -87,6 +92,7 @@ export const clearSession = () => {
   localStorage.removeItem(SESSION_EXPIRY_KEY);
   localStorage.removeItem('sharedlm_user_id');
   localStorage.removeItem('sharedlm_user_email');
+  localStorage.removeItem('sharedlm_full_name');
   localStorage.removeItem('sharedlm_user_name');
   sessionStorage.removeItem('auth_token');
   

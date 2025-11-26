@@ -32,7 +32,7 @@ export const UserProvider = ({ children }) => {
   // Analytics page visibility state - default enabled
   const [analyticsEnabled, setAnalyticsEnabled] = useState(() => {
     const saved = localStorage.getItem('sharedlm_analytics_enabled');
-    return saved !== null ? JSON.parse(saved) : true;
+    return saved !== null ? JSON.parse(saved) : false;
   });
 
   // Starred projects state

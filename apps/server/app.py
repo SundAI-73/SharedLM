@@ -10,10 +10,12 @@ from database.connection import engine
 from database import models
 
 # Import route modules
-from api.routes import health, auth, chat, projects, conversations, api_keys
+from api.routes import health, auth, chat, projects, conversations, api_keys, ollama
 
-# Create tables
-models.Base.metadata.create_all(bind=engine)
+# Create tables (skip in test environment)
+import os
+if os.getenv("ENVIRONMENT") != "test":
+    models.Base.metadata.create_all(bind=engine)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -81,6 +83,7 @@ app.include_router(projects.router)
 app.include_router(conversations.router)
 app.include_router(api_keys.router)
 app.include_router(custom_integrations.router)
+app.include_router(ollama.router)
 
 # Startup event
 @app.on_event("startup")

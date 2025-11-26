@@ -1,0 +1,55 @@
+{
+  // Python configuration
+  "python.defaultInterpreterPath": "${workspaceFolder}/apps/server/.venv/Scripts/python.exe",
+  "python.terminal.activateEnvironment": true,
+  
+  // Python path for imports
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/apps/server"
+  ],
+  
+  // Pytest configuration for Test Explorer
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "test/server",
+    "-v",
+    "--tb=long",
+    "--showlocals",
+    "--durations=10"
+  ],
+  "python.testing.cwd": "${workspaceFolder}",
+  
+  // Environment variables for tests
+  "python.testing.pytestEnvFile": "${workspaceFolder}/.env.test",
+  
+  // Auto discover tests
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  
+  // Terminal environment for tests
+  "python.terminal.activateEnvInCurrentTerminal": true,
+  
+  // File associations
+  "files.associations": {
+    "*.py": "python"
+  },
+  
+  // Python formatting (optional)
+  "python.formatting.provider": "none",
+  
+  // Python linting (optional)
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": false,
+  
+  // Workspace folders
+  "python.envFile": "${workspaceFolder}/.env",
+  
+  // Test Explorer settings
+  "python.testing.promptToConfigure": false,
+  
+  // Coverage settings
+  "python.testing.pytestPath": "pytest"
+}
+

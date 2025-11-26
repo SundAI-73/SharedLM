@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
 import logo from '../../assets/images/logo main.svg';
+import apiService from '../../services/api';
 import '../Login/Login.css';
 
 function ForgotPasswordPage() {
@@ -21,11 +22,19 @@ function ForgotPasswordPage() {
 
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setSent(true);
+    try {
+      const response = await apiService.forgotPassword(email);
+      
+      if (response.success) {
+        setSent(true);
+      } else {
+        setError(response.message || 'Failed to send reset email');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to send reset email. Please try again.');
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   if (sent) {

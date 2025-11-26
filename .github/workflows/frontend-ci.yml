@@ -1,22 +1,9 @@
+# This workflow is kept for reference but not used for PRs
+# PRs use ci-complete.yml instead
 name: Frontend CI
 
 on:
-  pull_request:
-    branches:
-      - main
-      - gagan
-      - nwl
-    paths:
-      - 'apps/web/**'
-      - 'package.json'
-      - '.github/workflows/frontend-ci.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'apps/web/**'
-      - 'package.json'
-      - '.github/workflows/frontend-ci.yml'
+  workflow_dispatch:
 
 jobs:
   check:
