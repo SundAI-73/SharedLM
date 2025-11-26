@@ -266,8 +266,6 @@ def create_chat_file(db: Session, conversation_id: int, filename: str, file_size
 
 def get_chat_files(db: Session, conversation_id: int):
     return db.query(ChatFile).filter(ChatFile.conversation_id == conversation_id).all()
-        db.commit()
-    return True
 
 def create_password_reset_token(db: Session, user_id: str, token: str, expires_at: datetime):
     """Create a password reset token"""
