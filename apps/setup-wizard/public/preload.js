@@ -10,12 +10,16 @@ contextBridge.exposeInMainWorld('electron', {
   
   // Installation
   selectInstallDirectory: () => ipcRenderer.invoke('select-install-directory'),
-  installSharedLM: (installPath, selectedModels) => 
-    ipcRenderer.invoke('install-sharedlm', installPath, selectedModels),
+  installSharedLM: (installPath, selectedModels, modelData, modelsToRemove) => 
+    ipcRenderer.invoke('install-sharedlm', installPath, selectedModels, modelData, modelsToRemove),
   
   // Ollama
   checkOllamaInstalled: () => ipcRenderer.invoke('check-ollama-installed'),
   downloadOllama: () => ipcRenderer.invoke('download-ollama'),
+  getExistingOllamaModels: () => ipcRenderer.invoke('get-existing-ollama-models'),
+  
+  // Application launch
+  launchApplication: (installPath) => ipcRenderer.invoke('launch-application', installPath),
   
   // Installation progress listener
   onInstallProgress: (callback) => {

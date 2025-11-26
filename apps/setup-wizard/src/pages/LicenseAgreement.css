@@ -3,16 +3,41 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #1a1a1a;
-  padding: 40px;
+  background: #000000;
+  padding: 35px 25px;
   overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.license-logo {
+  position: absolute;
+  top: 35px;
+  right: 25px;
+  width: 80px;
+  height: 80px;
+  pointer-events: none;
+  z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.license-logo .logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: brightness(1.1);
 }
 
 .license-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+  margin-right: 100px;
+  margin-top: 0;
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
 }
 
 .page-title {
@@ -20,57 +45,181 @@
   font-weight: 600;
   color: #ffffff;
   margin: 0;
-}
-
-.step-indicator {
-  font-size: 14px;
-  color: #888888;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.2;
 }
 
 .license-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   overflow: hidden;
+  min-height: 0;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 16px;
+  margin-right: 0;
+  max-width: 100%;
 }
 
 .license-instructions {
-  color: #cccccc;
+  color: #ffffff;
   font-size: 14px;
   line-height: 1.6;
+  flex-shrink: 0;
 }
 
 .license-instructions p {
-  margin: 8px 0;
+  margin: 4px 0;
 }
 
 .license-text-container {
   flex: 1;
-  background: #0a0a0a;
+  background: #1a1a1a;
   border: 1px solid #333333;
   border-radius: 4px;
   overflow: hidden;
-  min-height: 200px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  align-self: flex-end;
 }
 
 .license-text {
-  padding: 20px;
+  padding: 16px;
   color: #cccccc;
   font-size: 12px;
-  line-height: 1.8;
+  line-height: 1.6;
   white-space: pre-wrap;
   overflow-y: auto;
-  height: 100%;
+  flex: 1;
   font-family: 'Courier New', monospace;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  flex-shrink: 0;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.radio-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.radio-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #B94539;
+}
+
+.radio-option label {
+  cursor: pointer;
+  font-size: 14px;
+  color: #ffffff;
 }
 
 .license-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #333333;
+  margin-top: auto;
+  padding-top: 16px;
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 800px) {
+  .license-page {
+    padding: 35px 25px;
+  }
+  
+  .license-header {
+    margin-right: 80px;
+  }
+  
+  .license-content {
+    margin-right: 0;
+    max-width: 100%;
+  }
+  
+  .license-logo {
+    width: 60px;
+    height: 60px;
+    top: 40px;
+    right: 20px;
+  }
+  
+  .page-title {
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .license-page {
+    padding: 35px 25px;
+  }
+  
+  .license-header {
+    margin-right: 120px;
+  }
+  
+  .license-content {
+    margin-right: 0;
+    max-width: 100%;
+  }
+  
+  .license-logo {
+    width: 70px;
+    height: 70px;
+    top: 40px;
+    right: 20px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .license-page {
+    padding: 35px 25px;
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+  
+  .license-header {
+    margin-right: 140px;
+  }
+  
+  .license-content {
+    margin-right: 0;
+    max-width: 100%;
+  }
+  
+  .license-logo {
+    width: 70px;
+    height: 70px;
+    top: 40px;
+    right: 20px;
+  }
+  
+  .page-title {
+    font-size: 28px;
+  }
 }
 

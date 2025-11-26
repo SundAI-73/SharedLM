@@ -48,9 +48,11 @@ By clicking "I accept the agreement" and continuing with the installation, you a
 
   return (
     <div className="license-page">
+      <div className="license-logo">
+        <img src={`${process.env.PUBLIC_URL || ''}/logo.svg`} alt="SharedLM" className="logo-image" onError={(e) => { console.error('Logo failed to load:', e.target.src); }} />
+      </div>
       <div className="license-header">
         <h1 className="page-title">License Agreement</h1>
-        <div className="step-indicator">Step 1 of 4</div>
       </div>
 
       <div className="license-content">
@@ -90,14 +92,7 @@ By clicking "I accept the agreement" and continuing with the installation, you a
       </div>
 
       <div className="license-footer">
-        <button className="btn btn-secondary" onClick={onBack} disabled>
-          Back
-        </button>
-        <button
-          className="btn btn-primary"
-          onClick={onNext}
-          disabled={!localAccepted}
-        >
+        <button className="btn btn-primary" onClick={onNext} disabled={!localAccepted}>
           Next
         </button>
       </div>

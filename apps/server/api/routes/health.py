@@ -36,9 +36,14 @@ async def get_models(
         available_models = [key.provider for key in api_keys if key.is_active is True]
         
         # Also include custom integrations
+        # Include custom integrations that have base_url (even without API keys)
         try:
             custom_integrations = crud.get_user_custom_integrations(db, user_id)
-            custom_providers = [int.provider_id for int in custom_integrations if int.is_active is True]
+            # Include custom integrations that have base_url (they can work without API keys)
+            custom_providers = [
+                int.provider_id for int in custom_integrations 
+                if int.is_active is True and int.base_url  # Only include if has base_url
+            ]
             available_models.extend(custom_providers)
         except Exception as e:
             # If custom integrations query fails, just continue with API keys

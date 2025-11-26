@@ -110,7 +110,9 @@ function AppContent() {
     const checkBackend = async () => {
       // In Electron, wait longer for backend to initialize
       if (window.electron) {
-        console.log('🖥️ Running in Electron - waiting for backend...');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🖥️ Running in Electron - waiting for backend...');
+        }
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
       
@@ -118,10 +120,14 @@ function AppContent() {
         const health = await apiService.checkHealth();
         if (mounted) {
           setBackendStatus(health.status === 'ok' ? 'connected' : 'disconnected');
-          console.log('✅ Backend status:', health.status);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Backend status:', health.status);
+          }
         }
       } catch (error) {
-        console.error('❌ Backend check failed:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('❌ Backend check failed:', error);
+        }
         if (mounted) {
           setBackendStatus('disconnected');
         }
@@ -132,13 +138,15 @@ function AppContent() {
     return () => { mounted = false; };
   }, []);
 
-  // Log Electron environment info
+  // Log Electron environment info (only in development)
   useEffect(() => {
-    if (window.electron) {
-      console.log('🖥️ Running in Electron');
-      console.log('Platform:', window.electron.platform);
-    } else {
-      console.log('🌐 Running in browser');
+    if (process.env.NODE_ENV === 'development') {
+      if (window.electron) {
+        console.log('🖥️ Running in Electron');
+        console.log('Platform:', window.electron.platform);
+      } else {
+        console.log('🌐 Running in browser');
+      }
     }
   }, []);
 

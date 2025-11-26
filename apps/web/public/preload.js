@@ -28,5 +28,8 @@ contextBridge.exposeInMainWorld('electron', {
     set: (key, value) => ipcRenderer.invoke('store-set', key, value),
     delete: (key) => ipcRenderer.invoke('store-delete', key),
     clear: () => ipcRenderer.invoke('store-clear')
-  }
+  },
+  
+  // Config reading
+  readConfig: (installPath) => ipcRenderer.invoke('read-install-config', installPath)
 });
