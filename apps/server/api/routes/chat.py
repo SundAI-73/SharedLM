@@ -107,29 +107,52 @@ async def chat(
         # Check cache first to avoid database query and decryption
         api_key = get_cached_api_key(request.user_id, request.model_provider)
         
-        if not api_key:
-            # Cache miss - fetch from database and decrypt
-            api_key_obj = crud.get_api_key(db, request.user_id, request.model_provider)
-            if api_key_obj:
-                try:
-                    api_key = decrypt_key(api_key_obj.encrypted_key)
-                    # Cache the decrypted key for future requests
-                    set_cached_api_key(request.user_id, request.model_provider, api_key)
-                    logger.info(f"API key found and cached for user {request.user_id}, provider {request.model_provider}")
-                except Exception as e:
-                    logger.warning(f"Failed to decrypt API key for {request.model_provider}: {e}")
+        # For custom integrations with base_url, API key is optional
+        if custom_integration and custom_integration.base_url:
+            # Custom integration with base_url - API key is optional (can use placeholder)
+            if not api_key:
+                api_key_obj = crud.get_api_key(db, request.user_id, request.model_provider)
+                if api_key_obj:
+                    try:
+                        api_key = decrypt_key(api_key_obj.encrypted_key)
+                        set_cached_api_key(request.user_id, request.model_provider, api_key)
+                        logger.info(f"API key found and cached for user {request.user_id}, provider {request.model_provider}")
+                    except Exception as e:
+                        logger.warning(f"Failed to decrypt API key for {request.model_provider}: {e}")
+                        # For custom integrations with base_url, use placeholder if decryption fails
+                        api_key = "ollama"  # Placeholder for Ollama or similar services
+                        logger.info(f"Using placeholder API key for custom integration {request.model_provider} with base_url")
+                else:
+                    # No API key found, but base_url exists - use placeholder
+                    api_key = "ollama"  # Placeholder for services that don't require real API keys
+                    logger.info(f"Using placeholder API key for custom integration {request.model_provider} with base_url")
+            else:
+                logger.debug(f"API key retrieved from cache for user {request.user_id}, provider {request.model_provider}")
+        else:
+            # Standard providers or custom integrations without base_url - API key is required
+            if not api_key:
+                # Cache miss - fetch from database and decrypt
+                api_key_obj = crud.get_api_key(db, request.user_id, request.model_provider)
+                if api_key_obj:
+                    try:
+                        api_key = decrypt_key(api_key_obj.encrypted_key)
+                        # Cache the decrypted key for future requests
+                        set_cached_api_key(request.user_id, request.model_provider, api_key)
+                        logger.info(f"API key found and cached for user {request.user_id}, provider {request.model_provider}")
+                    except Exception as e:
+                        logger.warning(f"Failed to decrypt API key for {request.model_provider}: {e}")
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"Failed to decrypt API key for {request.model_provider}. Please update your API key in Settings."
+                        )
+                else:
+                    logger.warning(f"No API key found in database for user {request.user_id}, provider {request.model_provider}")
                     raise HTTPException(
-                        status_code=500,
-                        detail=f"Failed to decrypt API key for {request.model_provider}. Please update your API key in Settings."
+                        status_code=400,
+                        detail=f"No API key found for {request.model_provider}. Please add your API key in Settings."
                     )
             else:
-                logger.warning(f"No API key found in database for user {request.user_id}, provider {request.model_provider}")
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"No API key found for {request.model_provider}. Please add your API key in Settings."
-                )
-        else:
-            logger.debug(f"API key retrieved from cache for user {request.user_id}, provider {request.model_provider}")
+                logger.debug(f"API key retrieved from cache for user {request.user_id}, provider {request.model_provider}")
         
         # Wait for memory search to complete (may already be done by now)
         memories = await memories_task

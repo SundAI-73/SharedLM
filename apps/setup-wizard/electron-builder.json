@@ -13,29 +13,20 @@
     "node_modules/**/*",
     "package.json"
   ],
+  "extraResources": [
+    {
+      "from": "../application",
+      "to": "application",
+      "filter": ["SharedLM-Portable-*.exe"]
+    }
+  ],
   "win": {
     "target": [
       {
-        "target": "nsis",
+        "target": "portable",
         "arch": ["x64"]
       }
-    ],
-    "icon": "public/icon.png"
-  },
-  "nsis": {
-    "oneClick": false,
-    "allowToChangeInstallationDirectory": true,
-    "allowElevation": true,
-    "createDesktopShortcut": true,
-    "createStartMenuShortcut": true,
-    "shortcutName": "SharedLM",
-    "installerIcon": "public/icon.png",
-    "uninstallerIcon": "public/icon.png",
-    "installerHeaderIcon": "public/icon.png",
-    "deleteAppDataOnUninstall": true,
-    "runAfterFinish": false,
-    "menuCategory": "Development",
-    "include": "installer.nsh"
+    ]
   },
   "extraMetadata": {
     "main": "public/electron.js"

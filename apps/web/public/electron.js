@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs').promises;
 
 // Use dynamic import for electron-store to handle both ESM and CommonJS
 let Store;
@@ -35,7 +36,8 @@ async function initializeStore() {
 let mainWindow;
 
 // Determine if running in development mode
-const isDev = !app.isPackaged;
+// Check environment variable first (set by setup wizard when launching installed app)
+const isDev = process.env.ELECTRON_IS_DEV !== '0' && !app.isPackaged;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -49,7 +51,7 @@ function createWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js'),
-      devTools: true // Enable DevTools even in production for debugging
+      devTools: isDev // Only enable DevTools in development mode
     },
     icon: path.join(__dirname, 'icon.png'),
     titleBarStyle: 'hidden',
@@ -60,46 +62,70 @@ function createWindow() {
 
   // In packaged app, files are in resources/app.asar or resources/app
   // electron.js is at public/electron.js, so build is at ../build from there
+  // In installed directory, electron.js and index.html are in the same directory
   let startURL;
   if (isDev) {
     startURL = 'http://localhost:3000';
   } else {
-    // Use path.resolve for absolute path, and normalize separators
-    const indexPath = path.resolve(__dirname, '..', 'build', 'index.html');
+    // Check if index.html is in the same directory (installed) or in ../build (packaged)
+    const indexPathSameDir = path.resolve(__dirname, 'index.html');
+    const indexPathBuild = path.resolve(__dirname, '..', 'build', 'index.html');
+    
+    // Use synchronous file access instead of async
+    const fsSync = require('fs');
+    let indexPath;
+    if (fsSync.existsSync(indexPathSameDir)) {
+      indexPath = indexPathSameDir;
+      if (isDev) console.log('Using installed directory structure (index.html in same dir)');
+    } else {
+      indexPath = indexPathBuild;
+      if (isDev) console.log('Using packaged directory structure (index.html in ../build)');
+    }
+    
     startURL = `file://${indexPath.replace(/\\/g, '/')}`;
   }
 
-  console.log('=== Electron Debug Info ===');
-  console.log('Loading URL:', startURL);
-  console.log('__dirname:', __dirname);
-  console.log('app.isPackaged:', app.isPackaged);
-  console.log('app.getAppPath():', app.getAppPath());
-  console.log('==========================');
+  // Only log debug info in development
+  if (isDev) {
+    console.log('=== Electron Debug Info ===');
+    console.log('Loading URL:', startURL);
+    console.log('__dirname:', __dirname);
+    console.log('app.isPackaged:', app.isPackaged);
+    console.log('app.getAppPath():', app.getAppPath());
+    console.log('==========================');
+  }
   
   mainWindow.loadURL(startURL).catch(err => {
-    console.error('Failed to load URL:', err);
+    if (isDev) console.error('Failed to load URL:', err);
   });
 
-  // Log when page finishes loading
-  mainWindow.webContents.on('did-finish-load', () => {
-    console.log('Page finished loading');
-  });
+  // Only log in development
+  if (isDev) {
+    // Log when page finishes loading
+    mainWindow.webContents.on('did-finish-load', () => {
+      console.log('Page finished loading');
+    });
 
-  // Log any console messages from renderer
-  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-    console.log(`Renderer console [${level}]:`, message);
-  });
+    // Log any console messages from renderer
+    mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+      console.log(`Renderer console [${level}]:`, message);
+    });
+  }
 
-  // Log navigation errors
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-    console.error('Failed to load:', errorDescription, 'URL:', validatedURL);
-  });
+  // Log navigation errors (only in development)
+  if (isDev) {
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error('Failed to load:', errorDescription, 'URL:', validatedURL);
+    });
+  }
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     
-    // Open DevTools to see console output (temporarily for debugging)
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
+    // Only open DevTools in development mode
+    if (isDev) {
+      mainWindow.webContents.openDevTools({ mode: 'detach' });
+    }
 
     // Send initial window state after window is ready
     if (mainWindow.isMaximized()) {
@@ -190,5 +216,27 @@ function setupStorageHandlers() {
     const storeInstance = await initializeStore();
     storeInstance.clear();
     return true;
+  });
+
+  // Handler to read installation config file
+  ipcMain.handle('read-install-config', async (event, installPath) => {
+    try {
+      if (!installPath) {
+        // Try to get install path from store
+        const storeInstance = await initializeStore();
+        installPath = storeInstance.get('install_path');
+      }
+      
+      if (!installPath) {
+        return null;
+      }
+      
+      const configPath = path.join(installPath, 'config.json');
+      const configData = await fs.readFile(configPath, 'utf8');
+      return JSON.parse(configData);
+    } catch (error) {
+      console.error('Failed to read install config:', error);
+      return null;
+    }
   });
 }

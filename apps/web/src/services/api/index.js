@@ -936,9 +936,52 @@ class APIService {
       return null;
     }
   }
+
+  // Ollama API methods
+  async checkOllamaInstalled() {
+    try {
+      const response = await this.makeRequest(`${API_BASE_URL}/ollama/check`);
+      if (!response.ok) throw new Error('Failed to check Ollama');
+      return await response.json();
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Check Ollama failed:', error);
+      }
+      return { installed: false };
+    }
+  }
+
+  async getOllamaModels() {
+    try {
+      const response = await this.makeRequest(`${API_BASE_URL}/ollama/models`);
+      if (!response.ok) throw new Error('Failed to get Ollama models');
+      return await response.json();
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Get Ollama models failed:', error);
+      }
+      return { installed_models: [], available_models: [] };
+    }
+  }
+
+  async getOllamaModelStatus(modelId) {
+    try {
+      const response = await this.makeRequest(`${API_BASE_URL}/ollama/model/${encodeURIComponent(modelId)}/status`);
+      if (!response.ok) throw new Error('Failed to get model status');
+      return await response.json();
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Get Ollama model status failed:', error);
+      }
+      return { model_id: modelId, installed: false };
+    }
+  }
 }
 
-console.log('API Base URL:', API_BASE_URL);
+// Only log API URL in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('API Base URL:', API_BASE_URL);
+}
 
 const apiService = new APIService();
 export default apiService;

@@ -15,6 +15,9 @@ function App() {
     licenseAccepted: false,
     installPath: '',
     selectedModels: [],
+    modelData: [],
+    modelsToRemove: [],
+    existingModels: [],
     systemInfo: null
   });
 
@@ -33,7 +36,7 @@ function App() {
   };
 
   const nextPage = () => {
-    if (currentPage < 5) {
+    if (currentPage < 4) { // Changed from 5 to 4 - skip completion page (page 4 is the last)
       setCurrentPage(prev => prev + 1);
     }
   };
@@ -51,7 +54,6 @@ function App() {
       accepted={wizardData.licenseAccepted}
       onAccept={(accepted) => {
         updateWizardData({ licenseAccepted: accepted });
-        if (accepted) nextPage();
       }}
       onNext={nextPage}
       onBack={prevPage}
@@ -67,8 +69,10 @@ function App() {
       key="models"
       systemInfo={wizardData.systemInfo}
       selectedModels={wizardData.selectedModels}
-      onModelsChange={(models) => updateWizardData({ selectedModels: models })}
+      installPath={wizardData.installPath}
+      onModelsChange={(models, modelData, modelsToRemove) => updateWizardData({ selectedModels: models, modelData: modelData || [], modelsToRemove: modelsToRemove || [] })}
       onSystemInfoLoaded={(info) => updateWizardData({ systemInfo: info })}
+      onExistingModelsLoaded={(existing) => updateWizardData({ existingModels: existing || [] })}
       onNext={nextPage}
       onBack={prevPage}
     />,
@@ -76,13 +80,11 @@ function App() {
       key="progress"
       installPath={wizardData.installPath}
       selectedModels={wizardData.selectedModels}
+      modelData={wizardData.modelData}
+      modelsToRemove={wizardData.modelsToRemove}
+      existingModels={wizardData.existingModels}
       onComplete={nextPage}
       onBack={prevPage}
-    />,
-    <Completion
-      key="completion"
-      installPath={wizardData.installPath}
-      selectedModels={wizardData.selectedModels}
     />
   ];
 

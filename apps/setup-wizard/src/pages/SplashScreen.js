@@ -12,7 +12,7 @@ const SplashScreen = () => {
         className="splash-content"
       >
         <div className="splash-logo">
-          <div className="logo-text">SharedLM</div>
+          <img src={`${process.env.PUBLIC_URL || ''}/logo.svg`} alt="SharedLM" className="logo-image" onError={(e) => { console.error('Logo failed to load:', e.target.src); }} />
         </div>
         <motion.div
           initial={{ opacity: 0 }}
@@ -20,7 +20,7 @@ const SplashScreen = () => {
           transition={{ delay: 0.3, duration: 0.5 }}
           className="splash-subtitle"
         >
-          Unified AI Interface
+          SharedLM
         </motion.div>
       </motion.div>
     </div>
