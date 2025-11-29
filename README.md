@@ -7,6 +7,20 @@ A unified chat interface that enables seamless conversations across multiple LLM
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
+---
+
+> SHAREDLM
+>
+> SHAREDLM started out of a desire to experiment with local language models and unify fragmented AI conversations into a single, persistent interface.
+>
+> What began here is becoming part of something much larger - a unified ecosystem where every AI conversation builds upon the last.
+>
+> soon™
+>
+> \- The SharedLM Team
+
+---
+
 ## Table of Contents
 
 - [About The Project](#about-the-project)
