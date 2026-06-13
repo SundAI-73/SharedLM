@@ -91,12 +91,15 @@ class Conversation(Base):
 
 class Message(Base):
     __tablename__ = "messages"
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
     role = Column(String(50), nullable=False)
     content = Column(Text, nullable=False)
     model = Column(String(100))
+    prompt_tokens = Column(Integer)
+    completion_tokens = Column(Integer)
+    response_time_ms = Column(Integer)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     conversation = relationship("Conversation", back_populates="messages")

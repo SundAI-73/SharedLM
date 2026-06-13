@@ -50,9 +50,40 @@ Please use the information from the attached chat files to answer the user's que
 Please use the information from the attached files to answer the user's question. Reference specific details from the files when relevant."""
 
 
+def compose_system_context(
+    memories: List[str],
+    project_files_content: Optional[List[dict]] = None,
+    chat_files_content: Optional[List[dict]] = None
+) -> Optional[str]:
+    """Compose a system message carrying memories and file context.
+
+    Used by the history-aware chat flow: prior turns travel as real
+    user/assistant messages and the user's message stays untouched, so only
+    cross-conversation context belongs in the system prompt.
+    """
+    context_parts = [
+        "You are an assistant inside SharedLM, a chat app where the user talks to "
+        "multiple AI models with shared persistent memory across all of them."
+    ]
+
+    memory_context = format_memories(memories)
+    if memory_context:
+        context_parts.append(memory_context)
+
+    project_files_context = format_file_content(project_files_content or [], "project")
+    if project_files_context:
+        context_parts.append(project_files_context)
+
+    chat_files_context = format_file_content(chat_files_content or [], "chat")
+    if chat_files_context:
+        context_parts.append(chat_files_context)
+
+    return "\n\n".join(context_parts)
+
+
 def compose_prompt(
-    memories: List[str], 
-    user_message: str, 
+    memories: List[str],
+    user_message: str,
     project_files_content: Optional[List[dict]] = None,
     chat_files_content: Optional[List[dict]] = None
 ) -> str:

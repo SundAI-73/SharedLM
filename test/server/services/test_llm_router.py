@@ -121,10 +121,12 @@ class TestCustomIntegration:
     
     @pytest.mark.asyncio
     async def test_call_custom_integration_missing_api_key(self):
-        """Test custom integration call without API key"""
+        """Custom integrations don't require an API key (e.g. Ollama): with no
+        key it falls back to a placeholder and attempts the call, so an
+        unreachable URL surfaces as a connection failure, not a key error."""
         with pytest.raises(Exception) as exc_info:
             await call_custom_integration("Test prompt", "model", None, "https://api.example.com", "openai")
-        assert "API key" in str(exc_info.value)
+        assert "failed" in str(exc_info.value).lower()
     
     @pytest.mark.asyncio
     async def test_call_custom_integration_missing_base_url(self):
@@ -146,7 +148,7 @@ class TestRouteChat:
         reply, model = await route_chat("openai", "gpt-4o-mini", "Test prompt", "sk-test123")
         assert reply == "OpenAI response"
         assert model == "gpt-4o-mini"
-        mock_call_openai.assert_called_once_with(prompt="Test prompt", model="gpt-4o-mini", api_key="sk-test123")
+        mock_call_openai.assert_called_once_with(prompt="Test prompt", model="gpt-4o-mini", api_key="sk-test123", history=None, system=None, max_tokens=None)
     
     @patch('services.llm_router.call_anthropic', new_callable=AsyncMock)
     @pytest.mark.asyncio
@@ -156,7 +158,7 @@ class TestRouteChat:
         reply, model = await route_chat("anthropic", "claude-3-5-sonnet-20241022", "Test prompt", "sk-ant-test123")
         assert reply == "Anthropic response"
         assert model == "claude-3-5-sonnet-20241022"
-        mock_call_anthropic.assert_called_once_with(prompt="Test prompt", model="claude-3-5-sonnet-20241022", api_key="sk-ant-test123")
+        mock_call_anthropic.assert_called_once_with(prompt="Test prompt", model="claude-3-5-sonnet-20241022", api_key="sk-ant-test123", history=None, system=None, max_tokens=None)
     
     @patch('services.llm_router.call_mistral', new_callable=AsyncMock)
     @pytest.mark.asyncio
@@ -166,7 +168,7 @@ class TestRouteChat:
         reply, model = await route_chat("mistral", "mistral-small-latest", "Test prompt", "mistral-key")
         assert reply == "Mistral response"
         assert model == "mistral-small-latest"
-        mock_call_mistral.assert_called_once_with(prompt="Test prompt", model="mistral-small-latest", api_key="mistral-key")
+        mock_call_mistral.assert_called_once_with(prompt="Test prompt", model="mistral-small-latest", api_key="mistral-key", history=None, system=None, max_tokens=None)
     
     @patch('services.llm_router.call_custom_integration', new_callable=AsyncMock)
     @pytest.mark.asyncio
@@ -192,7 +194,11 @@ class TestRouteChat:
             model="custom-model",
             api_key="sk-custom123",
             base_url="https://api.custom.com",
-            api_type="openai"
+            api_type="openai",
+            fallback_urls=mock_integration.fallback_urls,
+            history=None,
+            system=None,
+            max_tokens=None
         )
     
     @pytest.mark.asyncio

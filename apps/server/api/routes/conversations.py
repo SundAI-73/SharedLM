@@ -43,6 +43,81 @@ async def get_conversations(
         logger.error(f"Get conversations error: {e}")
         raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to retrieve conversations"))
 
+@router.get("/{user_id}/search")
+async def search_conversations(
+    user_id: str,
+    q: str,
+    limit: int = 20,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Full-text search across the user's conversation titles and message contents"""
+    try:
+        verify_user_ownership(current_user, user_id, "conversations")
+
+        query = (q or "").strip()
+        if len(query) < 2:
+            return {"results": [], "query": query}
+
+        from database.models import Conversation, Message
+        pattern = f"%{query}%"
+        limit = max(1, min(limit, 50))
+
+        # Conversations whose title matches
+        title_matches = db.query(Conversation).filter(
+            Conversation.user_id == user_id,
+            Conversation.title.ilike(pattern)
+        ).all()
+
+        # Conversations containing a matching message (with a snippet)
+        message_rows = db.query(Message, Conversation).join(
+            Conversation, Message.conversation_id == Conversation.id
+        ).filter(
+            Conversation.user_id == user_id,
+            Message.content.ilike(pattern)
+        ).order_by(Message.created_at.desc()).limit(limit * 3).all()
+
+        results = {}
+        for conv in title_matches:
+            results[conv.id] = {
+                "id": conv.id,
+                "title": conv.title,
+                "model_used": conv.model_used,
+                "message_count": conv.message_count,
+                "project_id": conv.project_id,
+                "updated_at": str(conv.updated_at),
+                "snippet": None
+            }
+        for message, conv in message_rows:
+            if conv.id not in results:
+                results[conv.id] = {
+                    "id": conv.id,
+                    "title": conv.title,
+                    "model_used": conv.model_used,
+                    "message_count": conv.message_count,
+                    "project_id": conv.project_id,
+                    "updated_at": str(conv.updated_at),
+                    "snippet": None
+                }
+            if results[conv.id]["snippet"] is None:
+                content = message.content
+                pos = content.lower().find(query.lower())
+                start = max(0, pos - 40)
+                snippet = content[start:start + 160].strip()
+                if start > 0:
+                    snippet = "…" + snippet
+                if start + 160 < len(content):
+                    snippet = snippet + "…"
+                results[conv.id]["snippet"] = snippet
+
+        ordered = sorted(results.values(), key=lambda r: r["updated_at"], reverse=True)[:limit]
+        return {"results": ordered, "query": query}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Search conversations error: {e}")
+        raise HTTPException(status_code=500, detail=sanitize_error_message(e, "Failed to search conversations"))
+
 @router.get("/{conversation_id}/messages", response_model=List[MessageResponse])
 async def get_messages(
     conversation_id: int,

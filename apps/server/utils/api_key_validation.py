@@ -7,7 +7,11 @@ import asyncio
 from typing import Optional
 import openai
 from anthropic import Anthropic
-from mistralai.client import MistralClient
+try:
+    # mistralai<2.0 legacy shim; removed in 2.x
+    from mistralai.client import MistralClient
+except ImportError:
+    MistralClient = None
 
 logger = logging.getLogger(__name__)
 
@@ -67,13 +71,22 @@ async def validate_mistral_key(api_key: str) -> tuple[bool, str]:
     Returns (is_valid, error_message)
     """
     try:
-        client = MistralClient(api_key=api_key)
-        # Make a minimal test call
-        response = await asyncio.to_thread(
-            client.chat,
-            model="mistral-small-latest",
-            messages=[{"role": "user", "content": "test"}]
-        )
+        if MistralClient is not None:
+            client = MistralClient(api_key=api_key)
+            # Make a minimal test call
+            response = await asyncio.to_thread(
+                client.chat,
+                model="mistral-small-latest",
+                messages=[{"role": "user", "content": "test"}]
+            )
+        else:
+            from services.llm_router import _modern_mistral_class
+            client = _modern_mistral_class()(api_key=api_key)
+            response = await asyncio.to_thread(
+                client.chat.complete,
+                model="mistral-small-latest",
+                messages=[{"role": "user", "content": "test"}]
+            )
         # If we get a response, the key is valid
         return True, ""
     except Exception as e:
@@ -110,6 +123,31 @@ async def validate_inception_key(api_key: str) -> tuple[bool, str]:
     except Exception as e:
         logger.error(f"Inception key validation error: {e}")
         return False, f"Failed to validate Inception Labs API key: {str(e)}"
+
+
+async def validate_openrouter_key(api_key: str) -> tuple[bool, str]:
+    """
+    Validate OpenRouter API key by listing models.
+    Returns (is_valid, error_message)
+    """
+    try:
+        client = openai.OpenAI(
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1"
+        )
+        # Use a lightweight endpoint to validate the key
+        models = await asyncio.to_thread(client.models.list)
+        return True, ""
+    except openai.AuthenticationError:
+        return False, "Invalid API key. Please check your OpenRouter API key."
+    except openai.APIError as e:
+        error_msg = str(e)
+        if "invalid_api_key" in error_msg.lower() or "401" in error_msg:
+            return False, "Invalid API key. Please check your OpenRouter API key."
+        return False, f"OpenRouter API error: {error_msg}"
+    except Exception as e:
+        logger.error(f"OpenRouter key validation error: {e}")
+        return False, f"Failed to validate OpenRouter API key: {str(e)}"
 
 
 async def validate_custom_integration_key(
@@ -169,6 +207,11 @@ async def validate_api_key(
     elif provider == 'inception':
         # Inception keys don't have a specific prefix
         return await validate_inception_key(api_key)
+    elif provider == 'openrouter':
+        # OpenRouter keys start with sk-or-
+        if not api_key.startswith('sk-or-'):
+            return False, "Invalid OpenRouter API key format (must start with sk-or-)"
+        return await validate_openrouter_key(api_key)
     elif provider.startswith('custom_'):
         # For custom integrations, base_url is optional
         # If base_url is provided, validate the API key

@@ -77,12 +77,19 @@ class TestComposePrompt:
         assert "User works on AI projects" in result
     
     def test_compose_prompt_instructions(self):
-        """Test that composed prompt includes instructions"""
-        user_message = "hello"
-        result = compose_prompt([], user_message)
-        assert "Instructions" in result
-        assert "respond to the user's message" in result.lower()
-        assert "considering the previous context" in result.lower() or "consider the previous context" in result.lower()
+        """Test that composed prompt includes instructions.
+
+        With no memories there is no prior context to reference, so the
+        instructions just ask the model to respond. When memories are present
+        the instructions should direct the model to use that context.
+        """
+        result_no_context = compose_prompt([], "hello")
+        assert "Instructions" in result_no_context
+        assert "respond to the user's message" in result_no_context.lower()
+
+        result_with_context = compose_prompt(["User prefers Python"], "hello")
+        assert "Instructions" in result_with_context
+        assert "context" in result_with_context.lower()
     
     def test_compose_prompt_structure(self):
         """Test that composed prompt has proper structure"""

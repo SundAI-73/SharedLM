@@ -10,12 +10,14 @@ from database.connection import engine
 from database import models
 
 # Import route modules
-from api.routes import health, auth, chat, projects, conversations, api_keys, ollama
+from api.routes import health, auth, chat, projects, conversations, api_keys, ollama, analytics, openrouter
 
 # Create tables (skip in test environment)
 import os
 if os.getenv("ENVIRONMENT") != "test":
     models.Base.metadata.create_all(bind=engine)
+    from database.connection import run_schema_upgrades
+    run_schema_upgrades(engine)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,15 +30,19 @@ app = FastAPI(
     version=settings.app_version
 )
 
+# Note: the root "/" endpoint is served by the health router.
+
 # Add validation error handler to log 422 errors
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Log validation errors for debugging"""
     import json
     from utils.security import sanitize_request_body
-    
-    body = await request.body()
+
     try:
+        # request.body() raises RuntimeError("Stream consumed") when the body
+        # was a multipart upload already parsed by FastAPI, so guard it.
+        body = await request.body()
         if body:
             body_dict = json.loads(body.decode())
             sanitized_body = sanitize_request_body(body_dict)
@@ -45,7 +51,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         else:
             logger.error(f"Validation error on {request.url.path}: {exc.errors()}")
     except Exception:
-        # If body can't be parsed, just log the error
+        # Body unavailable (stream consumed) or unparseable; just log the error
         logger.error(f"Validation error on {request.url.path}: {exc.errors()}")
     
     return JSONResponse(
@@ -84,6 +90,8 @@ app.include_router(conversations.router)
 app.include_router(api_keys.router)
 app.include_router(custom_integrations.router)
 app.include_router(ollama.router)
+app.include_router(analytics.router)
+app.include_router(openrouter.router)
 
 # Startup event
 @app.on_event("startup")

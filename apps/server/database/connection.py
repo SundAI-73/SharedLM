@@ -68,3 +68,28 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def run_schema_upgrades(target_engine=None):
+    """Add columns introduced after initial release to existing databases.
+
+    create_all() only creates missing tables, never missing columns, so
+    deployments with an existing sharedlm.db need these ALTERs.
+    """
+    from sqlalchemy import inspect, text
+
+    eng = target_engine or engine
+    inspector = inspect(eng)
+    if 'messages' not in inspector.get_table_names():
+        return
+
+    existing = {col['name'] for col in inspector.get_columns('messages')}
+    new_columns = {
+        'prompt_tokens': 'INTEGER',
+        'completion_tokens': 'INTEGER',
+        'response_time_ms': 'INTEGER',
+    }
+    with eng.begin() as conn:
+        for name, col_type in new_columns.items():
+            if name not in existing:
+                conn.execute(text(f"ALTER TABLE messages ADD COLUMN {name} {col_type}"))

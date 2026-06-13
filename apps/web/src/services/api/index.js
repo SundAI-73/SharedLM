@@ -477,13 +477,13 @@ class APIService {
    * @private
    */
   async sendLocalLLMMessage(userId, message, modelChoice, sessionId, projectId, specificModel) {
-    const { callLocalOllama } = await import('../utils/localLLMHandler');
+    const { callLocalOllama } = await import('../../utils/localLLMHandler');
     const { 
       getLocalMemories, 
       searchLocalMemories, 
       addLocalMemory,
       saveLocalChat 
-    } = await import('../utils/localStorage');
+    } = await import('../../utils/localStorage');
     
     // Get custom integration details
     const integrations = await this.getCustomIntegrations(userId);
