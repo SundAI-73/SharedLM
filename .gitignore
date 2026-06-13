@@ -23,8 +23,10 @@ build/
 # Python virtual environments (both .venv and venv)
 **/.venv/
 **/venv/
+**/.venv-new/
 apps/server/.venv/
 apps/server/venv/
+apps/server/.venv-new/
 
 # Pytest cache
 .pytest_cache/
@@ -92,6 +94,8 @@ yarn-error.log*
 **/coverage_html/
 **/coverage.xml
 *.cover
+.coverage
+**/.coverage
 .pytest_cache/
 **/.pytest_cache/
 

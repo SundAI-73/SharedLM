@@ -1,0 +1,238 @@
+/* Rich markdown rendering for assistant messages — headings, lists, tables,
+   blockquotes, links, and fenced code blocks with syntax highlighting.
+   Loaded after chat-messages.css so these win on equal specificity. */
+
+/* ---- Headings ---- */
+.message-text h1,
+.message-text h2,
+.message-text h3,
+.message-text h4,
+.message-text h5,
+.message-text h6 {
+  color: #FFFFFF;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.4em 0 0.6em 0;
+}
+.message-text h1:first-child,
+.message-text h2:first-child,
+.message-text h3:first-child,
+.message-text > *:first-child { margin-top: 0; }
+
+.message-text h1 { font-size: 1.45rem; }
+.message-text h2 { font-size: 1.25rem; }
+.message-text h3 { font-size: 1.1rem; }
+.message-text h4 { font-size: 1rem; }
+.message-text h5,
+.message-text h6 { font-size: 0.9rem; color: #C0C0C0; }
+
+/* ---- Lists ---- */
+.message-text ul,
+.message-text ol {
+  margin: 10px 0 16px 0;
+  padding-left: 24px;
+}
+.message-text ul { list-style: disc; }
+.message-text ol { list-style: decimal; }
+.message-text li {
+  padding: 3px 0;
+  line-height: 1.65;
+}
+.message-text li::marker { color: #B94539; }
+.message-text li > ul,
+.message-text li > ol { margin: 4px 0 4px 0; }
+
+/* ---- Blockquotes ---- */
+.message-text blockquote {
+  border-left: 3px solid #B94539;
+  padding: 4px 0 4px 16px;
+  margin: 12px 0;
+  color: #B0B0B0;
+}
+.message-text blockquote p:last-child { margin-bottom: 0; }
+
+/* ---- Links ---- */
+.message-text a {
+  color: #5AA9E6;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(90, 169, 230, 0.35);
+  transition: border-color 0.15s ease;
+}
+.message-text a:hover { border-bottom-color: #5AA9E6; }
+
+/* ---- Horizontal rule ---- */
+.message-text hr {
+  border: none;
+  border-top: 1px solid #2A2A2A;
+  margin: 20px 0;
+}
+
+/* ---- Inline code ---- */
+.message-text code {
+  background: #2A2A2A;
+  color: #E5C07B;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'SFMono-Regular', 'Menlo', 'Consolas', 'Courier New', monospace;
+  font-size: 0.875em;
+  border: 1px solid #333333;
+}
+
+/* ---- Tables ---- */
+.message-text table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 0.875rem;
+  display: block;
+  overflow-x: auto;
+}
+.message-text th,
+.message-text td {
+  border: 1px solid #2F2F2F;
+  padding: 8px 12px;
+  text-align: left;
+}
+.message-text th {
+  background: #242424;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+.message-text tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
+
+/* ---- Fenced code blocks ---- */
+.message-text .code-block {
+  margin: 16px 0;
+  border: 1px solid #2A2A2A;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #151515;
+}
+.message-text .code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #1C1C1C;
+  border-bottom: 1px solid #2A2A2A;
+}
+.message-text .code-lang {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #777777;
+}
+.message-text .code-copy-btn {
+  background: transparent;
+  border: 1px solid #333333;
+  border-radius: 6px;
+  color: #999999;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  transition: all 0.15s ease;
+}
+.message-text .code-copy-btn:hover {
+  border-color: #4A4A4A;
+  color: #FFFFFF;
+  background: #262626;
+}
+.message-text .code-copy-btn.copied {
+  color: #00ff88;
+  border-color: #00ff88;
+}
+/* Override the imported atom-one-dark background to match the app */
+.message-text .code-block pre.hljs {
+  margin: 0;
+  padding: 14px 16px;
+  background: #151515;
+  overflow-x: auto;
+  border: none;
+  border-radius: 0;
+}
+.message-text .code-block pre.hljs code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-family: 'SFMono-Regular', 'Menlo', 'Consolas', 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* Code-block scrollbar */
+.message-text .code-block pre.hljs::-webkit-scrollbar { height: 8px; }
+.message-text .code-block pre.hljs::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 4px;
+}
+
+/* ---- Message layout: bubble + footer (model label left, actions right) ----
+   The bubble (.message-content) holds ONLY the response. The model name and the
+   copy/read-aloud actions live in a footer BELOW/outside the bubble. */
+.message-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.chat-message.assistant .message-column {
+  max-width: 88%;
+  align-items: flex-start;
+}
+.chat-message.user .message-column {
+  max-width: 70%;
+  align-items: flex-end;
+  order: 1;
+}
+.chat-message.user .message-avatar { order: 2; }
+
+/* Bubble width is now governed by the column */
+.message-content { max-width: 100%; }
+
+@media (max-width: 768px) {
+  .chat-message.assistant .message-column { max-width: 94%; }
+  .chat-message.user .message-column { max-width: 85%; }
+}
+
+/* Bubble + actions row: copy/read-aloud icons sit at the TOP-RIGHT, OUTSIDE
+   the response bubble. */
+.message-bubble-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 100%;
+}
+.chat-message.user .message-bubble-row { justify-content: flex-end; }
+
+/* Footer: dimmed model label (+ token count) below the response */
+.message-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 2px;
+  max-width: 100%;
+}
+.message-model-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.5px;
+  color: #5C5C5C;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.message-tokens {
+  flex-shrink: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.64rem;
+  color: #444444;
+  white-space: nowrap;
+}

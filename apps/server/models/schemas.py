@@ -10,7 +10,15 @@ class ChatRequest(BaseModel):
     model_choice: str
     session_id: Optional[str] = None
     project_id: Optional[int] = None
-    
+    # When true, the last assistant reply in the conversation is replaced
+    # instead of appending the message as a new user turn.
+    regenerate: Optional[bool] = False
+    max_tokens: Optional[int] = None
+    # OpenRouter-only enhancements (ignored by other providers):
+    # reasoning_effort: "low" | "medium" | "high"; web_search adds live web results.
+    reasoning_effort: Optional[str] = None
+    web_search: Optional[bool] = False
+
     @validator('session_id', pre=True)
     def convert_session_id(cls, v):
         """Convert session_id to string if it's an integer"""
@@ -18,13 +26,21 @@ class ChatRequest(BaseModel):
             return None
         if isinstance(v, int):
             return str(v)
-        return v  
+        return v
+
+    @validator('max_tokens')
+    def clamp_max_tokens(cls, v):
+        if v is None:
+            return None
+        return max(1, min(int(v), 8192))
 
 class ChatResponse(BaseModel):
     reply: str
     used_model: str
     memories: List[str]
-    conversation_id: Optional[int] = None  
+    conversation_id: Optional[int] = None
+    usage: Optional[dict] = None
+    response_time_ms: Optional[int] = None
 
 # HEALTH & INFO SCHEMAS
 

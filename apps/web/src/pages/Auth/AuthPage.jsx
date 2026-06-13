@@ -37,6 +37,10 @@ function AuthPage({ selectedLLM, setSelectedLLM, setConnectedLLMs, connectedLLMs
       notify.error('Invalid Anthropic API key format (must start with sk-ant-)');
       return;
     }
+    if (currentLLM.id === 'openrouter' && !apiKey.startsWith('sk-or-')) {
+      notify.error('Invalid OpenRouter API key format (must start with sk-or-)');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -99,8 +103,9 @@ function AuthPage({ selectedLLM, setSelectedLLM, setConnectedLLMs, connectedLLMs
               <input
                 type="password"
                 placeholder={
-                  currentLLM.id === 'openai' ? 'sk-...' : 
-                  currentLLM.id === 'anthropic' ? 'sk-ant-...' : 
+                  currentLLM.id === 'openai' ? 'sk-...' :
+                  currentLLM.id === 'anthropic' ? 'sk-ant-...' :
+                  currentLLM.id === 'openrouter' ? 'sk-or-...' :
                   'Enter API key...'
                 }
                 value={apiKey}

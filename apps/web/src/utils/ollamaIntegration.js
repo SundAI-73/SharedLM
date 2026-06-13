@@ -47,6 +47,16 @@ export async function readInstallConfig(installPath) {
 let setupInProgress = false;
 
 export async function setupOllamaIntegration(userId) {
+  // IMPORTANT: Only setup Ollama in application (Electron), NOT in web
+  // Check if we're in Electron application
+  if (!window.electron || !window.electron.readConfig) {
+    // We're in web, skip Ollama setup
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Ollama setup skipped - not in application (web mode)');
+    }
+    return false;
+  }
+  
   // Prevent duplicate setup calls
   if (setupInProgress) {
     return false;
@@ -55,28 +65,11 @@ export async function setupOllamaIntegration(userId) {
   try {
     setupInProgress = true;
     
-    // Check if integration already exists
-    const existingIntegrations = await apiService.getCustomIntegrations(userId);
-    const ollamaIntegration = existingIntegrations.find(
-      int => int.provider_id === 'custom_local_ollama'
-    );
-    
-    if (ollamaIntegration) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Ollama integration already exists');
-      }
-      return true;
-    }
-    
-    // Try to read config from various sources
+    // Try to read config from setup wizard
     let config = null;
-    
-    // Try Electron config reader
-    if (window.electron && window.electron.readConfig) {
-      const installPath = localStorage.getItem('sharedlm_install_path');
-      if (installPath) {
-        config = await readInstallConfig(installPath);
-      }
+    const installPath = localStorage.getItem('sharedlm_install_path');
+    if (installPath && window.electron.readConfig) {
+      config = await readInstallConfig(installPath);
     }
     
     // Fallback: check localStorage
@@ -87,57 +80,90 @@ export async function setupOllamaIntegration(userId) {
       }
     }
     
-    // If no config found, check if Ollama is installed
-    if (!config || !config.ollamaIntegration) {
-      // Check if Ollama is available by trying to detect it
-      const ollamaAvailable = await checkOllamaAvailable();
-      if (!ollamaAvailable) {
-        console.log('Ollama not detected, skipping integration setup');
-        return false;
+    // If no config found, skip setup (only setup from wizard)
+    if (!config || !config.ollamaIntegration || !config.ollamaIntegration.shouldCreate) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Ollama setup skipped - no config from setup wizard');
       }
-      
-      // Create integration with default values
-      config = {
-        ollamaIntegration: {
-          shouldCreate: true,
-          name: "Local Ollama",
-          baseUrl: "http://localhost:11434/v1",
-          apiType: "openai",
-          providerId: "custom_local_ollama",
-          apiKey: "ollama"
-        }
-      };
+      return false;
     }
     
-    // Create the custom integration
-    if (config.ollamaIntegration && config.ollamaIntegration.shouldCreate) {
+    // Get installed Ollama models
+    let installedModels = [];
+    try {
+      const ollamaData = await apiService.getOllamaModels();
+      installedModels = ollamaData.installed_models || [];
+    } catch (error) {
+      console.warn('Failed to get Ollama models:', error);
+    }
+    
+    // Build fallback URLs for local LLM
+    const fallbackUrls = [
+      { url: "http://localhost:11435/v1", api_key: "ollama" },
+      { url: "http://127.0.0.1:11434/v1", api_key: "ollama" },
+      { url: "http://127.0.0.1:11435/v1", api_key: "ollama" }
+    ];
+    
+    const baseUrl = config.ollamaIntegration.baseUrl || "http://localhost:11434/v1";
+    const apiType = config.ollamaIntegration.apiType || "openai";
+    const apiKey = config.ollamaIntegration.apiKey || "ollama";
+    
+    // Get existing integrations to avoid duplicates
+    const existingIntegrations = await apiService.getCustomIntegrations(userId);
+    const existingProviderIds = new Set(existingIntegrations.map(int => int.provider_id));
+    
+    // Create a separate custom integration for EACH installed Ollama model
+    let createdCount = 0;
+    for (const modelName of installedModels) {
+      // Generate provider_id from model name (e.g., "gemma3" -> "custom_local_gemma3")
+      const sanitizedModelName = modelName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const providerId = `custom_local_${sanitizedModelName}`;
+      
+      // Skip if already exists
+      if (existingProviderIds.has(providerId)) {
+        continue;
+      }
+      
+      // Create integration for this specific model
       const integrationData = {
-        name: config.ollamaIntegration.name || "Local Ollama",
-        base_url: config.ollamaIntegration.baseUrl || "http://localhost:11434/v1",
-        api_type: config.ollamaIntegration.apiType || "openai",
-        logo_url: null
+        name: `Local ${modelName}`,  // e.g., "Local gemma3"
+        base_url: baseUrl,
+        api_type: apiType,
+        logo_url: null,
+        fallback_urls: JSON.stringify(fallbackUrls)
       };
       
-      const result = await apiService.createCustomIntegration(userId, integrationData);
-      
-      if (result.success) {
-        // Also create the API key entry
-        try {
-          await apiService.saveApiKey(
-            userId,
-            'custom_local_ollama',
-            config.ollamaIntegration.apiKey || 'ollama',
-            'Local Ollama API Key'
-          );
-        } catch (keyError) {
-          console.warn('Failed to save Ollama API key (may already exist):', keyError);
-        }
+      try {
+        const result = await apiService.createCustomIntegration(userId, integrationData);
         
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Ollama custom integration created successfully');
+        if (result.success) {
+          // Create API key entry for this model
+          try {
+            await apiService.saveApiKey(
+              userId,
+              providerId,
+              apiKey,
+              `Local ${modelName} API Key`
+            );
+          } catch (keyError) {
+            console.warn(`Failed to save API key for ${modelName}:`, keyError);
+          }
+          
+          createdCount++;
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Created custom integration for model: ${modelName} (${providerId})`);
+          }
         }
-        return true;
+      } catch (error) {
+        console.error(`Failed to create integration for ${modelName}:`, error);
       }
+    }
+    
+    if (createdCount > 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Ollama integration setup complete: ${createdCount} model(s) configured`);
+      }
+      return true;
     }
     
     return false;

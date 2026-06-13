@@ -44,6 +44,9 @@ class CustomIntegration(Base):
     base_url = Column(String(500))
     api_type = Column(String(50), default="openai")
     logo_url = Column(String(500))
+    # Fallback URLs and API keys for local LLMs (stored as JSON)
+    # Format: [{"url": "http://localhost:11434/v1", "api_key": "ollama"}, ...]
+    fallback_urls = Column(Text)  # JSON string of fallback URLs and keys
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
@@ -88,12 +91,15 @@ class Conversation(Base):
 
 class Message(Base):
     __tablename__ = "messages"
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
     role = Column(String(50), nullable=False)
     content = Column(Text, nullable=False)
     model = Column(String(100))
+    prompt_tokens = Column(Integer)
+    completion_tokens = Column(Integer)
+    response_time_ms = Column(Integer)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     conversation = relationship("Conversation", back_populates="messages")

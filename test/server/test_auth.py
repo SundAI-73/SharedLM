@@ -167,8 +167,8 @@ class TestAuth:
         """Test successful forgot password request"""
         email_sent = []
         
-        def mock_send_email(email, token, frontend_url=None):
-            email_sent.append({"email": email, "token": token})
+        def mock_send_email(email, reset_token, frontend_url=None):
+            email_sent.append({"email": email, "token": reset_token})
             return True
         
         # Mock the email sending function where it's imported in the route module
@@ -192,8 +192,8 @@ class TestAuth:
         """Test forgot password for nonexistent user (should still return success)"""
         email_sent = []
         
-        def mock_send_email(email, token, frontend_url=None):
-            email_sent.append({"email": email, "token": token})
+        def mock_send_email(email, reset_token, frontend_url=None):
+            email_sent.append({"email": email, "token": reset_token})
             return True
         
         # Mock the email sending function at the route level

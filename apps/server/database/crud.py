@@ -4,6 +4,7 @@ from typing import List, Optional
 from database.models import User, APIKey, Project, Conversation, Message, ProjectFile, ChatFile, CustomIntegration, PasswordResetToken
 import bcrypt
 from datetime import datetime
+from utils.time import utcnow
 
 
 def _normalize_email(email: str) -> str:
@@ -73,7 +74,8 @@ def create_custom_integration(
     provider_id: str,
     base_url: str = None,
     api_type: str = "openai",
-    logo_url: str = None
+    logo_url: str = None,
+    fallback_urls: str = None
 ):
     integration = CustomIntegration(
         user_id=user_id,
@@ -81,7 +83,8 @@ def create_custom_integration(
         provider_id=provider_id,
         base_url=base_url,
         api_type=api_type,
-        logo_url=logo_url
+        logo_url=logo_url,
+        fallback_urls=fallback_urls
     )
     db.add(integration)
     db.commit()
@@ -115,7 +118,7 @@ def update_custom_integration(db: Session, integration_id: int, **kwargs):
         for key, value in kwargs.items():
             if hasattr(integration, key):
                 setattr(integration, key, value)
-        integration.updated_at = datetime.utcnow()
+        integration.updated_at = utcnow()
         db.commit()
         db.refresh(integration)
     
@@ -157,7 +160,7 @@ def update_project(db: Session, project_id: int, **kwargs):
     if project:
         for key, value in kwargs.items():
             setattr(project, key, value)
-        project.updated_at = datetime.utcnow()
+        project.updated_at = utcnow()
         db.commit()
         db.refresh(project)
     return project
@@ -198,7 +201,7 @@ def update_conversation_title(db: Session, conversation_id: int, title: str):
     conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
     if conversation:
         conversation.title = title
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = utcnow()
         db.commit()
         db.refresh(conversation)
     return conversation
@@ -215,7 +218,7 @@ def create_message(db: Session, conversation_id: int, role: str, content: str, m
     conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
     if conversation:
         conversation.message_count += 1
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = utcnow()
         if model:
             conversation.model_used = model
     

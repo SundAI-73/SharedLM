@@ -115,7 +115,11 @@ class APIService {
         
         const { clearAuth } = await import('../../utils/auth');
         clearAuth();
-        window.location.href = '/login?expired=true';
+        // Use a small delay to ensure state cleanup happens before redirect
+        // This prevents rendering issues that could cause a black screen
+        setTimeout(() => {
+          window.location.href = '/login?expired=true';
+        }, 100);
         throw new Error('Authentication required');
       }
 
@@ -375,42 +379,78 @@ class APIService {
     }
   }
 
-  async sendMessage(userId, message, modelChoice, sessionId = null, projectId = null, specificModel = null) {
+  /**
+   * Map a UI model choice to the backend (model_provider, model_choice) pair.
+   * Shared by sendMessage and sendMessageStream.
+   * @private
+   */
+  _resolveProviderAndModel(modelChoice, specificModel) {
+    let modelProvider;
+    if (modelChoice === 'openai') {
+      modelProvider = 'openai';
+    } else if (modelChoice === 'anthropic') {
+      modelProvider = 'anthropic';
+    } else if (modelChoice === 'mistral') {
+      modelProvider = 'mistral';
+    } else if (modelChoice === 'inception') {
+      modelProvider = 'inception';
+    } else if (modelChoice === 'openrouter') {
+      modelProvider = 'openrouter';
+    } else if (modelChoice && modelChoice.startsWith('custom_')) {
+      // It's a custom integration - pass the provider_id directly
+      modelProvider = modelChoice;
+    } else {
+      modelProvider = 'mistral';
+    }
+
+    let modelToUse;
+    if (modelChoice === 'openrouter') {
+      // For OpenRouter the specific model IS the full catalog id (e.g. "openai/gpt-4o")
+      modelToUse = specificModel || 'openai/gpt-4o-mini';
+    } else if (modelChoice && modelChoice.startsWith('custom_')) {
+      modelToUse = specificModel || 'default';
+    } else {
+      modelToUse = specificModel || (
+        modelChoice === 'openai' ? 'gpt-4o-mini' :
+        modelChoice === 'anthropic' ? 'claude-3-haiku-20240307' :
+        modelChoice === 'inception' ? 'mercury' :
+        'mistral-small-latest'
+      );
+    }
+    return { modelProvider, modelToUse };
+  }
+
+  /**
+   * If this model choice is a localhost custom integration, decide how to handle it.
+   * Returns 'client-side' (Electron local Ollama), throws for localhost-in-web,
+   * or returns null for everything that goes through the backend.
+   * @private
+   */
+  async _localhostHandling(userId, modelChoice) {
+    if (modelChoice && modelChoice.startsWith('custom_')) {
+      const integrations = await this.getCustomIntegrations(userId);
+      const integration = integrations.find(int => int.provider_id === modelChoice);
+      if (integration && integration.base_url) {
+        const isLocalhost = /localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(integration.base_url);
+        if (isLocalhost && !window.electron) {
+          throw new Error('Localhost LLMs can only be used in the desktop application. Please use the Electron app to access local LLMs.');
+        }
+        if (isLocalhost && window.electron) {
+          return 'client-side';
+        }
+      }
+    }
+    return null;
+  }
+
+  async sendMessage(userId, message, modelChoice, sessionId = null, projectId = null, specificModel = null, options = {}) {
     try {
-      // Check if it's a standard provider or custom integration
-      // Custom integrations have provider_id like "custom_inception_labs" or start with "custom_"
-      let modelProvider;
-      if (modelChoice === 'openai') {
-        modelProvider = 'openai';
-      } else if (modelChoice === 'anthropic') {
-        modelProvider = 'anthropic';
-      } else if (modelChoice === 'mistral') {
-        modelProvider = 'mistral';
-      } else if (modelChoice === 'inception') {
-        modelProvider = 'inception';
-      } else if (modelChoice && modelChoice.startsWith('custom_')) {
-        // It's a custom integration - pass the provider_id directly
-        modelProvider = modelChoice;
-      } else {
-        // Default to mistral for unknown providers
-        modelProvider = 'mistral';
+      if (await this._localhostHandling(userId, modelChoice) === 'client-side') {
+        // Handle localhost LLM entirely client-side (Electron only)
+        return await this.sendLocalLLMMessage(userId, message, modelChoice, sessionId, projectId, specificModel);
       }
 
-      // For custom integrations, if no specific model is provided, use 'default' or the model choice itself
-      // For standard providers, use defaults
-      let modelToUse;
-      if (modelChoice && modelChoice.startsWith('custom_')) {
-        // Custom integration - use specificModel if provided, otherwise use a default model name
-        modelToUse = specificModel || 'default';
-      } else {
-        // Standard providers
-        modelToUse = specificModel || (
-          modelChoice === 'openai' ? 'gpt-4o-mini' :
-          modelChoice === 'anthropic' ? 'claude-3-haiku-20240307' :
-          modelChoice === 'inception' ? 'mercury' :
-          'mistral-small-latest'
-        );
-      }
+      const { modelProvider, modelToUse } = this._resolveProviderAndModel(modelChoice, specificModel);
 
       const response = await this.makeRequest(`${API_BASE_URL}/chat`, {
         method: 'POST',
@@ -420,7 +460,10 @@ class APIService {
           model_provider: modelProvider,
           model_choice: modelToUse,
           session_id: sessionId ? String(sessionId) : null, // Convert to string as backend expects Optional[str]
-          project_id: projectId
+          project_id: projectId,
+          regenerate: options.regenerate || false,
+          reasoning_effort: options.reasoning_effort || null,
+          web_search: options.web_search || false
         })
       }, CHAT_REQUEST_TIMEOUT); // Use longer timeout for chat requests
 
@@ -435,6 +478,218 @@ class APIService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Stream a chat completion via the /chat/stream SSE endpoint.
+   *
+   * options: { regenerate, signal, onMeta(event), onDelta(text), onDone(event), onError(detail) }
+   * Returns the assembled { reply, used_model, memories, conversation_id, usage }.
+   * Aborting via options.signal stops the stream; the backend persists the
+   * partial reply, and the text already delivered via onDelta is kept.
+   */
+  async sendMessageStream(userId, message, modelChoice, sessionId = null, projectId = null, specificModel = null, options = {}) {
+    const { regenerate = false, signal, onMeta, onDelta, onDone, onError, reasoning_effort = null, web_search = false } = options;
+
+    // Localhost custom integration (Electron): no SSE path — run the local
+    // handler and surface its result as a single delta so callers share one flow.
+    if (await this._localhostHandling(userId, modelChoice) === 'client-side') {
+      const result = await this.sendLocalLLMMessage(userId, message, modelChoice, sessionId, projectId, specificModel);
+      if (onMeta) onMeta({ conversation_id: result.conversation_id, memories: result.memories });
+      if (onDelta && result.reply) onDelta(result.reply);
+      if (onDone) onDone({ used_model: result.used_model });
+      return result;
+    }
+
+    // Session check (mirrors makeRequest, which we can't use for a streamed body)
+    if (!checkSession(false)) {
+      logEvent(EventType.UNAUTHORIZED_ACCESS, LogLevel.SECURITY, 'Attempted stream with invalid session', {});
+      throw new Error('Session expired. Please log in again.');
+    }
+
+    const { modelProvider, modelToUse } = this._resolveProviderAndModel(modelChoice, specificModel);
+
+    const response = await fetch(`${API_BASE_URL}/chat/stream`, {
+      method: 'POST',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: userId,
+        message: message,
+        model_provider: modelProvider,
+        model_choice: modelToUse,
+        session_id: sessionId ? String(sessionId) : null,
+        project_id: projectId,
+        regenerate: regenerate,
+        reasoning_effort: reasoning_effort,
+        web_search: web_search
+      }),
+      signal
+    });
+
+    if (response.status === 401) {
+      const { clearAuth } = await import('../../utils/auth');
+      clearAuth();
+      setTimeout(() => { window.location.href = '/login?expired=true'; }, 100);
+      throw new Error('Authentication required');
+    }
+    if (!response.ok || !response.body) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to send message' }));
+      throw new Error(error.detail || 'Failed to send message');
+    }
+
+    extendSession();
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let meta = null;
+    let doneEvent = null;
+    let fullText = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let sepIndex;
+      while ((sepIndex = buffer.indexOf('\n\n')) !== -1) {
+        const rawEvent = buffer.slice(0, sepIndex);
+        buffer = buffer.slice(sepIndex + 2);
+
+        const dataLine = rawEvent.split('\n').find(l => l.startsWith('data:'));
+        if (!dataLine) continue;
+
+        let event;
+        try {
+          event = JSON.parse(dataLine.slice(dataLine.indexOf(':') + 1).trim());
+        } catch {
+          continue;
+        }
+
+        if (event.type === 'meta') {
+          meta = event;
+          if (onMeta) onMeta(event);
+        } else if (event.type === 'delta') {
+          fullText += event.text;
+          if (onDelta) onDelta(event.text);
+        } else if (event.type === 'done') {
+          doneEvent = event;
+          if (onDone) onDone(event);
+        } else if (event.type === 'error') {
+          if (onError) onError(event.detail || 'Stream error');
+          throw new Error(event.detail || 'Stream error');
+        }
+      }
+    }
+
+    return {
+      reply: fullText,
+      used_model: doneEvent ? doneEvent.used_model : (specificModel || modelToUse),
+      memories: meta ? (meta.memories || []) : [],
+      conversation_id: meta ? meta.conversation_id : null,
+      usage: doneEvent ? doneEvent.usage : null
+    };
+  }
+
+  /**
+   * Send message to local LLM entirely client-side
+   * @private
+   */
+  async sendLocalLLMMessage(userId, message, modelChoice, sessionId, projectId, specificModel) {
+    const { callLocalOllama } = await import('../../utils/localLLMHandler');
+    const { 
+      getLocalMemories, 
+      searchLocalMemories, 
+      addLocalMemory,
+      saveLocalChat 
+    } = await import('../../utils/localStorage');
+    
+    // Get custom integration details
+    const integrations = await this.getCustomIntegrations(userId);
+    const integration = integrations.find(int => int.provider_id === modelChoice);
+    
+    if (!integration) {
+      throw new Error(`Local LLM integration not found: ${modelChoice}`);
+    }
+    
+    // Extract model name from provider_id or use specificModel
+    // For Ollama integrations, provider_id might be like "custom_local_gemma3"
+    // For other localhost integrations, use the model name from the integration or specificModel
+    let actualModel = specificModel;
+    if (!actualModel) {
+      if (modelChoice.startsWith('custom_local_')) {
+        // Extract from provider_id (e.g., custom_local_gemma3 -> gemma3)
+        actualModel = modelChoice.replace('custom_local_', '').replace(/_/g, '.');
+      } else {
+        // For other localhost integrations, try to extract from integration name
+        // Remove "Local" prefix if present, convert to lowercase
+        actualModel = integration.name?.replace(/^Local\s+/i, '').toLowerCase() || 'default';
+      }
+    }
+    
+    // Parse fallback URLs
+    let fallbackUrls = [];
+    if (integration.fallback_urls) {
+      try {
+        const fallbacks = JSON.parse(integration.fallback_urls);
+        if (Array.isArray(fallbacks)) {
+          fallbackUrls = fallbacks.map(fb => fb.url).filter(Boolean);
+        }
+      } catch (e) {
+        console.warn('Failed to parse fallback URLs:', e);
+      }
+    }
+    
+    // Search local memories
+    const localMemories = searchLocalMemories(message, userId, 5);
+    
+    // Compose prompt with memories
+    let prompt = message;
+    if (localMemories.length > 0) {
+      const memoryContext = localMemories.map((mem, idx) => `Memory ${idx + 1}: ${mem}`).join('\n');
+      prompt = `Relevant context from past conversations:\n${memoryContext}\n\nUser question: ${message}`;
+    }
+    
+    // Call local Ollama
+    const reply = await callLocalOllama(
+      integration.base_url,
+      actualModel,
+      prompt,
+      fallbackUrls
+    );
+    
+    // Save to local storage
+    const conversationId = sessionId || `local_${Date.now()}`;
+    const chatData = {
+      id: conversationId,
+      user_id: userId,
+      title: message.substring(0, 50),
+      messages: [
+        { role: 'user', content: message, timestamp: new Date().toISOString() },
+        { role: 'assistant', content: reply, model: actualModel, timestamp: new Date().toISOString() }
+      ],
+      model_used: actualModel,
+      project_id: projectId,
+      created_at: new Date().toISOString()
+    };
+    saveLocalChat(chatData);
+    
+    // Add to local memory
+    addLocalMemory({
+      user_id: userId,
+      messages: [
+        { role: 'user', content: message },
+        { role: 'assistant', content: reply }
+      ],
+      project_id: projectId
+    });
+    
+    return {
+      reply: reply,
+      used_model: integration.name || actualModel,
+      memories: localMemories,
+      conversation_id: parseInt(conversationId) || conversationId
+    };
   }
 
   async uploadFile(file, userId, conversationId = null) {
@@ -835,6 +1090,10 @@ class APIService {
       if (!response.ok) throw new Error('Failed to fetch custom integrations');
       return await response.json();
     } catch (error) {
+      // If it's an authentication error, let it propagate so the redirect can happen
+      if (error.message === 'Authentication required' || error.message.includes('Session expired')) {
+        throw error;
+      }
       if (process.env.NODE_ENV !== 'production') {
         console.error('Get custom integrations failed:', error);
       }
@@ -921,6 +1180,54 @@ class APIService {
         console.error('Search memories failed:', error);
       }
       return { memories: [], count: 0 };
+    }
+  }
+
+  /** Real usage analytics for the user (replaces the hardcoded dashboard). */
+  async getAnalytics(userId, days = 30) {
+    try {
+      const response = await this.makeRequest(`${API_BASE_URL}/analytics/${userId}?days=${days}`);
+      if (!response.ok) throw new Error('Failed to fetch analytics');
+      return await response.json();
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Get analytics failed:', error);
+      }
+      return null;
+    }
+  }
+
+  /** Full-text search across the user's conversation titles and message content. */
+  async searchConversations(userId, query, limit = 20) {
+    try {
+      const url = `${API_BASE_URL}/conversations/${userId}/search?q=${encodeURIComponent(query)}&limit=${limit}`;
+      const response = await this.makeRequest(url);
+      if (!response.ok) throw new Error('Search failed');
+      return await response.json();
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Search conversations failed:', error);
+      }
+      return { results: [], query };
+    }
+  }
+
+  /** Live OpenRouter model catalog (cached server-side). Optional search filter. */
+  async getOpenRouterModels(search = null, limit = null) {
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (limit) params.set('limit', String(limit));
+      const qs = params.toString();
+      const url = `${API_BASE_URL}/openrouter/models${qs ? `?${qs}` : ''}`;
+      const response = await this.makeRequest(url);
+      if (!response.ok) throw new Error('Failed to fetch OpenRouter models');
+      return await response.json();
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Get OpenRouter models failed:', error);
+      }
+      return { models: [], count: 0, total: 0 };
     }
   }
 
