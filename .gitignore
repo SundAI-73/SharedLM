@@ -94,6 +94,8 @@ yarn-error.log*
 **/coverage_html/
 **/coverage.xml
 *.cover
+.coverage
+**/.coverage
 .pytest_cache/
 **/.pytest_cache/
 

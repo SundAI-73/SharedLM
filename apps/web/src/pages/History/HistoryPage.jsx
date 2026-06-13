@@ -17,6 +17,7 @@ function HistoryPage() {
   const [chats, setChats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [availableProjects, setAvailableProjects] = useState([]);
+  const [searchResults, setSearchResults] = useState(null); // null = not searching
   const notify = useNotification();
 
   const formatTime = (dateString) => {
@@ -99,6 +100,40 @@ function HistoryPage() {
     loadProjectsForFilter();
   }, [loadConversations, loadProjectsForFilter]);
 
+  // Project id -> name lookup, used to label backend search results too
+  const projectNameById = useMemo(() => {
+    const map = {};
+    availableProjects.forEach(p => { map[p.id] = p.name; });
+    return map;
+  }, [availableProjects]);
+
+  // Backend content search (over message bodies), debounced. A query of <2 chars
+  // falls back to the local title/model filter over the already-loaded list.
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setSearchResults(null);
+      return;
+    }
+    let cancelled = false;
+    const handle = setTimeout(async () => {
+      const data = await apiService.searchConversations(userId, query);
+      if (cancelled) return;
+      const mapped = (data.results || []).map(r => ({
+        id: r.id,
+        title: r.title || 'Untitled Chat',
+        model: r.model_used || 'Unknown',
+        time: formatTime(r.updated_at),
+        messages: r.message_count,
+        project: r.project_id,
+        projectName: r.project_id ? projectNameById[r.project_id] : null,
+        snippet: r.snippet || null
+      }));
+      setSearchResults(mapped);
+    }, 300);
+    return () => { cancelled = true; clearTimeout(handle); };
+  }, [searchQuery, userId, projectNameById]);
+
   const projectOptions = useMemo(() => {
     const options = [
       { value: 'all', label: 'ALL PROJECTS' },
@@ -115,23 +150,22 @@ function HistoryPage() {
     return options;
   }, [availableProjects]);
 
+  const matchesProjectFilter = useCallback((chat) => {
+    if (selectedProject === 'all') return true;
+    if (selectedProject === 'none') return chat.project === null || chat.project === undefined;
+    return chat.project && chat.project.toString() === selectedProject.toString();
+  }, [selectedProject]);
+
   const filteredChats = useMemo(() => {
-    return chats.filter(chat => {
-      const matchesSearch = chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        chat.model.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      let matchesProject = true;
-      if (selectedProject === 'all') {
-        matchesProject = true;
-      } else if (selectedProject === 'none') {
-        matchesProject = chat.project === null;
-      } else {
-        matchesProject = chat.project && chat.project.toString() === selectedProject.toString();
-      }
-      
-      return matchesSearch && matchesProject;
-    });
-  }, [chats, searchQuery, selectedProject]);
+    // When the backend content search is active, use its results (which match
+    // message bodies, not just titles); otherwise filter the loaded list locally.
+    const source = searchResults !== null
+      ? searchResults
+      : chats.filter(chat =>
+          chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          chat.model.toLowerCase().includes(searchQuery.toLowerCase()));
+    return source.filter(matchesProjectFilter);
+  }, [chats, searchResults, searchQuery, matchesProjectFilter]);
 
   const handleChatClick = (chatId) => {
     navigate(`/chat?conversation=${chatId}`);
@@ -295,6 +329,9 @@ function HistoryPage() {
                   
                   <div className="chat-content" onClick={() => handleChatClick(chat.id)}>
                     <h3 className="chat-title">{chat.title}</h3>
+                    {chat.snippet && (
+                      <p className="chat-snippet">{chat.snippet}</p>
+                    )}
                     <div className="chat-meta">
                       <span className="meta-item model">{chat.model}</span>
                       <span className="meta-divider">•</span>

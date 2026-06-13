@@ -14,6 +14,10 @@ class ChatRequest(BaseModel):
     # instead of appending the message as a new user turn.
     regenerate: Optional[bool] = False
     max_tokens: Optional[int] = None
+    # OpenRouter-only enhancements (ignored by other providers):
+    # reasoning_effort: "low" | "medium" | "high"; web_search adds live web results.
+    reasoning_effort: Optional[str] = None
+    web_search: Optional[bool] = False
 
     @validator('session_id', pre=True)
     def convert_session_id(cls, v):

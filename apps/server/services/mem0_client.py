@@ -22,7 +22,7 @@ class Mem0Client:
         try:
             results = self.client.search(
                 query=query,
-                user_id=user_id,
+                filters={"user_id": user_id},
                 limit=limit,
                 version="v2"
             )
@@ -81,7 +81,7 @@ class Mem0Client:
             project_user_id = f"{user_id}_project_{project_id}"
             results = self.client.search(
                 query=query or "project context and conversations",
-                user_id=project_user_id,
+                filters={"user_id": project_user_id},
                 limit=limit,
                 version="v2"
             )
@@ -104,7 +104,7 @@ class Mem0Client:
         try:
             results = self.client.search(
                 query=query,
-                user_id=user_id,
+                filters={"user_id": user_id},
                 limit=limit,
                 version="v2"
             )

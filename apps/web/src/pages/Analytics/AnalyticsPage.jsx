@@ -1,11 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Activity, PieChart } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useUser } from '../../contexts/UserContext';
+import apiService from '../../services/api';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
 import './Analytics.css';
 
+const TIME_RANGE_TO_DAYS = { '24h': 1, '7d': 7, '30d': 30, 'all': 0 };
+const DIST_COLORS = ['#00ff88', '#007aff', '#ff3b30', '#ffcc00', '#af52de', '#ff9500'];
+
+const formatTokens = (n) => {
+  if (!n) return '0';
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+};
+
+const formatResponseTime = (ms) => {
+  if (ms === null || ms === undefined) return '—';
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
+  return `${Math.round(ms)}ms`;
+};
+
 function AnalyticsPage() {
-  const [timeRange, setTimeRange] = useState('7d');
+  const { userId } = useUser();
+  const [timeRange, setTimeRange] = useState('30d');
+  const [data, setData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const timeRangeOptions = [
     { value: '24h', label: 'LAST 24 HOURS' },
@@ -14,34 +35,58 @@ function AnalyticsPage() {
     { value: 'all', label: 'ALL TIME' }
   ];
 
+  const loadAnalytics = useCallback(async () => {
+    if (!userId) return;
+    setIsLoading(true);
+    try {
+      const result = await apiService.getAnalytics(userId, TIME_RANGE_TO_DAYS[timeRange]);
+      setData(result);
+    } catch (e) {
+      setData(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId, timeRange]);
+
+  useEffect(() => {
+    loadAnalytics();
+  }, [loadAnalytics]);
+
+  const totals = data?.totals;
   const stats = [
-    { label: 'TOTAL CHATS', value: '247', change: '+12%' },
-    { label: 'TOKENS USED', value: '45.2K', change: '+23%' },
-    { label: 'MODELS USED', value: '4', change: '0%' },
-    { label: 'AVG RESPONSE', value: '1.2s', change: '-15%' }
+    { label: 'TOTAL CHATS', value: totals ? String(totals.conversations) : '—' },
+    { label: 'TOKENS USED', value: totals ? formatTokens(totals.total_tokens) : '—' },
+    { label: 'MODELS USED', value: totals ? String(totals.models_used) : '—' },
+    { label: 'AVG RESPONSE', value: totals ? formatResponseTime(totals.avg_response_time_ms) : '—' }
   ];
 
-  const modelDistribution = [
-    { name: 'GPT-4', percent: '45%', value: 45, color: '#00ff88' },
-    { name: 'SharedLM', percent: '35%', value: 35, color: '#007aff' },
-    { name: 'Gemini', percent: '20%', value: 20, color: '#ff3b30' }
-  ];
+  const distribution = (data?.model_distribution || []).map((m, idx) => ({
+    name: m.model,
+    percent: `${m.percent}%`,
+    value: m.percent,
+    color: DIST_COLORS[idx % DIST_COLORS.length]
+  }));
+
+  const daily = data?.daily_activity || [];
+  const maxDaily = Math.max(1, ...daily.map(d => d.messages));
 
   return (
     <div className="page-container">
       <div className="page-content">
-        <motion.div 
+        <motion.div
           className="page-header"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
         >
           <h1 className="page-title">ANALYTICS</h1>
-          <p className="page-subtitle">Track your AI usage and performance</p>
+          <p className="page-subtitle">
+            {isLoading ? 'Loading…' : 'Track your AI usage and performance'}
+          </p>
         </motion.div>
 
         <div className="page-main-content">
-          <motion.div 
+          <motion.div
             className="analytics-controls"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -55,15 +100,15 @@ function AnalyticsPage() {
             />
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="grid-4 stats-grid"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
             {stats.map((stat, idx) => (
-              <motion.div 
-                key={idx} 
+              <motion.div
+                key={idx}
                 className="card-base stat-card"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -72,20 +117,17 @@ function AnalyticsPage() {
               >
                 <div className="stat-label">{stat.label}</div>
                 <div className="stat-value">{stat.value}</div>
-                <div className={`stat-change ${stat.change.startsWith('+') ? 'positive' : stat.change.startsWith('-') ? 'negative' : 'neutral'}`}>
-                  {stat.change}
-                </div>
               </motion.div>
             ))}
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="grid-2 charts-section"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
           >
-            <motion.div 
+            <motion.div
               className="card-base chart-card"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -93,24 +135,32 @@ function AnalyticsPage() {
               whileHover={{ y: -4, scale: 1.01 }}
             >
               <div className="chart-header">
-                <h3 className="chart-title">USAGE OVER TIME</h3>
+                <h3 className="chart-title">MESSAGES OVER TIME</h3>
                 <Activity size={18} className="chart-icon" />
               </div>
               <div className="bar-chart">
-                {[65, 45, 80, 55, 72, 88, 60].map((height, idx) => (
-                  <motion.div
-                    key={idx}
-                    className="bar"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: `${height}%`, opacity: 1 }}
-                    transition={{ duration: 0.6, delay: 0.8 + idx * 0.05, ease: "easeOut" }}
-                    style={{ height: `${height}%` }}
-                  />
-                ))}
+                {daily.length === 0 ? (
+                  <p className="empty-state-text" style={{ margin: 'auto' }}>No activity yet</p>
+                ) : (
+                  daily.map((d, idx) => {
+                    const height = Math.round((d.messages / maxDaily) * 100);
+                    return (
+                      <motion.div
+                        key={d.date}
+                        className="bar"
+                        title={`${d.date}: ${d.messages} messages`}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: `${height}%`, opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.8 + idx * 0.01, ease: 'easeOut' }}
+                        style={{ height: `${height}%` }}
+                      />
+                    );
+                  })
+                )}
               </div>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="card-base chart-card"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -122,29 +172,33 @@ function AnalyticsPage() {
                 <PieChart size={18} className="chart-icon" />
               </div>
               <div className="distribution-list">
-                {modelDistribution.map((model, idx) => (
-                  <motion.div 
-                    key={idx} 
-                    className="distribution-item"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: 0.8 + idx * 0.1 }}
-                  >
-                    <div className="distribution-bar">
-                      <motion.div
-                        className="distribution-fill"
-                        initial={{ width: 0, opacity: 0 }}
-                        animate={{ width: `${model.value}%`, opacity: 1 }}
-                        transition={{ duration: 0.6, delay: 0.9 + idx * 0.1, ease: "easeOut" }}
-                        style={{ background: model.color }}
-                      />
-                    </div>
-                    <div className="distribution-info">
-                      <span className="distribution-name">{model.name}</span>
-                      <span className="distribution-percent">{model.percent}</span>
-                    </div>
-                  </motion.div>
-                ))}
+                {distribution.length === 0 ? (
+                  <p className="empty-state-text" style={{ margin: 'auto' }}>No model usage yet</p>
+                ) : (
+                  distribution.map((model, idx) => (
+                    <motion.div
+                      key={model.name}
+                      className="distribution-item"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4, delay: 0.8 + idx * 0.1 }}
+                    >
+                      <div className="distribution-bar">
+                        <motion.div
+                          className="distribution-fill"
+                          initial={{ width: 0, opacity: 0 }}
+                          animate={{ width: `${model.value}%`, opacity: 1 }}
+                          transition={{ duration: 0.6, delay: 0.9 + idx * 0.1, ease: 'easeOut' }}
+                          style={{ background: model.color }}
+                        />
+                      </div>
+                      <div className="distribution-info">
+                        <span className="distribution-name">{model.name}</span>
+                        <span className="distribution-percent">{model.percent}</span>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
               </div>
             </motion.div>
           </motion.div>

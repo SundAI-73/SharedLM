@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, X, Plus, SlidersHorizontal, Clock, ArrowUp, Search, Globe, Settings } from 'lucide-react';
+import { Bot, User, Star, Edit3, Trash2, MoreVertical, Paperclip, FolderOpen, X, Plus, SlidersHorizontal, Clock, ArrowUp, Search, Globe, Settings, Square, RefreshCw, Copy, Volume2, Mic, Download } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useUser } from '../../contexts/UserContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomDropdown from '../../components/common/CustomDropdown/CustomDropdown';
+import SearchableDropdown from '../../components/common/SearchableDropdown/SearchableDropdown';
 import ConnectorsModal from '../../components/ConnectorsModal/ConnectorsModal';
 import apiService from '../../services/api/index';
 import { logEvent, EventType, LogLevel } from '../../utils/auditLogger';
@@ -19,6 +20,8 @@ import './styles/chat-header.css';
 import './styles/chat-messages.css';
 import './styles/chat-input.css';
 import './styles/chat-responsive.css';
+import './styles/chat-actions.css';
+import './styles/chat-markdown.css';
 
 const generateChatTitle = (userMessage) => {
   const message = userMessage.toLowerCase();
@@ -99,15 +102,41 @@ const getModelLogo = (modelName, customIntegrations = []) => {
 const Message = React.memo(({ msg, customIntegrations = [] }) => {
   const formattedContent = formatMessage(msg.content);
   const modelLogo = msg.role === 'assistant' && msg.model ? getModelLogo(msg.model, customIntegrations) : null;
-  
+  // An assistant bubble with no text yet = waiting for the first streamed token
+  const awaitingFirstToken = msg.role === 'assistant' && !msg.content;
+  const [copied, setCopied] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+
+  const handleCopyMessage = () => {
+    navigator.clipboard?.writeText(msg.content).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {});
+  };
+
+  const handleReadAloud = () => {
+    if (!('speechSynthesis' in window)) return;
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(msg.content);
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setSpeaking(true);
+  };
+
   return (
     <div className={`chat-message ${msg.role}`}>
       <div className="message-avatar">
         {msg.role === 'user' ? (
           <User size={20} />
         ) : modelLogo ? (
-          <img 
-            src={modelLogo} 
+          <img
+            src={modelLogo}
             alt={`${msg.model || 'Model'} logo`}
             className="message-model-logo"
           />
@@ -115,20 +144,51 @@ const Message = React.memo(({ msg, customIntegrations = [] }) => {
           <Bot size={20} />
         )}
       </div>
-      <div className="message-content">
-        <div 
-          className="message-text"
-          dangerouslySetInnerHTML={{ __html: formattedContent }}
-        />
-        {msg.model && (
-          <div className="message-meta">
-            <span className="message-model">{msg.model.toUpperCase()}</span>
-            <span className="message-time">
-              {new Date(msg.timestamp).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+      <div className="message-column">
+        <div className="message-bubble-row">
+          <div className="message-content">
+            {awaitingFirstToken ? (
+              <div className="typing-indicator">
+                <span /><span /><span />
+              </div>
+            ) : (
+              <div
+                className="message-text"
+                dangerouslySetInnerHTML={{ __html: formattedContent }}
+              />
+            )}
+          </div>
+          {msg.role === 'assistant' && msg.content && !msg.streaming && (
+            <div className="message-actions">
+              <button
+                className={`message-action-btn ${copied ? 'copied' : ''}`}
+                onClick={handleCopyMessage}
+                title={copied ? 'Copied' : 'Copy'}
+                aria-label="Copy message"
+              >
+                <Copy size={15} />
+              </button>
+              {'speechSynthesis' in window && (
+                <button
+                  className={`message-action-btn ${speaking ? 'active' : ''}`}
+                  onClick={handleReadAloud}
+                  title={speaking ? 'Stop' : 'Read aloud'}
+                  aria-label="Read aloud"
+                >
+                  {speaking ? <Square size={15} /> : <Volume2 size={15} />}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        {msg.role === 'assistant' && msg.content && (
+          <div className="message-footer">
+            <span className="message-model-label">
+              {msg.model ? msg.model.toUpperCase() : ''}
             </span>
+            {msg.usage && (msg.usage.total_tokens != null) && (
+              <span className="message-tokens">{msg.usage.total_tokens.toLocaleString()} tok</span>
+            )}
           </div>
         )}
       </div>
@@ -186,6 +246,14 @@ const getUserDisplayName = () => {
   return nameSource.split(' ')[0]; // Get first name only
 };
 
+// Suggested prompts shown on the empty chat state (clicking fills the composer)
+const PROMPT_STARTERS = [
+  { title: 'Explain a concept', sub: 'in simple terms', prompt: 'Explain the following concept in simple terms: ' },
+  { title: 'Write something', sub: 'draft an email or post', prompt: 'Help me write a ' },
+  { title: 'Summarize', sub: 'condense a long text', prompt: 'Summarize the following text:\n\n' },
+  { title: 'Debug code', sub: 'find and fix the issue', prompt: 'Find and fix the bug in this code:\n\n```\n\n```' }
+];
+
 function ChatPage({ backendStatus }) {
   const { userId, currentModel, setCurrentModel } = useUser();
   const notify = useNotification();
@@ -194,6 +262,10 @@ function ChatPage({ backendStatus }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [streaming, setStreaming] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [openRouterModels, setOpenRouterModels] = useState([]);
   const [availableModels, setAvailableModels] = useState([]);
   const [chatTitle, setChatTitle] = useState('');
   const [showOptions, setShowOptions] = useState(false);
@@ -204,7 +276,6 @@ function ChatPage({ backendStatus }) {
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [selectedModelVariant, setSelectedModelVariant] = useState('mistral-medium-latest');
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const [showHistoryMenu, setShowHistoryMenu] = useState(false);
   const [showConnectorsModal, setShowConnectorsModal] = useState(false);
   const [customIntegrations, setCustomIntegrations] = useState([]);
   const [extendedThinkingEnabled, setExtendedThinkingEnabled] = useState(() => localStorage.getItem('sharedlm_toggle_extended') === 'true');
@@ -216,12 +287,17 @@ function ChatPage({ backendStatus }) {
   const [modelVariants, setModelVariants] = useState({});
   
   const messagesEndRef = useRef(null);
+  const messagesWrapperRef = useRef(null);
+  const isNearBottomRef = useRef(true);
   const optionsRef = useRef(null);
   const titleInputRef = useRef(null);
+  const abortControllerRef = useRef(null);
+  const textareaRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const voiceBaseRef = useRef('');
   const initialMessageSent = useRef(false);
   const fileInputRef = useRef(null);
   const settingsMenuRef = useRef(null);
-  const historyMenuRef = useRef(null);
   const previousModelRef = useRef(currentModel);
   const previousModelVariantRef = useRef(selectedModelVariant);
   const modelChangedDuringLoadingRef = useRef(false);
@@ -635,9 +711,11 @@ function ChatPage({ backendStatus }) {
     // This prevents reloading when we just updated the URL with the same conversation
     if (conversationId) {
       const convIdInt = parseInt(conversationId);
-      // Only load if it's a different conversation AND we don't have messages
-      // If we have messages, we're already in an active chat and shouldn't reload
-      if (convIdInt !== currentConversationId && messages.length === 0) {
+      // Load whenever the URL points at a different conversation than the one
+      // open. The isUpdatingUrlRef / isSendingMessageRef guards above already
+      // prevent clobbering an in-flight send, so this safely supports switching
+      // conversations from the sidebar/history while a chat is open.
+      if (convIdInt !== currentConversationId) {
         loadConversation(conversationId);
       }
     }
@@ -667,7 +745,8 @@ function ChatPage({ backendStatus }) {
           'mistral': 'MISTRAL AI',
           'openai': 'OPENAI',
           'anthropic': 'ANTHROPIC',
-          'inception': 'INCEPTION'
+          'inception': 'INCEPTION',
+          'openrouter': 'OPENROUTER'
         };
         
         // Build model providers list from available models only
@@ -818,6 +897,33 @@ function ChatPage({ backendStatus }) {
     loadAvailableModels();
   }, [loadAvailableModels]);
 
+  // Fetch the OpenRouter catalog once the user has connected the openrouter provider
+  useEffect(() => {
+    if (!userId || !availableModels.includes('openrouter') || openRouterModels.length > 0) {
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const data = await apiService.getOpenRouterModels();
+      if (cancelled) return;
+      const opts = (data.models || []).map(m => ({ value: m.id, label: m.name || m.id }));
+      setOpenRouterModels(opts);
+    })();
+    return () => { cancelled = true; };
+  }, [userId, availableModels, openRouterModels.length]);
+
+  // When OpenRouter is selected, make sure a valid catalog model id is chosen
+  useEffect(() => {
+    if (currentModel !== 'openrouter' || openRouterModels.length === 0) return;
+    const isValid = openRouterModels.some(o => o.value === selectedModelVariant);
+    if (!isValid) {
+      const preferred = openRouterModels.find(o => o.value === 'openai/gpt-4o-mini')
+        || openRouterModels.find(o => o.value === 'openai/gpt-4o')
+        || openRouterModels[0];
+      setSelectedModelVariant(preferred.value);
+    }
+  }, [currentModel, openRouterModels, selectedModelVariant]);
+
   // Listen for API key updates to refresh models
   useEffect(() => {
     const handleApiKeysUpdated = () => {
@@ -866,9 +972,6 @@ function ChatPage({ backendStatus }) {
       if (settingsMenuRef.current && !settingsMenuRef.current.contains(e.target)) {
         setShowSettingsMenu(false);
       }
-      if (historyMenuRef.current && !historyMenuRef.current.contains(e.target)) {
-        setShowHistoryMenu(false);
-      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -881,9 +984,25 @@ function ChatPage({ backendStatus }) {
     }
   }, [isEditingTitle]);
 
+  // Auto-scroll only when the user is already near the bottom, so we don't
+  // yank them back down while they scroll up to read during a stream.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (isNearBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
+
+  const handleMessagesScroll = useCallback(() => {
+    const el = messagesWrapperRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    isNearBottomRef.current = nearBottom;
+    setShowScrollToBottom(!nearBottom);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
@@ -1014,15 +1133,23 @@ function ChatPage({ backendStatus }) {
     }
     
     const modelToUse = currentModel;
-    
+
     // Check if it's a custom integration
     const isCustomIntegration = modelToUse && modelToUse.startsWith('custom_');
-    
+    const isOpenRouter = modelToUse === 'openrouter';
+
     // Ensure we have a valid model variant
     let modelVariantToUse = selectedModelVariant;
     let displayModelName = modelVariantToUse; // For display in UI
-    
-    if (!modelVariantToUse || modelVariantToUse.trim() === '') {
+
+    if (isOpenRouter) {
+      // For OpenRouter the variant IS the full catalog model id (e.g. "openai/gpt-4o")
+      if (!modelVariantToUse || !modelVariantToUse.includes('/')) {
+        modelVariantToUse = 'openai/gpt-4o-mini';
+        setSelectedModelVariant(modelVariantToUse);
+      }
+      displayModelName = modelVariantToUse;
+    } else if (!modelVariantToUse || modelVariantToUse.trim() === '') {
       // Default to first available variant for the current model
       const variants = modelVariants[modelToUse] || [];
       if (variants.length > 0) {
@@ -1077,125 +1204,233 @@ function ChatPage({ backendStatus }) {
       displayModelName = modelVariantToUse;
     }
 
+    // Streamed reply: append an empty assistant placeholder, then fill it as
+    // tokens arrive. Stop = abort the fetch (the backend persists the partial).
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setStreaming(true);
+
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: '',
+      model: displayModelName,
+      streaming: true,
+      timestamp: new Date().toISOString()
+    }]);
+
+    // Update the trailing assistant message (the streaming placeholder)
+    const patchAssistant = (updater) => {
+      setMessages(prev => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (last && last.role === 'assistant') {
+          copy[copy.length - 1] = updater(last);
+        }
+        return copy;
+      });
+    };
+
+    let newConversationId = null;
+
     try {
-      const response = await apiService.sendMessage(
-        userId, 
-        messageText, 
+      const result = await apiService.sendMessageStream(
+        userId,
+        messageText,
         modelToUse,
         currentConversationId,
         selectedProject?.id || null,
-        modelVariantToUse
+        modelVariantToUse,
+        {
+          regenerate: false,
+          reasoning_effort: extendedThinkingEnabled ? 'high' : null,
+          web_search: webSearchEnabled || researchEnabled,
+          signal: controller.signal,
+          onMeta: (event) => {
+            if (!currentConversationId && event.conversation_id) {
+              newConversationId = event.conversation_id;
+              setCurrentConversationId(event.conversation_id);
+            }
+          },
+          onDelta: (text) => patchAssistant(last => ({ ...last, content: last.content + text })),
+          onDone: (event) => patchAssistant(last => ({
+            ...last,
+            streaming: false,
+            model: event.used_model || last.model
+          }))
+        }
       );
 
-      if (response) {
-        // Add the assistant's response to messages first
-        // Use the model from response if available, otherwise use the display name
-        // For custom integrations, response.used_model will be the integration name
-        const responseModel = response.used_model || displayModelName || modelVariantToUse || selectedModelVariant;
-        
-        // Check if this is a new conversation (no currentConversationId but we got one back)
-        const isNewConversation = !currentConversationId && response.conversation_id;
-        
-        // Update conversation ID first (before adding message to prevent reload)
-        if (isNewConversation) {
-          setCurrentConversationId(response.conversation_id);
-        }
-        
-        // Add the assistant's response to messages
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: response.reply,
-          model: responseModel,
-          memories: response.memories,
+      // Finalize (covers providers/paths that don't emit a done event)
+      patchAssistant(last => ({
+        ...last,
+        streaming: false,
+        model: (result && result.used_model) || last.model,
+        memories: (result && result.memories) || last.memories,
+        usage: (result && result.usage) || last.usage
+      }));
+
+      const provider = modelToUse || currentModel || 'mistral';
+      window.dispatchEvent(new CustomEvent('messageSent', {
+        detail: {
+          provider,
+          model: (result && result.used_model) || displayModelName,
           timestamp: new Date().toISOString()
-        }]);
-        
-        // Emit event for usage tracking
-        // Determine the provider from modelToUse (handles both standard and custom integrations)
-        const provider = modelToUse || currentModel || 'mistral';
-        window.dispatchEvent(new CustomEvent('messageSent', {
-          detail: {
-            provider: provider,
-            model: responseModel,
-            timestamp: new Date().toISOString()
-          }
-        }));
-        
-        // Update URL after a delay to ensure message is in state first
-        // This prevents the useEffect from clearing messages
-        if (isNewConversation) {
-          // Wait for React to process the state updates before updating URL
-          // Use a longer delay to ensure messages are rendered
-          setTimeout(() => {
-            isUpdatingUrlRef.current = true;
-            navigate(`/chat?conversation=${response.conversation_id}`, { replace: true });
-            // Clear flag after navigation completes to allow future loads
-            setTimeout(() => {
-              isUpdatingUrlRef.current = false;
-            }, 300);
-          }, 300);
         }
-        
-        setAttachedFiles([]);
+      }));
+
+      if (newConversationId) {
+        setTimeout(() => {
+          isUpdatingUrlRef.current = true;
+          navigate(`/chat?conversation=${newConversationId}`, { replace: true });
+          setTimeout(() => { isUpdatingUrlRef.current = false; }, 300);
+        }, 300);
       }
+
+      setAttachedFiles([]);
     } catch (error) {
-      // Log chat error
-      logEvent(EventType.ERROR, LogLevel.ERROR, 'Chat message error', {
-        userId,
-        error: error.message,
-        model: modelVariantToUse || selectedModelVariant
-      });
-      
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Chat error:', error);
-      }
-      
-      // Parse error message to extract model name if present
-      let errorMessage = error.message;
-      let errorModel = displayModelName || modelVariantToUse || selectedModelVariant;
-      
-      // Try to extract model name from error message (backend includes it)
-      // Format: "Error calling {provider} API ({model_name}): {error}"
-      const modelMatch = errorMessage.match(/\(([^)]+)\):/);
-      if (modelMatch && modelMatch[1]) {
-        errorModel = modelMatch[1];
-      }
-      
-      // If we still don't have a model name, use fallback
-      if (!errorModel || (errorModel === 'mistral-small-latest' && isCustomIntegration)) {
-        if (isCustomIntegration) {
-          const provider = modelProviders.find(p => p.value === modelToUse);
-          errorModel = provider ? provider.label : (modelToUse || 'unknown');
-        } else {
-          errorModel = errorModel || modelToUse || 'unknown';
+      // Stop button or navigation aborts the fetch — keep the partial reply as-is.
+      if (error.name === 'AbortError' || controller.signal.aborted) {
+        patchAssistant(last => ({ ...last, streaming: false }));
+      } else {
+        logEvent(EventType.ERROR, LogLevel.ERROR, 'Chat message error', {
+          userId, error: error.message, model: modelVariantToUse || selectedModelVariant
+        });
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Chat error:', error);
         }
+
+        let errorMessage = error.message;
+        let errorModel = displayModelName || modelVariantToUse || selectedModelVariant;
+        const modelMatch = errorMessage.match(/\(([^)]+)\):/);
+        if (modelMatch && modelMatch[1]) {
+          errorModel = modelMatch[1];
+        }
+        if (!errorModel || (errorModel === 'mistral-small-latest' && isCustomIntegration)) {
+          if (isCustomIntegration) {
+            const provider = modelProviders.find(p => p.value === modelToUse);
+            errorModel = provider ? provider.label : (modelToUse || 'unknown');
+          } else {
+            errorModel = errorModel || modelToUse || 'unknown';
+          }
+        }
+        if (errorMessage.includes('Session expired')) {
+          errorMessage = 'Your session has expired. Please refresh the page.';
+        } else if (/rate limit|api key|limit exceeded|quota|insufficient|credit|forbidden|\b40[123]\b/i.test(errorMessage)) {
+          // Surface provider-meaningful errors (quota/credits/auth). Pull the
+          // inner human message out of the wrapped API error when present.
+          const inner = errorMessage.match(/'message':\s*'([^']+)'/) || errorMessage.match(/"message":\s*"([^"]+)"/);
+          if (inner && inner[1]) {
+            errorMessage = inner[1];
+          }
+        } else {
+          errorMessage = 'Connection issue. Please check settings or try again.';
+        }
+
+        // Fill the placeholder with the error (appending to any partial text)
+        patchAssistant(last => ({
+          ...last,
+          streaming: false,
+          content: last.content ? `${last.content}\n\n${errorMessage}` : errorMessage,
+          model: String(errorModel).toUpperCase()
+        }));
       }
-      
-      // Format error message for display
-      if (errorMessage.includes('Session expired')) {
-        errorMessage = 'Your session has expired. Please refresh the page.';
-      } else if (!errorMessage.includes('Rate limit') && !errorMessage.includes('API key')) {
-        // For other errors, show generic message but preserve model info in errorModel
-        // Rate limit and API key errors are kept as-is
-        errorMessage = 'Connection issue. Please check settings or try again.';
-      }
-        
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: errorMessage,
-        model: errorModel.toUpperCase(),
-        timestamp: new Date().toISOString()
-      }]);
     } finally {
+      abortControllerRef.current = null;
+      setStreaming(false);
       setLoading(false);
-      // Clear the sending flag after a short delay to allow state updates to complete
       setTimeout(() => {
         isSendingMessageRef.current = false;
       }, 500);
-      // Check if model changed during loading - if so, handle it now
-      // This is handled by the useEffect that watches currentModel and loading state
     }
-  }, [currentModel, selectedModelVariant, userId, currentConversationId, selectedProject, modelVariants, modelProviders, navigate, notify]);
+  }, [currentModel, selectedModelVariant, userId, currentConversationId, selectedProject, modelVariants, modelProviders, navigate, notify, extendedThinkingEnabled, researchEnabled, webSearchEnabled]);
+
+  // Stop an in-flight streamed response (backend keeps the partial reply)
+  const handleStopGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  }, []);
+
+  // Delegated handler for the copy buttons inside rendered code blocks
+  const handleMessagesClick = useCallback((e) => {
+    const btn = e.target.closest && e.target.closest('.code-copy-btn');
+    if (!btn) return;
+    const codeEl = btn.closest('.code-block')?.querySelector('pre code');
+    if (!codeEl) return;
+    navigator.clipboard?.writeText(codeEl.innerText).then(() => {
+      const original = btn.textContent;
+      btn.classList.add('copied');
+      btn.textContent = 'Copied';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.textContent = original;
+      }, 1500);
+    }).catch(() => {});
+  }, []);
+
+  // Re-run the last user turn, replacing the last assistant reply
+  const handleRegenerate = useCallback(async () => {
+    if (loading || streaming || !currentConversationId) return;
+    const lastUser = [...messages].reverse().find(m => m.role === 'user');
+    if (!lastUser) return;
+
+    // Drop the trailing assistant message locally; backend drops it server-side too
+    setMessages(prev => {
+      const copy = [...prev];
+      if (copy.length && copy[copy.length - 1].role === 'assistant') copy.pop();
+      return copy;
+    });
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setLoading(true);
+    setStreaming(true);
+    isSendingMessageRef.current = true;
+
+    setMessages(prev => [...prev, {
+      role: 'assistant', content: '', model: selectedModelVariant || currentModel,
+      streaming: true, timestamp: new Date().toISOString()
+    }]);
+
+    const patchAssistant = (updater) => {
+      setMessages(prev => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (last && last.role === 'assistant') copy[copy.length - 1] = updater(last);
+        return copy;
+      });
+    };
+
+    try {
+      await apiService.sendMessageStream(
+        userId, lastUser.content, currentModel, currentConversationId,
+        selectedProject?.id || null, selectedModelVariant,
+        {
+          regenerate: true,
+          reasoning_effort: extendedThinkingEnabled ? 'high' : null,
+          web_search: webSearchEnabled || researchEnabled,
+          signal: controller.signal,
+          onDelta: (text) => patchAssistant(last => ({ ...last, content: last.content + text })),
+          onDone: (event) => patchAssistant(last => ({ ...last, streaming: false, model: event.used_model || last.model }))
+        }
+      );
+      patchAssistant(last => ({ ...last, streaming: false }));
+    } catch (error) {
+      if (error.name === 'AbortError' || controller.signal.aborted) {
+        patchAssistant(last => ({ ...last, streaming: false }));
+      } else {
+        patchAssistant(last => ({
+          ...last, streaming: false,
+          content: error.message || 'Connection issue. Please try again.'
+        }));
+      }
+    } finally {
+      abortControllerRef.current = null;
+      setStreaming(false);
+      setLoading(false);
+      setTimeout(() => { isSendingMessageRef.current = false; }, 500);
+    }
+  }, [loading, streaming, currentConversationId, messages, userId, currentModel, selectedModelVariant, selectedProject, extendedThinkingEnabled, researchEnabled, webSearchEnabled]);
 
   useEffect(() => {
     const { projectId, projectName, initialMessage, newChat } = location.state || {};
@@ -1287,7 +1522,55 @@ function ChatPage({ backendStatus }) {
   const handleSend = useCallback(() => {
     handleSendWithMessage(input);
     setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
   }, [input, handleSendWithMessage]);
+
+  // Auto-grow the textarea up to a max height
+  const handleInputChange = useCallback((e) => {
+    setInput(e.target.value);
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, []);
+
+  // Voice dictation via the Web Speech API. Toggling stops it; results stream
+  // into the composer, appended to whatever was already typed.
+  const handleVoiceInput = useCallback(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      notify.error('Voice input is not supported in this browser. Try Chrome or Edge.');
+      return;
+    }
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    recognitionRef.current = recognition;
+    voiceBaseRef.current = input ? `${input.trim()} ` : '';
+
+    recognition.onresult = (event) => {
+      let transcript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setInput(voiceBaseRef.current + transcript);
+    };
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+
+    recognition.start();
+    setListening(true);
+  }, [listening, input, notify]);
+
+  // Stop dictation if the component unmounts
+  useEffect(() => () => {
+    try { recognitionRef.current?.stop(); } catch { /* noop */ }
+  }, []);
 
   const handleRename = useCallback(() => {
     setEditedTitle(chatTitle);
@@ -1334,6 +1617,28 @@ function ChatPage({ backendStatus }) {
     }
     setShowOptions(false);
   };
+
+  // Export the current conversation as a Markdown file
+  const handleExport = useCallback(() => {
+    if (!messages.length) return;
+    const title = chatTitle || 'Conversation';
+    const lines = [`# ${title}`, ''];
+    messages.forEach((m) => {
+      const who = m.role === 'user' ? 'You' : (m.model ? m.model.toUpperCase() : 'Assistant');
+      lines.push(`## ${who}`, '', m.content || '', '');
+    });
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const slug = title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-|-$/g, '').slice(0, 50);
+    a.download = `${slug || 'conversation'}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setShowOptions(false);
+  }, [messages, chatTitle]);
 
   return (
     <div className="chat-page-container">
@@ -1389,6 +1694,10 @@ function ChatPage({ backendStatus }) {
                       <Star size={16} />
                       <span>Star</span>
                     </button>
+                    <button className="option-item" onClick={handleExport}>
+                      <Download size={16} />
+                      <span>Export</span>
+                    </button>
                     <button className="option-item danger" onClick={handleDelete}>
                       <Trash2 size={16} />
                       <span>Delete</span>
@@ -1402,7 +1711,11 @@ function ChatPage({ backendStatus }) {
           </div>
         ) : null}
 
-        <div className={`chat-messages-wrapper ${messages.length === 0 ? 'full-height' : ''}`}>
+        <div
+          className={`chat-messages-wrapper ${messages.length === 0 ? 'full-height' : ''}`}
+          ref={messagesWrapperRef}
+          onScroll={handleMessagesScroll}
+        >
           {messages.length === 0 ? (
             <motion.div 
               className="chat-empty-state"
@@ -1437,7 +1750,7 @@ function ChatPage({ backendStatus }) {
                   {getTimeBasedGreeting()}, {getUserDisplayName()}
                 </motion.h2>
                 {selectedProject && (
-                  <motion.p 
+                  <motion.p
                     className="welcome-project"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -1446,15 +1759,35 @@ function ChatPage({ backendStatus }) {
                     in {selectedProject.name}
                   </motion.p>
                 )}
+                <motion.div
+                  className="prompt-starters"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.55 }}
+                >
+                  {PROMPT_STARTERS.map((starter) => (
+                    <button
+                      key={starter.title}
+                      className="prompt-starter-chip"
+                      onClick={() => {
+                        setInput(starter.prompt);
+                        setTimeout(() => textareaRef.current?.focus(), 0);
+                      }}
+                    >
+                      <span className="prompt-starter-title">{starter.title}</span>
+                      <span className="prompt-starter-sub">{starter.sub}</span>
+                    </button>
+                  ))}
+                </motion.div>
               </motion.div>
             </motion.div>
           ) : (
-            <div className="chat-messages-list">
+            <div className="chat-messages-list" onClick={handleMessagesClick}>
               {messages.map((msg, idx) => (
                 <Message key={idx} msg={msg} customIntegrations={customIntegrations} />
               ))}
 
-              {loading && (
+              {loading && !streaming && (
                 <div className="chat-message assistant">
                   <div className="message-avatar">
                     {(() => {
@@ -1485,10 +1818,35 @@ function ChatPage({ backendStatus }) {
                   </div>
                 </div>
               )}
+
+              {!loading && !streaming && currentConversationId &&
+                messages.length > 0 && messages[messages.length - 1].role === 'assistant' && (
+                <div className="chat-regenerate-row">
+                  <button
+                    className="chat-regenerate-btn"
+                    onClick={handleRegenerate}
+                    title="Regenerate response"
+                  >
+                    <RefreshCw size={14} />
+                    <span>Regenerate</span>
+                  </button>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
           )}
         </div>
+
+        {showScrollToBottom && messages.length > 0 && (
+          <button
+            className="chat-scroll-bottom-btn"
+            onClick={scrollToBottom}
+            title="Scroll to latest"
+            aria-label="Scroll to latest"
+          >
+            <ArrowUp size={18} style={{ transform: 'rotate(180deg)' }} />
+          </button>
+        )}
 
         <div className="chat-input-wrapper">
           {attachedFiles.length > 0 && (
@@ -1522,7 +1880,7 @@ function ChatPage({ backendStatus }) {
                 <Plus size={18} />
               </motion.button>
               
-              <motion.button 
+              <motion.button
                 className="chat-control-btn"
                 onClick={() => setShowSettingsMenu(!showSettingsMenu)}
                 whileHover={{ scale: 1.05 }}
@@ -1531,19 +1889,35 @@ function ChatPage({ backendStatus }) {
               >
                 <SlidersHorizontal size={18} />
               </motion.button>
-              
-              <motion.button 
-                className="chat-control-btn"
-                onClick={() => {
-                  setShowHistoryMenu(!showHistoryMenu);
-                  navigate('/history');
-                }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="History"
-              >
-                <Clock size={18} />
-              </motion.button>
+
+              {/* Active-capability indicators (click to turn off) */}
+              {extendedThinkingEnabled && (
+                <button
+                  className="chat-toggle-indicator"
+                  onClick={() => setExtendedThinkingEnabled(false)}
+                  title="Extended thinking is on — click to turn off"
+                >
+                  <Clock size={15} />
+                </button>
+              )}
+              {researchEnabled && (
+                <button
+                  className="chat-toggle-indicator"
+                  onClick={() => setResearchEnabled(false)}
+                  title="Research is on — click to turn off"
+                >
+                  <Search size={15} />
+                </button>
+              )}
+              {webSearchEnabled && (
+                <button
+                  className="chat-toggle-indicator"
+                  onClick={() => setWebSearchEnabled(false)}
+                  title="Web search is on — click to turn off"
+                >
+                  <Globe size={15} />
+                </button>
+              )}
             </div>
 
             {/* Right Side - Model Dropdowns */}
@@ -1557,14 +1931,22 @@ function ChatPage({ backendStatus }) {
                     className="chat-model-dropdown-inline"
                   />
                   
-                  {currentModel && modelVariants[currentModel]?.length > 0 && (
+                  {currentModel === 'openrouter' ? (
+                    <SearchableDropdown
+                      value={selectedModelVariant}
+                      onChange={setSelectedModelVariant}
+                      options={openRouterModels}
+                      placeholder="Search 400+ models…"
+                      className="chat-model-dropdown-inline"
+                    />
+                  ) : (currentModel && modelVariants[currentModel]?.length > 0 && (
                     <CustomDropdown
                       value={selectedModelVariant}
                       onChange={setSelectedModelVariant}
                       options={modelVariants[currentModel]}
                       className="chat-model-dropdown-inline"
                     />
-                  )}
+                  ))}
                 </>
               ) : (
                 <div style={{ 
@@ -1582,27 +1964,54 @@ function ChatPage({ backendStatus }) {
           {/* Main Input Field with Send Button Inside */}
           <div className="chat-input-main">
             <div className="chat-input-container-main">
-              <input
-                type="text"
+              <textarea
+                ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleInputChange}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !loading && input.trim()) handleSend();
+                  // Enter sends; Shift+Enter inserts a newline
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!loading && input.trim()) handleSend();
+                  }
                 }}
                 placeholder="How can I help you today?"
                 className="chat-input-field-main"
+                rows={1}
                 disabled={loading}
                 autoFocus
               />
               <motion.button
-                onClick={handleSend}
-                disabled={!input.trim() || loading}
-                className={`chat-send-btn-inside ${input.trim() ? 'active' : ''}`}
-                whileHover={input.trim() ? { scale: 1.05 } : {}}
-                whileTap={input.trim() ? { scale: 0.95 } : {}}
+                onClick={handleVoiceInput}
+                className={`chat-mic-btn ${listening ? 'listening' : ''}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title={listening ? 'Stop dictation' : 'Voice input'}
+                type="button"
               >
-                <ArrowUp size={18} />
+                <Mic size={18} />
               </motion.button>
+              {streaming ? (
+                <motion.button
+                  onClick={handleStopGeneration}
+                  className="chat-send-btn-inside active chat-stop-btn"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Stop generating"
+                >
+                  <Square size={16} />
+                </motion.button>
+              ) : (
+                <motion.button
+                  onClick={handleSend}
+                  disabled={!input.trim() || loading}
+                  className={`chat-send-btn-inside ${input.trim() ? 'active' : ''}`}
+                  whileHover={input.trim() ? { scale: 1.05 } : {}}
+                  whileTap={input.trim() ? { scale: 0.95 } : {}}
+                >
+                  <ArrowUp size={18} />
+                </motion.button>
+              )}
             </div>
           </div>
 

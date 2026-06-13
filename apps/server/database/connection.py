@@ -74,22 +74,32 @@ def run_schema_upgrades(target_engine=None):
     """Add columns introduced after initial release to existing databases.
 
     create_all() only creates missing tables, never missing columns, so
-    deployments with an existing sharedlm.db need these ALTERs.
+    deployments with an existing sharedlm.db need these ALTERs. Add any
+    post-release column here keyed by table name.
     """
     from sqlalchemy import inspect, text
 
     eng = target_engine or engine
     inspector = inspect(eng)
-    if 'messages' not in inspector.get_table_names():
-        return
+    tables = set(inspector.get_table_names())
 
-    existing = {col['name'] for col in inspector.get_columns('messages')}
-    new_columns = {
-        'prompt_tokens': 'INTEGER',
-        'completion_tokens': 'INTEGER',
-        'response_time_ms': 'INTEGER',
+    column_upgrades = {
+        'messages': {
+            'prompt_tokens': 'INTEGER',
+            'completion_tokens': 'INTEGER',
+            'response_time_ms': 'INTEGER',
+        },
+        'custom_integrations': {
+            # Added with URL-based local/cloud routing; older DBs lack it.
+            'fallback_urls': 'TEXT',
+        },
     }
+
     with eng.begin() as conn:
-        for name, col_type in new_columns.items():
-            if name not in existing:
-                conn.execute(text(f"ALTER TABLE messages ADD COLUMN {name} {col_type}"))
+        for table, columns in column_upgrades.items():
+            if table not in tables:
+                continue
+            existing = {col['name'] for col in inspector.get_columns(table)}
+            for name, col_type in columns.items():
+                if name not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {col_type}"))

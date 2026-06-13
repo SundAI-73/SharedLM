@@ -2,6 +2,7 @@ import logging
 import uuid
 import secrets
 from datetime import datetime, timedelta
+from utils.time import utcnow
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from database.connection import get_db
@@ -140,7 +141,7 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
             reset_token = secrets.token_urlsafe(32)
             
             # Set expiration to 1 hour from now
-            expires_at = datetime.utcnow() + timedelta(hours=1)
+            expires_at = utcnow() + timedelta(hours=1)
             
             # Create reset token in database
             crud.create_password_reset_token(db, user.id, reset_token, expires_at)
@@ -177,7 +178,7 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
             raise HTTPException(status_code=400, detail="Invalid or expired reset token")
         
         # Check if token is expired
-        if datetime.utcnow() > token_record.expires_at:
+        if utcnow() > token_record.expires_at:
             raise HTTPException(status_code=400, detail="Reset token has expired")
         
         # Validate new password

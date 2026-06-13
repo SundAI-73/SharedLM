@@ -10,8 +10,8 @@
 > | Model access via **OpenRouter gateway** | ✅ Decided — implementing now |
 > | Memory moat = **local-first / sovereign** | ✅ Decided (direction) |
 > | Memory engine = **Mem0 OSS + sqlite-vec + local embeddings** | 🟡 Proposed (default pick) |
-> | Sync model (local-only vs E2E-encrypted multi-device) | ❓ Open — user to decide |
-> | Extraction location (local model vs cloud chat model) | ❓ Open — user to decide |
+> | Sync model | ✅ Decided — **local-first + E2E-encrypted sync** (user holds key; server stores ciphertext only) |
+> | Extraction location (local model vs cloud chat model) | ❓ Open — leaning per-user toggle |
 > | General vs vertical product focus | ❓ Open — user to decide |
 
 ---

@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from utils.time import utcnow
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import List
@@ -223,7 +224,7 @@ async def update_conversation(
             if hasattr(conversation, key):
                 setattr(conversation, key, value)
         
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = utcnow()
         db.commit()
         db.refresh(conversation)
         
@@ -254,7 +255,7 @@ async def toggle_star_conversation(
         if hasattr(conversation, 'is_starred'):
             conversation.is_starred = new_starred
         
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = utcnow()
         db.commit()
         
         return {"success": True, "is_starred": new_starred}

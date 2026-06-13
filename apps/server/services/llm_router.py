@@ -46,6 +46,20 @@ def _openrouter_headers() -> Dict[str, str]:
     }
 
 
+def _openrouter_extras(model: str, reasoning_effort: Optional[str] = None, web_search: bool = False):
+    """Apply OpenRouter's web-search (':online' suffix) and reasoning controls.
+
+    Returns (effective_model, extra_body). The ':online' suffix routes the
+    request through OpenRouter's web plugin; reasoning effort is passed in the
+    request body for models that support it.
+    """
+    effective_model = f"{model}:online" if web_search else model
+    extra_body = None
+    if reasoning_effort in ("low", "medium", "high"):
+        extra_body = {"reasoning": {"effort": reasoning_effort}}
+    return effective_model, extra_body
+
+
 def _build_messages(
     prompt: str,
     history: Optional[List[Dict[str, str]]] = None,
@@ -244,7 +258,8 @@ async def call_openrouter(
     api_key: str = None,
     history: Optional[List[Dict[str, str]]] = None,
     system: Optional[str] = None,
-    max_tokens: Optional[int] = None
+    max_tokens: Optional[int] = None,
+    extra_body: Optional[Dict[str, Any]] = None
 ) -> str:
     """Call OpenRouter (OpenAI-compatible gateway to 400+ models)"""
     try:
@@ -256,13 +271,15 @@ async def call_openrouter(
             base_url=OPENROUTER_BASE_URL,
             default_headers=_openrouter_headers()
         )
-        response = await asyncio.to_thread(
-            client.chat.completions.create,
-            model=model,
-            messages=_build_messages(prompt, history, system),
-            max_tokens=max_tokens or DEFAULT_MAX_TOKENS,
-            temperature=0.7
-        )
+        kwargs = {
+            "model": model,
+            "messages": _build_messages(prompt, history, system),
+            "max_tokens": max_tokens or DEFAULT_MAX_TOKENS,
+            "temperature": 0.7,
+        }
+        if extra_body:
+            kwargs["extra_body"] = extra_body
+        response = await asyncio.to_thread(client.chat.completions.create, **kwargs)
 
         reply = response.choices[0].message.content
         logger.info(f"OpenRouter {model} response generated")
@@ -387,7 +404,9 @@ async def route_chat(
     custom_integration: Optional[Any] = None,
     history: Optional[List[Dict[str, str]]] = None,
     system: Optional[str] = None,
-    max_tokens: Optional[int] = None
+    max_tokens: Optional[int] = None,
+    reasoning_effort: Optional[str] = None,
+    web_search: bool = False
 ) -> tuple[str, str]:
     """Route chat to the appropriate model"""
     if model_provider == "openai":
@@ -407,8 +426,10 @@ async def route_chat(
                                      history=history, system=system, max_tokens=max_tokens)
         return reply, model_choice
     elif model_provider == "openrouter":
-        reply = await call_openrouter(prompt=prompt, model=model_choice, api_key=api_key,
-                                      history=history, system=system, max_tokens=max_tokens)
+        eff_model, extra_body = _openrouter_extras(model_choice, reasoning_effort, web_search)
+        reply = await call_openrouter(prompt=prompt, model=eff_model, api_key=api_key,
+                                      history=history, system=system, max_tokens=max_tokens,
+                                      extra_body=extra_body)
         return reply, model_choice
     elif custom_integration and model_provider.startswith("custom_"):
         # Handle custom integration with fallback support
@@ -468,7 +489,8 @@ async def _stream_openai_compatible(
     system: Optional[str] = None,
     max_tokens: Optional[int] = None,
     request_usage: bool = True,
-    default_headers: Optional[Dict[str, str]] = None
+    default_headers: Optional[Dict[str, str]] = None,
+    extra_body: Optional[Dict[str, Any]] = None
 ) -> AsyncGenerator[Dict[str, Any], None]:
     client = openai.AsyncOpenAI(
         api_key=api_key,
@@ -483,6 +505,8 @@ async def _stream_openai_compatible(
         "temperature": 0.7,
         "stream": True,
     }
+    if extra_body:
+        kwargs["extra_body"] = extra_body
     if request_usage:
         # Not all OpenAI-compatible servers accept stream_options; only real
         # OpenAI/Inception get it, custom servers report usage if they choose to.
@@ -629,7 +653,9 @@ async def route_chat_stream(
     custom_integration: Optional[Any] = None,
     history: Optional[List[Dict[str, str]]] = None,
     system: Optional[str] = None,
-    max_tokens: Optional[int] = None
+    max_tokens: Optional[int] = None,
+    reasoning_effort: Optional[str] = None,
+    web_search: bool = False
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Stream a chat completion from the appropriate provider.
 
@@ -654,10 +680,12 @@ async def route_chat_stream(
                                         history=history, system=system, max_tokens=max_tokens,
                                         request_usage=False)
     elif model_provider == "openrouter":
-        gen = _stream_openai_compatible(prompt, model_choice, api_key,
+        eff_model, extra_body = _openrouter_extras(model_choice, reasoning_effort, web_search)
+        gen = _stream_openai_compatible(prompt, eff_model, api_key,
                                         base_url=OPENROUTER_BASE_URL,
                                         history=history, system=system, max_tokens=max_tokens,
-                                        default_headers=_openrouter_headers())
+                                        default_headers=_openrouter_headers(),
+                                        extra_body=extra_body)
     elif custom_integration and model_provider.startswith("custom_"):
         actual_model = _resolve_custom_model(model_provider, model_choice)
         gen = _stream_custom_integration(prompt, actual_model or model_choice, api_key,

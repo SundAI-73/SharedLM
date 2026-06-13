@@ -20,12 +20,19 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
   const [apiKeys, setApiKeys] = useState([]);
 
   const defaultLLMs = [
-    { 
-      id: 'mistral', 
-      name: 'MISTRAL', 
-      provider: 'Mistral AI', 
-      status: 'available', 
-      logo: mistralLogo 
+    {
+      id: 'openrouter',
+      name: 'OPENROUTER',
+      provider: '400+ models, one key',
+      status: 'available',
+      logo: null
+    },
+    {
+      id: 'mistral',
+      name: 'MISTRAL',
+      provider: 'Mistral AI',
+      status: 'available',
+      logo: mistralLogo
     },
     { 
       id: 'inception', 
@@ -113,8 +120,7 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
       const allConnected = [...new Set([...connectedFromKeys, ...connectedFromIntegrations])];
       
       console.log('[IntegrationsPage] All connected models:', allConnected);
-      console.log('[IntegrationsPage] Current connectedLLMs prop:', connectedLLMs);
-      
+
       // Always update the connected LLMs state, even if empty
       if (setConnectedLLMs) {
         setConnectedLLMs(allConnected);
@@ -125,7 +131,10 @@ function IntegrationsPage({ connectedLLMs = [], setConnectedLLMs, setSelectedLLM
     } catch (error) {
       console.error('[IntegrationsPage] Failed to load connected models:', error);
     }
-  }, [userId, setConnectedLLMs, connectedLLMs]);
+    // NOTE: connectedLLMs is intentionally NOT a dependency — this callback
+    // *sets* connectedLLMs, so depending on it creates an infinite fetch/render
+    // loop (which also wedges the page-transition animation on navigate).
+  }, [userId, setConnectedLLMs]);
 
   useEffect(() => {
     loadConnectedModels();

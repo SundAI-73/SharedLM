@@ -23,6 +23,7 @@ from utils.encryption import decrypt_key
 from utils.security import validate_file_upload, sanitize_error_message, validate_message
 from utils.cache import get_cached_api_key, set_cached_api_key, clear_api_key_cache
 from datetime import datetime
+from utils.time import utcnow
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["chat"])
@@ -215,7 +216,7 @@ async def _prepare_chat(request: ChatRequest, current_user: User, db: Session) -
         )
         db.add(user_message_obj)
         conversation.message_count += 1
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = utcnow()
         db.commit()
 
     history = [
@@ -291,7 +292,7 @@ def _save_assistant_message(
     )
     db.add(assistant_message_obj)
     conversation.message_count += 1
-    conversation.updated_at = datetime.utcnow()
+    conversation.updated_at = utcnow()
     conversation.model_used = used_model
 
     # Set conversation title on the first exchange (1 user + 1 assistant)
@@ -334,7 +335,9 @@ async def chat(
                 custom_integration=prepared.custom_integration,
                 history=prepared.history,
                 system=prepared.system_context,
-                max_tokens=request.max_tokens
+                max_tokens=request.max_tokens,
+                reasoning_effort=request.reasoning_effort,
+                web_search=request.web_search
             )
         except ValueError as e:
             error_msg = str(e)
@@ -435,7 +438,9 @@ async def chat_stream(
                 custom_integration=prepared.custom_integration,
                 history=prepared.history,
                 system=prepared.system_context,
-                max_tokens=request.max_tokens
+                max_tokens=request.max_tokens,
+                reasoning_effort=request.reasoning_effort,
+                web_search=request.web_search
             ):
                 if event["type"] == "delta":
                     reply_parts.append(event["text"])

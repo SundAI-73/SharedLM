@@ -1,0 +1,62 @@
+/* Extends CustomDropdown.css with a search box + scrollable, capped results. */
+
+.searchable-menu {
+  display: flex;
+  flex-direction: column;
+  max-height: 360px;
+  padding: 0;
+}
+
+.searchable-input-wrapper {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #1A1A1A;
+  border-bottom: 1px solid #2A2A2A;
+  z-index: 1;
+}
+
+.searchable-input-icon {
+  color: #666666;
+  flex-shrink: 0;
+}
+
+.searchable-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #E0E0E0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+}
+
+.searchable-input::placeholder {
+  color: #555555;
+}
+
+.searchable-options {
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.searchable-empty {
+  padding: 16px 12px;
+  color: #666666;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.searchable-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.searchable-options::-webkit-scrollbar-thumb {
+  background: #2A2A2A;
+  border-radius: 3px;
+}

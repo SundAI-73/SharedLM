@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta
+from utils.time import utcnow
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy import func
@@ -31,7 +32,7 @@ async def get_analytics(
 
         since = None
         if days > 0:
-            since = datetime.utcnow() - timedelta(days=days)
+            since = utcnow() - timedelta(days=days)
 
         def scoped(query):
             query = query.join(Conversation, Message.conversation_id == Conversation.id) \
@@ -77,7 +78,7 @@ async def get_analytics(
 
         # Daily message counts for the activity chart
         chart_days = days if 0 < days <= 90 else 30
-        chart_since = datetime.utcnow() - timedelta(days=chart_days - 1)
+        chart_since = utcnow() - timedelta(days=chart_days - 1)
         daily_rows = scoped(db.query(
             func.date(Message.created_at),
             func.count(Message.id)

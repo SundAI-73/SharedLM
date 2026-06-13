@@ -23,7 +23,7 @@ class TestOpenRouterRouting:
         assert model == "openai/gpt-4o"
         mock_call_openrouter.assert_called_once_with(
             prompt="Test prompt", model="openai/gpt-4o", api_key="sk-or-test123",
-            history=None, system=None, max_tokens=None
+            history=None, system=None, max_tokens=None, extra_body=None
         )
 
     @patch('services.llm_router.asyncio.to_thread')
@@ -50,6 +50,24 @@ class TestOpenRouterRouting:
         with pytest.raises(Exception) as exc_info:
             await call_openrouter("Test", "openai/gpt-4o", None)
         assert "api key" in str(exc_info.value).lower()
+
+    def test_web_search_appends_online_suffix(self):
+        from services.llm_router import _openrouter_extras
+        model, extra = _openrouter_extras("openai/gpt-4o", web_search=True)
+        assert model == "openai/gpt-4o:online"
+        assert extra is None
+
+    def test_reasoning_effort_sets_extra_body(self):
+        from services.llm_router import _openrouter_extras
+        model, extra = _openrouter_extras("openai/gpt-4o", reasoning_effort="high")
+        assert model == "openai/gpt-4o"
+        assert extra == {"reasoning": {"effort": "high"}}
+
+    def test_no_extras_by_default(self):
+        from services.llm_router import _openrouter_extras
+        model, extra = _openrouter_extras("openai/gpt-4o")
+        assert model == "openai/gpt-4o"
+        assert extra is None
 
 
 @pytest.mark.unit
